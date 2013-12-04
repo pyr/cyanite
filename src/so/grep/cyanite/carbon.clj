@@ -8,7 +8,6 @@
 
 (defn formatter
   [rollups input]
-  (debug "got input: " input)
   (let [[path metric time] (s/split input #" ")]
     (when (not= metric "nan")
       (for [{:keys [rollup period rollup-to]} rollups]
@@ -28,7 +27,7 @@
 (defn start
   [{:keys [store carbon]}]
   (let [handler (handler (:rollups carbon) store)]
-    (info "starting carbon handler with config: " carbon)
+    (info "starting carbon handler")
     (tcp/start-tcp-server
      handler
      (merge carbon {:frame (string :utf-8 :delimiters ["\r\n"])}))))
