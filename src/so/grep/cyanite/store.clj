@@ -2,7 +2,7 @@
   (:require [so.grep.cyanite.config :as config]
             [clojure.string         :as str]
             [qbits.alia             :as alia]
-            [clojure.tools.logging  :refer [error info]]
+            [clojure.tools.logging  :refer [error info debug]]
             [lamina.core            :refer [channel receive-all]]))
 
 (def path-db
@@ -14,7 +14,7 @@
    session
    (str
     "UPDATE metric USING TTL ? SET data = data + ? "
-    "WHERE period = ? AND rollup = ? AND path = ? AND time = ?;")))
+    "WHERE rollup = ? AND period = ? AND path = ? AND time = ?;")))
 
 (defn fetchq
   [session]
@@ -86,12 +86,13 @@
        (doseq [{:keys [metric path time rollup period ttl]} payload]
          (alia/execute
           session query
-          :values [(int ttl) [metric] (int period) (int rollup) path time]))))
+          :values [(int ttl) [metric] (int rollup) (int period) path time]))))
     ch))
 
 (defn fetch
   [session paths rollup period from to]
-  (let [q (alia/prepare session fetchq)]
+  (debug "fetching paths from store: " paths rollup period from to)
+  (let [q (fetchq session)]
     (alia/execute
      session q
      :values [paths (int rollup) (int period) from to])))

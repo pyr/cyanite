@@ -10,6 +10,10 @@
 (def routes [[:paths   #"^/paths.*"]
              [:metrics #"^/metrics.*"]])
 
+(defn now
+  []
+  (quot (System/currentTimeMillis) 1000))
+
 (defn keywordized
   "Yield a map where string keys are keywordized"
   [params]
@@ -20,24 +24,22 @@
 
 (defn find-best-rollup
   [from rollups]
-  (let [now    (fn [] (quot (System/currentTimeMillis) 1000))
-        within (fn [from {:keys [rollup period] :as rollup-def}]
-                 (and (>= from (- (now) (* rollup period)))
+  (let [within (fn [{:keys [rollup period] :as rollup-def}]
+                 (and (>= (Long/parseLong from) (- (now) (* rollup period)))
                       rollup-def))]
     (some within (sort-by :rollup rollups))))
 
 (defn assoc-params
-  [{:keys [query-string] :as req}]
+  [{:keys [query-string] :as request}]
   (or
    (when-let [params (and (seq query-string)
                           (codec/form-decode query-string))]
-     (as-> req req
-           (assoc req
-             :params (keywordized
-                      (cond (map? params) params
-                            (string? params) {params nil}
-                            :else {})))))
-   (assoc req :params {})))
+     (assoc request
+       :params (keywordized
+                (cond (map? params) params
+                      (string? params) {params nil}
+                      :else {}))))
+   (assoc request :params {})))
 
 (defn match-route
   [{:keys [uri path-info] :as request} [action re]]
@@ -55,9 +57,16 @@
   (store/find-paths true query))
 
 (defmethod process :metrics
-  [{:keys [from to paths store rollups]}]
+  [{{:keys [from to path]} :params :keys [store rollups] :as request}]
+  (debug "fetching paths: " path)
   (if-let [{:keys [rollup period]} (find-best-rollup from rollups)]
-    (store/fetch store paths rollup period from to)
+    (store/fetch store
+                 (mapcat (partial store/find-paths false)
+                         (if (sequential? path) path [path]))
+                 rollup
+                 period
+                 (Long/parseLong from)
+                 (if to (Long/parseLong to) (now)))
     []))
 
 (defmethod process :default
