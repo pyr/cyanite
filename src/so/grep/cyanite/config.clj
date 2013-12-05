@@ -26,8 +26,8 @@
 
 (defn assoc-rollup-to
   [rollups]
-  (map (fn [{:keys [period] :as rollup}]
-         (assoc rollup :rollup-to #(-> % (quot period) (* period))))
+  (map (fn [{:keys [rollup] :as rollup-def}]
+         (assoc rollup-def :rollup-to #(-> % (quot rollup) (* rollup))))
        rollups))
 
 (defn find-ns-var
