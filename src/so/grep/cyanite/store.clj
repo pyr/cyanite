@@ -43,17 +43,22 @@
     (and (or partial? (= (count query) (count path-elems)))
          (every? seq (map re-matches query path-elems)))))
 
+(defn truncate-path
+  [query path]
+  (let [depth     (count (str/split query #"\."))
+        truncated (str/join "." (take depth (str/split path #"\.")))]
+    {:leaf (= truncated path) :path truncated}))
+
 (defn find-paths
   [partial? query]
   (let [depth    (count (str/split query #"\."))
-        truncate (if partial?
-                   (fn [e] (str/join "." (take depth (str/split e #"\."))))
-                   identity)]
+        truncate (if partial? (partial truncate-path query) identity)
+        sorter   (if partial? :path identity)]
     (->> @path-db
          (filter (partial path-matches partial? (prepare-path-query query)))
          (map truncate)
          (set)
-         (sort))))
+         (sort-by sorter))))
 
 (defn update-path-db-every
   [session interval]
@@ -89,10 +94,44 @@
           :values [(int ttl) [metric] (int rollup) (int period) path time]))))
     ch))
 
+(defmulti aggregate-with (comp first list))
+
+(defmethod aggregate-with :mean
+  [_ {:keys [data] :as metric}]
+  (if (seq data)
+    (-> metric
+        (dissoc :data)
+        (assoc :metric (/ (reduce + 0.0 data) (count data))))
+    metric))
+
+(defmethod aggregate-with :sum
+  [_ {:keys [data] :as metric}]
+  (-> metric
+      (dissoc :data)
+      (assoc :metric (reduce + 0.0 data))))
+
+(defmethod aggregate-with :max
+  [_ {:keys [data] :as metric}]
+  (-> metric
+      (dissoc :data)
+      (assoc :metric (apply max data))))
+
+(defmethod aggregate-with :min
+  [_ {:keys [data] :as metric}]
+  (-> metric
+      (dissoc :data)
+      (assoc :metric (apply min data))))
+
+(defmethod aggregate-with :raw
+  [_ metric]
+  metric)
+
 (defn fetch
-  [session paths rollup period from to]
+  [session agg paths rollup period from to]
   (debug "fetching paths from store: " paths rollup period from to)
+
   (let [q (fetchq session)]
-    (alia/execute
-     session q
-     :values [paths (int rollup) (int period) from to])))
+    (->> (alia/execute
+          session q
+          :values [paths (int rollup) (int period) from to])
+         (map (partial aggregate-with (keyword agg))))))

@@ -57,17 +57,27 @@
   (store/find-paths true query))
 
 (defmethod process :metrics
-  [{{:keys [from to path]} :params :keys [store rollups] :as request}]
+  [{{:keys [from to path agg]} :params :keys [store rollups] :as request}]
   (debug "fetching paths: " path)
   (if-let [{:keys [rollup period]} (find-best-rollup from rollups)]
-    (store/fetch store
-                 (mapcat (partial store/find-paths false)
-                         (if (sequential? path) path [path]))
-                 rollup
-                 period
-                 (Long/parseLong from)
-                 (if to (Long/parseLong to) (now)))
-    []))
+    (let [to    (if to (Long/parseLong to) (now))
+          from  (Long/parseLong from)
+          paths (mapcat (partial store/find-paths false)
+                        (if (sequential? path) path [path]))]
+      {:step rollup
+       :from from
+       :to to
+       :data (store/fetch store
+                          (or agg "mean")
+                          paths
+                          rollup
+                          period
+                          from
+                          to)})
+    {:step nil
+     :from nil
+     :to nil
+     :data []}))
 
 (defmethod process :default
   [_]
@@ -83,9 +93,7 @@
                                 :store store
                                 :rollups rollups))
            def-resp  {:status 200 :headers {"Content-Type" "application/json"}}
-           resp      (if (map? resp-body)
-                       (merge def-resp resp-body)
-                       (assoc def-resp :body resp-body))]
+           resp      (assoc def-resp :body resp-body)]
        (update-in resp [:body] json/generate-string))
      (catch Exception e
        (error e "could not process request")
