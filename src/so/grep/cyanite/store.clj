@@ -123,8 +123,10 @@
       (assoc :metric (apply min data))))
 
 (defmethod aggregate-with :raw
-  [_ metric]
-  metric)
+  [_ {:keys [data] :as metric}]
+  (-> metric
+      (dissoc :data)
+      (assoc :metric data)))
 
 (defn max-points
   [paths rollup from to]
@@ -141,9 +143,19 @@
   (debug "fetching paths from store: " paths rollup period from to
          (max-points paths rollup from to))
 
-  (let [q (fetchq session)]
-    (->> (alia/execute
-          session q
-          :values [paths (int rollup) (int period) from to
-                   (max-points paths rollup from to)])
-         (map (partial aggregate-with (keyword agg))))))
+  (let [q (fetchq session)
+        data       (->> (alia/execute
+                         session q
+                         :values [paths (int rollup) (int period) from to
+                                  (max-points paths rollup from to)])
+                        (map (partial aggregate-with (keyword agg))))
+        min-point  (:time (first data))
+        max-point  (-> to (quot rollup) (* rollup))
+        nil-points (->> (range min-point (inc max-point) rollup)
+                        (map (fn [time] {time [{:time time}]}))
+                        (reduce merge {}))
+        as-map     (merge nil-points (group-by :time data))]
+    {:from min-point
+     :to   max-point
+     :step rollup
+     :data (map :metric (sort-by :time (map (comp first val) as-map)))}))

@@ -64,20 +64,8 @@
           from  (Long/parseLong from)
           paths (mapcat (partial store/find-paths false)
                         (if (sequential? path) path [path]))]
-      {:step rollup
-       :from from
-       :to to
-       :data (store/fetch store
-                          (or agg "mean")
-                          paths
-                          rollup
-                          period
-                          from
-                          to)})
-    {:step nil
-     :from nil
-     :to nil
-     :data []}))
+      (store/fetch store (or agg "mean") paths rollup period from to))
+    {:step nil :from nil :to nil :data []}))
 
 (defmethod process :default
   [_]
