@@ -23,7 +23,7 @@
    (str
     "SELECT path,data,time FROM metric WHERE "
     "path IN ? AND rollup = ? AND period = ? "
-    "AND time >= ? AND time <= ? ORDER BY time ASC;")))
+    "AND time >= ? AND time <= ? ORDER BY time ASC LIMIT ?;")))
 
 (defn prepare-path-elem-re
   [e]
@@ -126,12 +126,24 @@
   [_ metric]
   metric)
 
+(defn max-points
+  [paths rollup from to]
+  (let [path-count (count paths)]
+    (-> (- to from)
+        (/ rollup)
+        (long)
+        (inc)
+        (* path-count)
+        (int))))
+
 (defn fetch
   [session agg paths rollup period from to]
-  (debug "fetching paths from store: " paths rollup period from to)
+  (debug "fetching paths from store: " paths rollup period from to
+         (max-points paths rollup from to))
 
   (let [q (fetchq session)]
     (->> (alia/execute
           session q
-          :values [paths (int rollup) (int period) from to])
+          :values [paths (int rollup) (int period) from to
+                   (max-points paths rollup from to)])
          (map (partial aggregate-with (keyword agg))))))
