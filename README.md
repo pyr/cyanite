@@ -117,6 +117,14 @@ from this branch for now: https://github.com/brutasse/graphite-web/tree/exoscale
 will also need the following module installed: https://github.com/brutasse/graphite-cyanite.
 Stay tuned for a seamless installation procedure.
 
+## Thanks
+
+Thanks go out to @brutasse for his work on https://github.com/brutasse/graphite-cyanite and modifications
+in his `graphite-exoscale` branch of graphite-web: https://github.com/brutasse/graphite-web.
+
+We're also indebted to the creator of graphite which we've been using for a while
+and for the rest of the crew at exoscale.
+
 ## License
 
 Copyright 2013 Pierre-Yves Ritschard <pyr@spootnik.org>
