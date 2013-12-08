@@ -1,4 +1,5 @@
 (ns so.grep.cyanite.logging
+  "Very simple wrapper for log4j"
   (:import (org.apache.log4j           Logger
                                        BasicConfigurator
                                        EnhancedPatternLayout
@@ -12,7 +13,9 @@
            (org.apache.commons.logging LogFactory))
   (:require [clojure.tools.logging :as log]))
 
-(def levels
+(def
+  ^{:doc "known log levels"}
+  levels
   {"debug" Level/DEBUG
    "info"  Level/INFO
    "warn"  Level/WARN

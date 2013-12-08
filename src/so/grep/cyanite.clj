@@ -1,4 +1,5 @@
 (ns so.grep.cyanite
+  "Main cyanite namespace"
   (:gen-class)
   (:require [so.grep.cyanite.carbon :as carbon]
             [so.grep.cyanite.http   :as http]
@@ -6,6 +7,7 @@
             [clojure.tools.cli      :refer [cli]]))
 
 (defn get-cli
+  "Call cli parsing with our known options"
   [args]
   (try
     (cli args
@@ -18,6 +20,7 @@
       (System/exit 1))))
 
 (defn -main
+  "Our main function, parses args and launches appropriate services"
   [& args]
   (let [[{:keys [path help quiet]} args banner] (get-cli args)]
     (when help

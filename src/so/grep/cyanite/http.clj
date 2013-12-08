@@ -1,4 +1,7 @@
 (ns so.grep.cyanite.http
+  "Very simple asynchronous HTTP API, implements two
+   routes: paths and metrics to query existing paths
+   and retrieve metrics"
   (:require [aleph.http            :as http]
             [ring.util.codec       :as codec]
             [so.grep.cyanite.store :as store]
@@ -7,10 +10,13 @@
             [clojure.string        :refer [lower-case]]
             [clojure.tools.logging :refer [info error debug]]))
 
-(def routes [[:paths   #"^/paths.*"]
-             [:metrics #"^/metrics.*"]])
+(def
+  ^{:doc "Our dead simple router"}
+  routes [[:paths   #"^/paths.*"]
+          [:metrics #"^/metrics.*"]])
 
 (defn now
+  "Returns a unix epoch"
   []
   (quot (System/currentTimeMillis) 1000))
 
@@ -23,6 +29,7 @@
    nil))
 
 (defn find-best-rollup
+  "Find most precise storage period given the oldest point wanted"
   [from rollups]
   (let [within (fn [{:keys [rollup period] :as rollup-def}]
                  (and (>= (Long/parseLong from) (- (now) (* rollup period)))
@@ -30,6 +37,7 @@
     (some within (sort-by :rollup rollups))))
 
 (defn assoc-params
+  "Parse query args"
   [{:keys [query-string] :as request}]
   (or
    (when-let [params (and (seq query-string)
@@ -42,15 +50,19 @@
    (assoc request :params {})))
 
 (defn match-route
+  ""
   [{:keys [uri path-info] :as request} [action re]]
   (when (re-matches re (or path-info uri))
     action))
 
 (defn assoc-route
+  "Find matching route in router, store "
   [request]
   (assoc request :action (some (partial match-route request) routes)))
 
-(defmulti process :action)
+(defmulti process
+  "Process request by dispatching on the action that was found"
+  :action)
 
 (defmethod process :paths
   [{{:keys [query]} :params :as request}]
@@ -65,33 +77,36 @@
           paths (mapcat (partial store/find-paths false)
                         (if (sequential? path) path [path]))]
       (store/fetch store (or agg "mean") paths rollup period from to))
-    {:step nil :from nil :to nil :data []}))
+    {:step nil :from nil :to nil :series {}}))
 
 (defmethod process :default
   [_]
-  {:body {:error "unknown action" :status 404}})
+  (throw (ex-info "unknown action" {:status 404 :suppress? true})))
 
 (defn wrap-process
+  "Process request, generating a JSON output for it, catch exception
+   and yield a payload"
   [request rollups chan store]
   (debug "got request: " request)
   (enqueue
    chan
    (try
-     (let [resp-body (process (assoc request
-                                :store store
-                                :rollups rollups))
-           def-resp  {:status 200 :headers {"Content-Type" "application/json"}}
-           resp      (assoc def-resp :body resp-body)]
-       (update-in resp [:body] json/generate-string))
+     {:status  200
+      :headers {"Content-Type" "application/json"}
+      :body    (json/generate-string
+                (process (assoc request :store store :rollups rollups)))}
      (catch Exception e
-       (error e "could not process request")
-       {:status 500
-        :headers {"Content-Type" "application/json"}
-        :body (json/generate-string
-               {:error (.getMessage e)
-                :data  (ex-data e)})}))))
+       (let [{:keys [status body suppress?]} (ex-data e)]
+         (when-not suppress?
+           (error e "could not process request"))
+         {:status (or status 500)
+          :headers {"Content-Type" "application/json"}
+          :body    (json/generate-string
+                    (or body {:error (.getMessage e)}))})))))
 
 (defn start
+  "Start the API, handling each request by parsing parameters and
+   routes then handing over to the request processor"
   [{:keys [http store carbon] :as config}]
   (let [handler (fn [chan request]
                   (-> request

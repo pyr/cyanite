@@ -1,8 +1,11 @@
 (ns so.grep.cyanite.config
+  "Yaml config parser, with a poor man's dependency injector"
   (:require [clj-yaml.core         :refer [parse-string]]
             [clojure.tools.logging :refer [error info debug]]))
 
-(def default-logging
+(def
+  ^{:doc "handle logging configuration from the yaml file"}
+  default-logging
   {:use "so.grep.cyanite.logging/start-logging"
    :pattern "%p [%d] %t - %c - %m%n"
    :external false
@@ -11,26 +14,32 @@
    :level  "info"
    :overrides {:so.grep "debug"}})
 
-(def default-store
+(def ^{:doc "handle storage with cassandra-metric-store by default"}
+  default-store
   {:use "so.grep.cyanite.store/cassandra-metric-store"})
 
-(def default-carbon
+(def ^{:doc "let carbon listen on 2003 by default"}
+  default-carbon
   {:enabled true
    :host    "127.0.0.1"
    :port    2003})
 
-(def default-http
+(def ^{:doc "let the http api listen on 8080 by default"}
+  default-http
   {:enabled true
    :host    "127.0.0.1"
    :port    8080})
 
 (defn assoc-rollup-to
+  "Enhance a rollup definition with a function to compute
+   the rollup of a point"
   [rollups]
   (map (fn [{:keys [rollup] :as rollup-def}]
          (assoc rollup-def :rollup-to #(-> % (quot rollup) (* rollup))))
        rollups))
 
 (defn find-ns-var
+  "Find a symbol in a namespace"
   [s]
   (try
     (let [n (namespace (symbol s))]
@@ -48,6 +57,8 @@
     (throw (ex-info (str "no such namespace: " class) {}))))
 
 (defn get-instance
+  "For dependency injected configuration elements, find build fn
+   and call it"
   [{:keys [use] :as config} target]
   (debug "building " target " with " use)
   (instantiate (-> use name symbol) config))
@@ -64,6 +75,7 @@
       parse-string))
 
 (defn init
+  "Parse yaml then enhance config"
   [path quiet?]
   (try
     (when-not quiet?

@@ -204,6 +204,16 @@ metrics. Right now it is way too expensive and should be computed differently"}
       (* (count paths))
       (int)))
 
+(defn fill-in
+  "Fill in fetched data with nil metrics for a given time range"
+  [nils [path data]]
+  (hash-map path
+            (->> (group-by :time data)
+                 (merge nils)
+                 (map (comp first val))
+                 (sort-by :time)
+                 (map :metric))))
+
 (defn fetch
   "Fetch metrics for a given resolution. Once fetched, formats
    metrics in a way graphite can easily consume"
@@ -222,8 +232,10 @@ metrics. Right now it is way too expensive and should be computed differently"}
         nil-points (->> (range min-point (inc max-point) rollup)
                         (map (fn [time] {time [{:time time}]}))
                         (reduce merge {}))
-        as-map     (merge nil-points (group-by :time data))]
+        by-path    (->> (group-by :path data)
+                        (map (partial fill-in nil-points))
+                        (reduce merge {}))]
     {:from min-point
      :to   max-point
      :step rollup
-     :data (map :metric (sort-by :time (map (comp first val) as-map)))}))
+     :series by-path}))
