@@ -28,7 +28,7 @@ The resulting artifact will be stored in `target/cyanite-0.1.0-standalone.jar`
 
 You will need a running cassandra cluster, the simplest way to get up and running
 is to follow the instructions as available here (using the `20x` branch):
-[http://wiki.apache.org/cassandra/DebianPackaging].
+http://wiki.apache.org/cassandra/DebianPackaging.
 
 You will need a cassandra keyspace (rough equivalent of an SQL database) with the
 following schema (also available in doc/schema.cql):
@@ -113,8 +113,8 @@ store:
 ## Wiring up graphite-web to cyanite
 
 To display cyanite graphs from grahite, you need to run graphite-web
-from this branch for now: [https://github.com/brutasse/graphite-web/tree/exoscale-graphite], you
-will also need the following module installed: [https://github.com/brutasse/graphite-cyanite].
+from this branch for now: https://github.com/brutasse/graphite-web/tree/exoscale-graphite, you
+will also need the following module installed: https://github.com/brutasse/graphite-cyanite.
 Stay tuned for a seamless installation procedure.
 
 ## License
