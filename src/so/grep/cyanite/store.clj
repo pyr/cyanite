@@ -1,14 +1,33 @@
 (ns so.grep.cyanite.store
+  "Implements a metric store on top of cassandra. This currently
+   relies on a single schema. All cassandra interaction bits
+   should quickly be abstracted with a protocol to more easily
+   swap implementations"
   (:require [so.grep.cyanite.config :as config]
             [clojure.string         :as str]
             [qbits.alia             :as alia]
             [clojure.tools.logging  :refer [error info debug]]
             [lamina.core            :refer [channel receive-all]]))
 
-(def path-db
+(def
+  ^{:doc "Store an in-memory set of all known metric paths"}
+  path-db
   (atom #{}))
 
+;;
+;; The following contains necessary cassandra queries. Since
+;; cyanite relies on very few queries, I decided against using
+;; hayt
+
 (defn insertq
+  "Yields a cassandra prepared statement of 6 arguments:
+
+* `ttl`: how long to keep the point around
+* `metric`: the data point
+* `rollup`: interval between points at this resolution
+* `period`: rollup multiplier which determines the time to keep points for
+* `path`: name of the metric
+* `time`: timestamp of the metric, should be divisible by rollup"
   [session]
   (alia/prepare
    session
@@ -17,6 +36,14 @@
     "WHERE rollup = ? AND period = ? AND path = ? AND time = ?;")))
 
 (defn fetchq
+  "Yields a cassandra prepared statement of 6 arguments:
+
+* `paths`: list of paths
+* `rollup`: interval between points at this resolution
+* `period`: rollup multiplier which determines the time to keep points for
+* `min`: return points starting from this timestamp
+* `max`: return points up to this timestamp
+* `limit`: maximum number of points to return"
   [session]
   (alia/prepare
    session
@@ -25,63 +52,96 @@
     "path IN ? AND rollup = ? AND period = ? "
     "AND time >= ? AND time <= ? ORDER BY time ASC LIMIT ?;")))
 
+
+(def
+  ^{:doc "This query returns only paths, to get a list of
+metrics. Right now it is way too expensive and should be computed differently"}
+  pathq "SELECT path from metric;")
+
+(defn useq
+  "Yields a cassandra use statement for a keyspace"
+  [keyspace]
+  (format "USE %s;" (name keyspace)))
+
+;;
+;; The next section contains a series of path matching functions
+
+
 (defn prepare-path-elem-re
+  "Each graphite path elem may contain '*' wildcards, this
+   functions yields a regexp pattern fro this format"
   [e]
   (re-pattern (format "^%s$" (str/replace e "*" ".*"))))
 
 (defn prepare-path-query
+  "For a complete path query, yield a list of regexp pattern
+   for each element"
   [q]
   (map prepare-path-elem-re (str/split q #"\.")))
 
-(defn path-elem-matches
-  [elem-re path-elem]
-  (re-matches elem-re path-elem))
-
-(defn path-matches
+(defn path-matches?
+  "Predicate testing a path against a query. partial? determines
+   whether the query should be treated as a prefix query or an
+   absolute query"
   [partial? query path]
   (let [path-elems (str/split path #"\.")]
     (and (or partial? (= (count query) (count path-elems)))
          (every? seq (map re-matches query path-elems)))))
 
 (defn truncate-path
+  "When doing prefix searches, we're only interested in returning
+   prefixes, this function yields a map of two keys:
+
+   * leaf: indicates whether this is a prefix or an actual point
+   * path: the prefix"
   [query path]
   (let [depth     (count (str/split query #"\."))
         truncated (str/join "." (take depth (str/split path #"\.")))]
     {:leaf (= truncated path) :path truncated}))
 
 (defn find-paths
+  "Find either prefix or absolute matches for a query"
   [partial? query]
-  (let [depth    (count (str/split query #"\."))
-        truncate (if partial? (partial truncate-path query) identity)
-        sorter   (if partial? :path identity)]
-    (->> @path-db
-         (filter (partial path-matches partial? (prepare-path-query query)))
-         (map truncate)
-         (set)
-         (sort-by sorter))))
+  (let [depth    (count (str/split query #"\."))]
+    (filter (partial path-matches? partial? (prepare-path-query query))
+            @path-db)))
+
+(defn find-prefixes
+  "Find prefix matches for a query and then format for graphite output"
+  [query]
+  (->> (find-paths true query)
+       (map (partial truncate-path query))
+       (set)
+       (sort-by :path)))
 
 (defn update-path-db-every
+  "At each interval, fetch all known paths, and store the
+   resulting set in path-db"
   [session interval]
   (while true
-    (->> (alia/execute session "SELECT path from metric;")
+    (->> (alia/execute session pathq)
          (map :path)
          (set)
          (reset! path-db)))
   (Thread/sleep (* interval 1000)))
 
 (defn cassandra-metric-store
+  "Connect to cassandra and start a path fetching thread.
+   The interval is fixed for now, at 1minute"
   [{:keys [keyspace cluster hints]
     :or   {hints {:replication {:class "SimpleStrategy"
                                 :replication_factor 1}}}}]
   (info "connecting to cassandra cluster")
   (let [session (-> (alia/cluster cluster) (alia/connect))]
-    (try (alia/execute session (format "USE %s;" (name keyspace)))
+    (try (alia/execute session (useq keyspace))
          (future (update-path-db-every session 60))
          session
          (catch Exception e
            (error e "could not connect to cassandra cluster")))))
 
 (defn channel-for
+  "Yields a lamina channel which expects lists of metrics and will
+   insert each for every resolution"
   [session]
   (let [ch    (channel)
         query (insertq session)]
@@ -94,7 +154,12 @@
           :values [(int ttl) [metric] (int rollup) (int period) path time]))))
     ch))
 
-(defmulti aggregate-with (comp first list))
+(defmulti aggregate-with
+  "This transforms a raw list of points according to the provided aggregation
+   method. Each point is stored as a list of data points, so multiple
+   methods make sense (max, min, mean). Additionally, a raw method is
+   provided"
+  (comp first list))
 
 (defmethod aggregate-with :mean
   [_ {:keys [data] :as metric}]
@@ -129,21 +194,24 @@
       (assoc :metric data)))
 
 (defn max-points
+  "Returns the maximum number of points to expect for
+   a given resolution, time range and number of paths"
   [paths rollup from to]
-  (let [path-count (count paths)]
-    (-> (- to from)
-        (/ rollup)
-        (long)
-        (inc)
-        (* path-count)
-        (int))))
+  (-> (- to from)
+      (/ rollup)
+      (long)
+      (inc)
+      (* (count paths))
+      (int)))
 
 (defn fetch
+  "Fetch metrics for a given resolution. Once fetched, formats
+   metrics in a way graphite can easily consume"
   [session agg paths rollup period from to]
   (debug "fetching paths from store: " paths rollup period from to
          (max-points paths rollup from to))
 
-  (let [q (fetchq session)
+  (let [q          (fetchq session)
         data       (->> (alia/execute
                          session q
                          :values [paths (int rollup) (int period) from to

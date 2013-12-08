@@ -54,7 +54,7 @@
 
 (defmethod process :paths
   [{{:keys [query]} :params :as request}]
-  (store/find-paths true query))
+  (store/find-prefixes query))
 
 (defmethod process :metrics
   [{{:keys [from to path agg]} :params :keys [store rollups] :as request}]
