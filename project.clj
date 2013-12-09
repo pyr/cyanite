@@ -5,7 +5,6 @@
             :url "https://github.com/pyr/cyanite/tree/master/LICENSE"}
   :maintainer {:email "pyr@spootnik.org"}
   :main so.grep.cyanite
-  :profiles {:dev {:eval-in-leiningen true}}
   :dependencies [[org.clojure/clojure       "1.5.1"]
                  [org.clojure/tools.logging "0.2.6"]
                  [org.clojure/tools.cli     "0.2.4"]
