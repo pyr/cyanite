@@ -13,7 +13,7 @@ logging:
   level: info
   console: true
   files:
-    - "/tmp/cyanite.log"
+    - "/var/log/cyanite/cyanite.log"
 store:
   cluster: 'localhost'
   keyspace: 'metric'
