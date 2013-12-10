@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [ -f /etc/default/cyanite ]; then
+    . /etc/default/cyanite
+fi
+
+JAR="$EXTRA_CLASSPATH:/usr/lib/cyanite/cyanite.jar"
+CONFIG="/etc/cyanite.yaml"
+
+exec java $EXTRA_JAVA_OPTS $OPTS -cp "$JAR" so.grep.cyanite "$CONFIG"
