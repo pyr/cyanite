@@ -35,4 +35,4 @@
     (info "starting carbon handler")
     (tcp/start-tcp-server
      handler
-     (merge carbon {:frame (string :utf-8 :delimiters ["\r\n"])}))))
+     (merge carbon {:frame (string :utf-8 :delimiters ["\r\n" "\n"])}))))
