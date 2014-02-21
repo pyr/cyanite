@@ -112,15 +112,13 @@ store:
 
 ## Wiring up graphite-web to cyanite
 
-To display cyanite graphs from grahite, you need to run graphite-web
-from this branch for now: https://github.com/brutasse/graphite-web/tree/exoscale-graphite, you
-will also need the following module installed: https://github.com/brutasse/graphite-cyanite.
+To display cyanite graphs from grahite, you need to install graphite-web
+from source using the master branch at https://github.com/graphite-project/graphite-web. You will also need the following module installed: https://github.com/brutasse/graphite-cyanite.
 Stay tuned for a seamless installation procedure.
 
 ## Thanks
 
-Thanks go out to @brutasse for his work on https://github.com/brutasse/graphite-cyanite and modifications
-in his `graphite-exoscale` branch of graphite-web: https://github.com/brutasse/graphite-web.
+Thanks go out to @brutasse for his work on https://github.com/brutasse/graphite-cyanite and the addition of pluggable backends in graphite-web.
 
 We're also indebted to the creator of graphite which we've been using for a while
 and for the rest of the crew at exoscale.
