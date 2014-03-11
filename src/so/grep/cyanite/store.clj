@@ -122,8 +122,8 @@ metrics. Right now it is way too expensive and should be computed differently"}
     (->> (alia/execute session pathq)
          (map :path)
          (set)
-         (reset! path-db)))
-  (Thread/sleep (* interval 1000)))
+         (reset! path-db))
+    (Thread/sleep (* interval 1000))))
 
 (defn cassandra-metric-store
   "Connect to cassandra and start a path fetching thread.
