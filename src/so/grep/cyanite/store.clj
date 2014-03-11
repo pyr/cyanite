@@ -33,7 +33,7 @@
    session
    (str
     "UPDATE metric USING TTL ? SET data = data + ? "
-    "WHERE rollup = ? AND period = ? AND path = ? AND time = ?;")))
+    "WHERE tenant = '' AND rollup = ? AND period = ? AND path = ? AND time = ?;")))
 
 (defn fetchq
   "Yields a cassandra prepared statement of 6 arguments:
@@ -49,7 +49,7 @@
    session
    (str
     "SELECT path,data,time FROM metric WHERE "
-    "path IN ? AND rollup = ? AND period = ? "
+    "path IN ? AND tenant = '' AND rollup = ? AND period = ? "
     "AND time >= ? AND time <= ? ORDER BY time ASC LIMIT ?;")))
 
 
