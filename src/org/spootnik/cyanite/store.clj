@@ -1,13 +1,13 @@
-(ns so.grep.cyanite.store
+(ns org.spootnik.cyanite.store
   "Implements a metric store on top of cassandra. This currently
    relies on a single schema. All cassandra interaction bits
    should quickly be abstracted with a protocol to more easily
    swap implementations"
-  (:require [so.grep.cyanite.config :as config]
-            [clojure.string         :as str]
-            [qbits.alia             :as alia]
-            [clojure.tools.logging  :refer [error info debug]]
-            [lamina.core            :refer [channel receive-all]]))
+  (:require [org.spootnik.cyanite.config :as config]
+            [clojure.string              :as str]
+            [qbits.alia                  :as alia]
+            [clojure.tools.logging       :refer [error info debug]]
+            [lamina.core                 :refer [channel receive-all]]))
 
 (def
   ^{:doc "Store an in-memory set of all known metric paths"}

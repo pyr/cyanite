@@ -1,4 +1,4 @@
-(ns so.grep.cyanite.config
+(ns org.spootnik.cyanite.config
   "Yaml config parser, with a poor man's dependency injector"
   (:require [clj-yaml.core         :refer [parse-string]]
             [clojure.tools.logging :refer [error info debug]]))
@@ -6,17 +6,17 @@
 (def
   ^{:doc "handle logging configuration from the yaml file"}
   default-logging
-  {:use "so.grep.cyanite.logging/start-logging"
+  {:use "org.spootnik.cyanite.logging/start-logging"
    :pattern "%p [%d] %t - %c - %m%n"
    :external false
    :console true
    :files  []
    :level  "info"
-   :overrides {:so.grep "debug"}})
+   :overrides {:org.spootnik "debug"}})
 
 (def ^{:doc "handle storage with cassandra-metric-store by default"}
   default-store
-  {:use "so.grep.cyanite.store/cassandra-metric-store"})
+  {:use "org.spootnik.cyanite.store/cassandra-metric-store"})
 
 (def ^{:doc "let carbon listen on 2003 by default"}
   default-carbon

@@ -1,10 +1,10 @@
-(defproject so.grep/cyanite "0.1.0"
+(defproject org.spootnik/cyanite "0.1.0"
   :description "Alternative storage backend for graphite, backed by cassandra"
   :url "https://github.com/pyr/cyanite"
   :license {:name "MIT License"
             :url "https://github.com/pyr/cyanite/tree/master/LICENSE"}
   :maintainer {:email "pyr@spootnik.org"}
-  :main so.grep.cyanite
+  :main org.spootnik.cyanite
   :dependencies [[org.clojure/clojure       "1.5.1"]
                  [org.clojure/tools.logging "0.2.6"]
                  [org.clojure/tools.cli     "0.2.4"]

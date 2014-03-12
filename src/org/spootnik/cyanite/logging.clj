@@ -1,4 +1,4 @@
-(ns so.grep.cyanite.logging
+(ns org.spootnik.cyanite.logging
   "Very simple wrapper for log4j"
   (:import (org.apache.log4j           Logger
                                        BasicConfigurator

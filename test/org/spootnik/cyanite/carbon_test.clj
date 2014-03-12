@@ -1,7 +1,7 @@
-(ns so.grep.cyanite.carbon-test
-  (:require [so.grep.cyanite.carbon :refer :all]
-            [so.grep.cyanite.config :refer [assoc-rollup-to]]
-            [clojure.test           :refer :all]))
+(ns org.spootnik.cyanite.carbon-test
+  (:require [org.spootnik.cyanite.carbon :refer :all]
+            [org.spootnik.cyanite.config :refer [assoc-rollup-to]]
+            [clojure.test                :refer :all]))
 
 (deftest formatter-test
   (testing "nil-transform"

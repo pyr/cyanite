@@ -1,11 +1,11 @@
-(ns so.grep.cyanite.carbon
+(ns org.spootnik.cyanite.carbon
   "Dead simple carbon protocol handler"
-  (:require [aleph.tcp             :as tcp]
-            [clojure.string        :as s]
-            [so.grep.cyanite.store :as store]
-            [clojure.tools.logging :refer [info debug]]
-            [gloss.core            :refer [string]]
-            [lamina.core           :refer [receive-all map* siphon]]))
+  (:require [aleph.tcp                  :as tcp]
+            [clojure.string             :as s]
+            [org.spootnik.cyanite.store :as store]
+            [clojure.tools.logging      :refer [info debug]]
+            [gloss.core                 :refer [string]]
+            [lamina.core                :refer [receive-all map* siphon]]))
 
 (defn formatter
   "Split each line on whitespace, discard nan metric lines

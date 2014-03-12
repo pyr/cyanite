@@ -1,10 +1,10 @@
-(ns so.grep.cyanite
+(ns org.spootnik.cyanite
   "Main cyanite namespace"
   (:gen-class)
-  (:require [so.grep.cyanite.carbon :as carbon]
-            [so.grep.cyanite.http   :as http]
-            [so.grep.cyanite.config :as config]
-            [clojure.tools.cli      :refer [cli]]))
+  (:require [org.spootnik.cyanite.carbon :as carbon]
+            [org.spootnik.cyanite.http   :as http]
+            [org.spootnik.cyanite.config :as config]
+            [clojure.tools.cli           :refer [cli]]))
 
 (defn get-cli
   "Call cli parsing with our known options"
