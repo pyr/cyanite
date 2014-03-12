@@ -44,10 +44,11 @@ USE metric;
 CREATE TABLE metric (
   period int,
   rollup int,
+  tenant text,
   path text,
   time bigint,
   data list<double>,
-  PRIMARY KEY ((period, rollup, path), time)
+  PRIMARY KEY ((tenant, period, rollup, path), time)
 ) WITH
   bloom_filter_fp_chance=0.010000 AND
   caching='KEYS_ONLY' AND
