@@ -98,6 +98,11 @@
                 (str "cyanite-" (:version project) "-standalone.jar"))
           (file dir "usr" "lib" "cyanite" "cyanite.jar"))
 
+    ; cql schema
+    (.mkdirs (file dir "var" "lib" "cyanite"))
+    (copy (file (:root project) "doc" "schema.cql")
+          (file dir "var" "lib" "cyanite" "schema.cql"))
+
     ; Binary
     (.mkdirs (file dir "usr" "bin"))
     (copy (file (:root project) "pkg" "deb" "cyanite")
