@@ -80,7 +80,9 @@
     (.mkdirs (file dir "DEBIAN"))
     (write (file dir "DEBIAN" "control") (control project))
     (write (file dir "DEBIAN" "conffiles")
-           (join "\n" ["/etc/cyanite.yaml"]))
+           (join "\n" ["/etc/cyanite.yaml"
+                       "/etc/init.d/cyanite.yaml"
+                       "/etc/default/cyanite"]))
 
     ; Preinst
     (copy (file (:root project) "pkg" "deb" "preinst.sh")
