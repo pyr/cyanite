@@ -80,7 +80,9 @@
     (.mkdirs (file dir "DEBIAN"))
     (write (file dir "DEBIAN" "control") (control project))
     (write (file dir "DEBIAN" "conffiles")
-           (join "\n" ["/etc/cyanite.yaml"]))
+           (join "\n" ["/etc/cyanite.yaml"
+                       "/etc/init.d/cyanite"
+                       "/etc/default/cyanite"]))
 
     ; Preinst
     (copy (file (:root project) "pkg" "deb" "preinst.sh")
@@ -91,6 +93,16 @@
     (copy (file (:root project) "pkg" "deb" "postinst.sh")
           (file dir "DEBIAN" "postinst"))
     (.setExecutable (file dir "DEBIAN" "postinst") true false)
+
+    ; Prerm
+    (copy (file (:root project) "pkg" "deb" "prerm.sh")
+          (file dir "DEBIAN" "prerm"))
+    (.setExecutable (file dir "DEBIAN" "prerm") true false)
+
+    ; Postrm
+    (copy (file (:root project) "pkg" "deb" "postrm.sh")
+          (file dir "DEBIAN" "postrm"))
+    (.setExecutable (file dir "DEBIAN" "postrm") true false)
 
     ; Jar
     (.mkdirs (file dir "usr" "lib" "cyanite"))

@@ -1,5 +1,7 @@
 #!/bin/sh
 # Create cyanite user and group
+set -e
+
 USERNAME="cyanite"
 GROUPNAME="cyanite"
 getent group "$GROUPNAME" >/dev/null || groupadd -r "$GROUPNAME"
