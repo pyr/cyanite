@@ -81,7 +81,7 @@
     (write (file dir "DEBIAN" "control") (control project))
     (write (file dir "DEBIAN" "conffiles")
            (join "\n" ["/etc/cyanite.yaml"
-                       "/etc/init.d/cyanite.yaml"
+                       "/etc/init.d/cyanite"
                        "/etc/default/cyanite"]))
 
     ; Preinst
