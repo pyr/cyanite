@@ -99,6 +99,11 @@
           (file dir "DEBIAN" "prerm"))
     (.setExecutable (file dir "DEBIAN" "prerm") true false)
 
+    ; Postrm
+    (copy (file (:root project) "pkg" "deb" "postrm.sh")
+          (file dir "DEBIAN" "postrm"))
+    (.setExecutable (file dir "DEBIAN" "postrm") true false)
+
     ; Jar
     (.mkdirs (file dir "usr" "lib" "cyanite"))
     (copy (file (:root project) "target"
