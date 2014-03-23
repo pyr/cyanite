@@ -101,6 +101,15 @@ store:
   keyspace: 'metric'
 ```
 
+You can also specify your rollups as [carbon-style](http://graphite.readthedocs.org/en/latest/config-carbon.html#storage-schemas-conf) retention description.
+
+```yaml
+carbon:
+  rollups:
+    - "10s:1d"
+    - "10m:1y"
+```
+
 ## Running
 
 ```
