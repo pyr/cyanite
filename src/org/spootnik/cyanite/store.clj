@@ -56,7 +56,7 @@
 (def
   ^{:doc "This query returns only paths, to get a list of
 metrics. Right now it is way too expensive and should be computed differently"}
-  pathq "SELECT path from metric;")
+  pathq "SELECT distinct tenant, path, rollup, period from metric;")
 
 (defn useq
   "Yields a cassandra use statement for a keyspace"
