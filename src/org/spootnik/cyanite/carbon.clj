@@ -11,7 +11,7 @@
   "Split each line on whitespace, discard nan metric lines
    and format correct lines for each resolution"
   [rollups input]
-  (let [[path metric time] (s/split input #" ")]
+  (let [[path metric time] (s/split (.trim input) #" ")]
     (when (not= metric "nan")
       (for [{:keys [rollup period rollup-to]} rollups]
         {:path   path
@@ -35,4 +35,4 @@
     (info "starting carbon handler")
     (tcp/start-tcp-server
      handler
-     (merge carbon {:frame (string :utf-8 :delimiters ["\r\n" "\n"])}))))
+     (merge carbon {:frame (string :utf-8 :delimiters ["\n"])}))))
