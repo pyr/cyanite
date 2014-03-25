@@ -5,7 +5,7 @@
             :url "https://github.com/pyr/cyanite/tree/master/LICENSE"}
   :maintainer {:email "pyr@spootnik.org"}
   :main org.spootnik.cyanite
-  :dependencies [[org.clojure/clojure       "1.5.1"]
+  :dependencies [[org.clojure/clojure       "1.6.0"]
                  [org.clojure/tools.logging "0.2.6"]
                  [org.clojure/tools.cli     "0.2.4"]
                  [ring/ring-codec           "1.0.0"]
