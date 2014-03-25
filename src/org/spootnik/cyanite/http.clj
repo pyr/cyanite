@@ -13,7 +13,8 @@
 (def
   ^{:doc "Our dead simple router"}
   routes [[:paths   #"^/paths.*"]
-          [:metrics #"^/metrics.*"]])
+          [:metrics #"^/metrics.*"]
+          [:ping #"^/ping/?"]])
 
 (defn now
   "Returns a unix epoch"
@@ -78,6 +79,10 @@
                         (if (sequential? path) path [path]))]
       (store/fetch store (or agg "mean") paths rollup period from to))
     {:step nil :from nil :to nil :series {}}))
+
+(defmethod process :ping
+  [_]
+  {})
 
 (defmethod process :default
   [_]
