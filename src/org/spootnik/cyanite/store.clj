@@ -119,10 +119,13 @@ metrics. Right now it is way too expensive and should be computed differently"}
    resulting set in path-db"
   [session interval]
   (while true
-    (->> (alia/execute session pathq)
-         (map :path)
-         (set)
-         (reset! path-db))
+    (try
+      (->> (alia/execute session pathq)
+           (map :path)
+           (set)
+           (reset! path-db))
+      (catch Exception e
+        (error e "could not update path database")))
     (Thread/sleep (* interval 1000))))
 
 (defn cassandra-metric-store
