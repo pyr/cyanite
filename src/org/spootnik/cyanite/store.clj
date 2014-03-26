@@ -221,7 +221,7 @@ metrics. Right now it is way too expensive and should be computed differently"}
   (debug "fetching paths from store: " paths rollup period from to
          (max-points paths rollup from to))
 
-  (if paths
+  (if (seq paths)
     (let [q          (fetchq session)
           data       (->> (alia/execute
                            session q
