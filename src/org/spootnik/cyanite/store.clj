@@ -221,14 +221,14 @@ metrics. Right now it is way too expensive and should be computed differently"}
   (debug "fetching paths from store: " paths rollup period from to
          (max-points paths rollup from to))
 
-  (if (seq paths)
-    (let [q          (fetchq session)
-          data       (->> (alia/execute
-                           session q
+  (if-let [data (and (seq paths)
+                     (->> (alia/execute
+                           session (fetchq session)
                            :values [paths (int rollup) (int period) from to
                                     (max-points paths rollup from to)])
-                          (map (partial aggregate-with (keyword agg))))
-          min-point  (:time (first data))
+                          (map (partial aggregate-with (keyword agg)))
+                          (seq)))]
+    (let [min-point  (:time (first data))
           max-point  (-> to (quot rollup) (* rollup))
           nil-points (->> (range min-point (inc max-point) rollup)
                           (map (fn [time] {time [{:time time}]}))
