@@ -221,21 +221,26 @@ metrics. Right now it is way too expensive and should be computed differently"}
   (debug "fetching paths from store: " paths rollup period from to
          (max-points paths rollup from to))
 
-  (let [q          (fetchq session)
-        data       (->> (alia/execute
-                         session q
-                         :values [paths (int rollup) (int period) from to
-                                  (max-points paths rollup from to)])
-                        (map (partial aggregate-with (keyword agg))))
-        min-point  (:time (first data))
-        max-point  (-> to (quot rollup) (* rollup))
-        nil-points (->> (range min-point (inc max-point) rollup)
-                        (map (fn [time] {time [{:time time}]}))
-                        (reduce merge {}))
-        by-path    (->> (group-by :path data)
-                        (map (partial fill-in nil-points))
-                        (reduce merge {}))]
-    {:from min-point
-     :to   max-point
+  (if paths
+    (let [q          (fetchq session)
+          data       (->> (alia/execute
+                           session q
+                           :values [paths (int rollup) (int period) from to
+                                    (max-points paths rollup from to)])
+                          (map (partial aggregate-with (keyword agg))))
+          min-point  (:time (first data))
+          max-point  (-> to (quot rollup) (* rollup))
+          nil-points (->> (range min-point (inc max-point) rollup)
+                          (map (fn [time] {time [{:time time}]}))
+                          (reduce merge {}))
+          by-path    (->> (group-by :path data)
+                          (map (partial fill-in nil-points))
+                          (reduce merge {}))]
+      {:from min-point
+       :to   max-point
+       :step rollup
+       :series by-path})
+    {:from from
+     :to to
      :step rollup
-     :series by-path}))
+     :series {}}))
