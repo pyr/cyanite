@@ -15,7 +15,7 @@
   (let [[path metric time] (s/split (.trim input) #" ")]
     (when (not= metric "nan")
       ;; hardcode empty tenant for now
-      (path/register index "" path)
+      (when index (path/register index "" path))
       (for [{:keys [rollup period rollup-to]} rollups]
         {:path   path
          :rollup rollup
