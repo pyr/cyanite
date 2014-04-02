@@ -5,6 +5,7 @@
   (:require [aleph.http                 :as http]
             [ring.util.codec            :as codec]
             [org.spootnik.cyanite.store :as store]
+            [org.spootnik.cyanite.path  :as path]
             [cheshire.core              :as json]
             [lamina.core                :refer [enqueue]]
             [clojure.string             :refer [lower-case]]
@@ -66,18 +67,18 @@
   :action)
 
 (defmethod process :paths
-  [{{:keys [query]} :params :as request}]
-  (store/find-prefixes query))
+  [{{:keys [index query]} :params :as request}]
+  (path/search index "" (str query ".*")))
 
 (defmethod process :metrics
-  [{{:keys [from to path agg]} :params :keys [store rollups] :as request}]
+  [{{:keys [index from to path agg]} :params :keys [store rollups]}]
   (debug "fetching paths: " path)
   (if-let [{:keys [rollup period]} (find-best-rollup from rollups)]
     (let [to    (if to (Long/parseLong to) (now))
           from  (Long/parseLong from)
-          paths (mapcat (partial store/find-paths false)
+          paths (mapcat (partial path/search index "")
                         (if (sequential? path) path [path]))]
-      (store/fetch store (or agg "mean") paths rollup period from to))
+      (store/fetch store (or agg "mean") paths "" rollup period from to))
     {:step nil :from nil :to nil :series {}}))
 
 (defmethod process :ping
@@ -91,7 +92,7 @@
 (defn wrap-process
   "Process request, generating a JSON output for it, catch exception
    and yield a payload"
-  [request rollups chan store]
+  [request rollups chan store index]
   (debug "got request: " request)
   (enqueue
    chan
@@ -99,7 +100,10 @@
      {:status  200
       :headers {"Content-Type" "application/json"}
       :body    (json/generate-string
-                (process (assoc request :store store :rollups rollups)))}
+                (process (assoc request
+                           :store store
+                           :rollups rollups
+                           :index index)))}
      (catch Exception e
        (let [{:keys [status body suppress?]} (ex-data e)]
          (when-not suppress?
@@ -112,11 +116,11 @@
 (defn start
   "Start the API, handling each request by parsing parameters and
    routes then handing over to the request processor"
-  [{:keys [http store carbon] :as config}]
+  [{:keys [http store carbon index] :as config}]
   (let [handler (fn [chan request]
                   (-> request
                       (assoc-params)
                       (assoc-route)
-                      (wrap-process (:rollups carbon) chan store)))]
+                      (wrap-process (:rollups carbon) chan store index)))]
     (http/start-http-server handler http))
   nil)
