@@ -130,14 +130,10 @@
     :or   {hints {:replication {:class "SimpleStrategy"
                                 :replication_factor 1}}}}]
   (info "creating cassandra metric store with in-memory path index")
-  (let [session (-> (alia/cluster cluster) (alia/connect))
+  (let [session (-> (alia/cluster cluster) (alia/connect keyspace))
         index   (search/memory-index)
         insert! (insertq session)
         fetch!  (fetchq session)]
-
-    (try (alia/execute session (useq keyspace))
-         (catch Exception e
-           (error e "could not connect to cassandra cluster")))
 
     (reify
       Metricstore
