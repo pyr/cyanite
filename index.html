@@ -1,0 +1,56 @@
+---
+layout: home
+title: Pithos
+---
+
+
+	<div class="container">
+		<div class="row">
+			<div class="col-sm-8 jumbotron">
+				<h2>Cyanite stores your metrics.</h2>
+				<p>Cyanite provides a metric data-store and API targetted at compatibility with the graphite ecosystem
+        </p>
+
+				<p>
+					<a href="/quickstart/" class="btn btn-success">Get started</a>
+					<a href="/design/" class="btn btn-warning">Learn more</a>
+				</p>
+			</div>
+		</div>
+	</div>
+
+
+<div class="row" style="margin-top: 50px">
+  <div class="col-md-3 col-sm-6">
+    <h3>Scalable</h3>
+    <p>By relying on <a href="http://cassandra.apache.org">Apache Cassandra</a>, cyanite makes scaling your
+      metric infrastructure a breeze. No more shuffling whisper data around, just add nodes to your cluster!
+    </p>
+  </div>
+
+  <div class="col-md-3 col-sm-6">
+    <h3>Fast</h3>
+    <p>
+      The underlying model in cyanite is optimized for very fast writes, and a constant write cost as you
+      scale the cluster up. While this is mostly thanks to <a href="http://cassandra.apache.org">Apache Cassandra</a>,
+      cyanite architecture which leverages a fast async event driven network library ensures it doesn't become a bottleneck
+    </p>
+  </div>
+  
+  
+  <div class="col-md-3 col-sm-6">
+    <h3>Compatible</h3>
+    <p>
+      Fell in love with graphite-web's UI or maybe you're more of a grafana person ?<br/>
+      Either way, cyanite gets you up and running quickly, thanks to its compatibility with graphite and graphite-api.
+    </p>
+  </div>
+
+  <div class="col-md-3 col-sm-6">
+    <h3>Simple</h3>
+    <p>
+      Installing and scaling cyanite is 100% worry-free. Relying on a simple YAML configuration file, cyanite will discover and
+      keep track of its cassandra storage cluster as well as maintain a search index of metric names.
+    </p>
+  </div>
+</div>

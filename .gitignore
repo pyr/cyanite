@@ -1,0 +1,17 @@
+_site
+node_modules
+.lein-failures
+.sass-cache
+/target
+/lib
+/docs
+/classes
+/checkouts
+pom.xml
+pom.xml.asc
+*.jar
+*.class
+.lein-deps-sum
+.lein-plugins
+.lein-repl-history
+.nrepl-port
