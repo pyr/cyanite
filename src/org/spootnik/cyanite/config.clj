@@ -31,6 +31,9 @@
    :host    "127.0.0.1"
    :port    8080})
 
+(def default-index
+  {:use "org.spootnik.cyanite.path/lucene-memory-pathstore"})
+
 (defn to-seconds
   "Takes a string containing a duration like 13s, 4h etc. and
    converts it to seconds"
@@ -120,4 +123,6 @@
         (update-in [:carbon] (partial merge default-carbon))
         (update-in [:carbon :rollups] convert-shorthand-rollups)
         (update-in [:carbon :rollups] assoc-rollup-to)
+        (update-in [:index] (partial merge default-index))
+        (update-in [:index] get-instance :index)
         (update-in [:http] (partial merge default-http)))))
