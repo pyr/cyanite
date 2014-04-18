@@ -12,7 +12,7 @@
                  [ring/ring-codec                 "1.0.0"]
                  [aleph                           "0.3.0"]
                  [clj-yaml                        "0.4.0"]
-                 [cc.qbits/alia                   "2.0.0-beta10"]
+                 [cc.qbits/alia                   "2.0.0-rc1"]
                  [net.jpountz.lz4/lz4             "1.2.0"]
                  [org.xerial.snappy/snappy-java   "1.0.5"]
                  [clucy                           "0.4.0"]
