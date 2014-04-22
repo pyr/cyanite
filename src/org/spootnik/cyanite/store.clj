@@ -3,8 +3,7 @@
    relies on a single schema. All cassandra interaction bits
    should quickly be abstracted with a protocol to more easily
    swap implementations"
-  (:require [org.spootnik.cyanite.config :as config]
-            [clojure.string              :as str]
+  (:require [clojure.string              :as str]
             [qbits.alia                  :as alia]
             [clojure.tools.logging       :refer [error info debug]]
             [lamina.core                 :refer [channel receive-all]]))
@@ -135,7 +134,8 @@ metrics. Right now it is way too expensive and should be computed differently"}
     :or   {hints {:replication {:class "SimpleStrategy"
                                 :replication_factor 1}}}}]
   (info "connecting to cassandra cluster")
-  (let [session (-> (alia/cluster cluster) (alia/connect))]
+  (let [session (-> (alia/cluster {:contact-points [cluster]})
+                    (alia/connect))]
     (try (alia/execute session (useq keyspace))
          (future (update-path-db-every session 60))
          session
@@ -154,7 +154,7 @@ metrics. Right now it is way too expensive and should be computed differently"}
        (doseq [{:keys [metric path time rollup period ttl]} payload]
          (alia/execute
           session query
-          :values [(int ttl) [metric] (int rollup) (int period) path time]))))
+          {:values [(int ttl) [metric] (int rollup) (int period) path time]}))))
     ch))
 
 (defmulti aggregate-with
@@ -227,8 +227,8 @@ metrics. Right now it is way too expensive and should be computed differently"}
   (if-let [data (and (seq paths)
                      (->> (alia/execute
                            session (fetchq session)
-                           :values [paths (int rollup) (int period) from to
-                                    (max-points paths rollup from to)])
+                           {:values [paths (int rollup) (int period) from to
+                                     (max-points paths rollup from to)]})
                           (map (partial aggregate-with (keyword agg)))
                           (seq)))]
     (let [min-point  (:time (first data))
