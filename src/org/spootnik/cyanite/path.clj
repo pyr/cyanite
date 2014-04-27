@@ -1,35 +1,62 @@
 (ns org.spootnik.cyanite.path
-  "Implements a path store which tracks metric names. The
-   default implementation provides lucene based implementations"
-  (:require [clucy.core                  :as search]
-            [clojure.tools.logging       :refer [error info debug]]))
+  "Implements a path store which tracks metric names."
+  (:require [clojure.tools.logging :refer [error info debug]]
+            [clojure.string        :refer [split join] :as str]))
 
 (defprotocol Pathstore
   "The pathstore provides a way to insert paths and later look them up"
   (register [this tenant path])
-  (search [this tenant path]))
+  (prefixes [this tenant path])
+  (lookup   [this tenant path]))
 
-(defn lucene-pathstore
-  [index]
-  (reify Pathstore
-    (register [this tenant path]
-      (search/add index {:tenant tenant :path path}))
-    (search [this tenant path]
-      (let [query (format "tenant:'%s' path:'%s'" tenant path)]
-        (->> (loop [init []
-                    page 0]
-               (let [paths (map :path (search/search index query 1000000
-                                                     :page page
-                                                     :results-per-page 100))]
+(defn path-elem-re
+  "Each graphite path elem may contain '*' wildcards, this
+   functions yields a regexp pattern fro this format"
+  [e]
+  (re-pattern (format "^%s$" (str/replace e "*" ".*"))))
 
-                 (if (< (count paths) 100)
-                   (concat init paths)
-                   (recur (concat init paths) (inc page))))))))))
+(defn path-q
+  "For a complete path query, yield a list of regexp pattern
+   for each element"
+  [path]
+  (map path-elem-re (split path #"\.")))
 
-(defn lucene-memory-pathstore
+(defn matches?
+  "Predicate testing a path against a query. partial? determines
+   whether the query should be treated as a prefix query or an
+   absolute query"
+  [query path]
+  (and (= (count query) (count path))
+       (every? seq (map re-matches query path))))
+
+(defn truncate
+  "When doing prefix searches, we're only interested in returning
+   prefixes, this function yields a map of two keys:
+
+   * leaf: indicates whether this is a prefix or an actual point
+   * path: the prefix"
+  [depth path]
+  (let [truncated (take depth path)]
+    {:leaf (= truncated path) :path (join "." truncated)}))
+
+(defn prefix?
+  [query path]
+  (every? seq (map re-matches query (take (count query) path))))
+
+(defn memory-pathstore
   [_]
-  (lucene-pathstore (search/memory-index)))
-
-(defn lucene-file-pathstore
-  [{:keys [path]}]
-  (lucene-pathstore (search/disk-index path)))
+  (let [store (atom {})]
+    (reify Pathstore
+      (register [this tenant path]
+        (swap! store update-in [tenant] #(set (conj % (split path #"\.")))))
+      (prefixes [this tenant path]
+        (let [query (path-q path)]
+          (->> (get @store tenant)
+               (filter (partial prefix? query))
+               (map (partial truncate (count query)))
+               (set)
+               (sort-by :path))))
+      (lookup [this tenant path]
+        (->> (get @store tenant)
+             (filter (partial matches? (path-q path)))
+             (map (partial join ".")))))))

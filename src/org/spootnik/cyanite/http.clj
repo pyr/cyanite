@@ -67,8 +67,9 @@
   :action)
 
 (defmethod process :paths
-  [{{:keys [index query]} :params :as request}]
-  (path/search index "" (str query ".*")))
+  [{{:keys [query]} :params :keys [index] :as request}]
+  (debug "query now: " query)
+  (path/prefixes index "" (str query "*")))
 
 (defmethod process :metrics
   [{{:keys [index from to path agg]} :params :keys [store rollups]}]
@@ -76,7 +77,7 @@
   (if-let [{:keys [rollup period]} (find-best-rollup from rollups)]
     (let [to    (if to (Long/parseLong to) (now))
           from  (Long/parseLong from)
-          paths (mapcat (partial path/search index "")
+          paths (mapcat (partial path/lookup index "")
                         (if (sequential? path) path [path]))]
       (store/fetch store (or agg "mean") paths "" rollup period from to))
     {:step nil :from nil :to nil :series {}}))

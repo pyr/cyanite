@@ -32,7 +32,7 @@
    :port    8080})
 
 (def default-index
-  {:use "org.spootnik.cyanite.path/lucene-memory-pathstore"})
+  {:use "org.spootnik.cyanite.path/memory-pathstore"})
 
 (defn to-seconds
   "Takes a string containing a duration like 13s, 4h etc. and

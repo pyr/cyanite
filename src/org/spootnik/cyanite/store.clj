@@ -6,7 +6,6 @@
   (:require [org.spootnik.cyanite.config :as config]
             [clojure.string              :as str]
             [qbits.alia                  :as alia]
-            [clucy.core                  :as search]
             [clojure.tools.logging       :refer [error info debug]]
             [lamina.core                 :refer [channel receive-all]]))
 
@@ -131,7 +130,6 @@
                                 :replication_factor 1}}}}]
   (info "creating cassandra metric store with in-memory path index")
   (let [session (-> (alia/cluster cluster) (alia/connect keyspace))
-        index   (search/memory-index)
         insert! (insertq session)
         fetch!  (fetchq session)]
 
