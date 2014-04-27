@@ -28,7 +28,7 @@
   "Send each metric over to the cassandra store"
   [index rollups insertch]
   (fn [ch info]
-    (siphon (map* (partial index formatter rollups) ch) insertch)))
+    (siphon (map* (partial formatter index rollups) ch) insertch)))
 
 (defn start
   "Start a tcp carbon listener"
