@@ -49,7 +49,7 @@
    (str
     "SELECT path,data,time FROM metric WHERE "
     "path IN ? AND tenant = '' AND rollup = ? AND period = ? "
-    "AND time >= ? AND time <= ? ORDER BY time ASC LIMIT ?;")))
+    "AND time >= ? AND time <= ? ORDER BY time ASC;")))
 
 
 (defn useq
