@@ -72,7 +72,7 @@
   (path/prefixes index "" (str query "*")))
 
 (defmethod process :metrics
-  [{{:keys [index from to path agg]} :params :keys [store rollups]}]
+  [{{:keys [from to path agg]} :params :keys [index store rollups]}]
   (debug "fetching paths: " path)
   (if-let [{:keys [rollup period]} (find-best-rollup from rollups)]
     (let [to    (if to (Long/parseLong to) (now))
