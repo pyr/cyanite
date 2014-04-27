@@ -3,8 +3,7 @@
    relies on a single schema. All cassandra interaction bits
    should quickly be abstracted with a protocol to more easily
    swap implementations"
-  (:require [org.spootnik.cyanite.config :as config]
-            [clojure.string              :as str]
+  (:require [clojure.string              :as str]
             [qbits.alia                  :as alia]
             [clojure.tools.logging       :refer [error info debug]]
             [lamina.core                 :refer [channel receive-all]]))
@@ -129,7 +128,8 @@
     :or   {hints {:replication {:class "SimpleStrategy"
                                 :replication_factor 1}}}}]
   (info "creating cassandra metric store with in-memory path index")
-  (let [session (-> (alia/cluster cluster) (alia/connect keyspace))
+  (let [session (-> (alia/cluster {:contact-points [cluster]})
+                    (alia/connect keyspace))
         insert! (insertq session)
         fetch!  (fetchq session)]
 
@@ -143,7 +143,8 @@
              (doseq [{:keys [metric path time rollup period ttl]} payload]
                (alia/execute
                 session insert!
-                :values [(int ttl) [metric] (int rollup) (int period) path time]))))
+                {:values [(int ttl) [metric] (int rollup)
+                          (int period) path time]}))))
           ch))
       (insert [this ttl data tenant rollup period path time]
         (alia/execute
@@ -156,8 +157,9 @@
         (if-let [data (and (seq paths)
                            (->> (alia/execute
                                  session fetch!
-                                 :values [paths (int rollup) (int period) from to
-                                          (max-points paths rollup from to)])
+                                 {:values [paths (int rollup) (int period)
+                                           from to
+                                           (max-points paths rollup from to)]})
                                 (map (partial aggregate-with (keyword agg)))
                                 (seq)))]
           (let [min-point  (:time (first data))
