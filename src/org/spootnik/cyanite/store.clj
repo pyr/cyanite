@@ -8,10 +8,10 @@
             [clojure.tools.logging       :refer [error info debug]]
             [lamina.core                 :refer [channel receive-all]]))
 
-(def
-  ^{:doc "Store an in-memory set of all known metric paths"}
-  path-db
-  (atom #{}))
+(defprotocol Metricstore
+  (insert [this ttl data tenant rollup period path time])
+  (channel-for [this])
+  (fetch [this agg paths tenant rollup period from to]))
 
 ;;
 ;; The following contains necessary cassandra queries. Since
@@ -52,11 +52,6 @@
     "AND time >= ? AND time <= ? ORDER BY time ASC LIMIT ?;")))
 
 
-(def
-  ^{:doc "This query returns only paths, to get a list of
-metrics. Right now it is way too expensive and should be computed differently"}
-  pathq "SELECT distinct tenant, path, rollup, period from metric;")
-
 (defn useq
   "Yields a cassandra use statement for a keyspace"
   [keyspace]
@@ -65,97 +60,6 @@ metrics. Right now it is way too expensive and should be computed differently"}
 ;;
 ;; The next section contains a series of path matching functions
 
-
-(defn prepare-path-elem-re
-  "Each graphite path elem may contain '*' wildcards, this
-   functions yields a regexp pattern fro this format"
-  [e]
-  (re-pattern (format "^%s$" (str/replace e "*" ".*"))))
-
-(defn prepare-path-query
-  "For a complete path query, yield a list of regexp pattern
-   for each element"
-  [q]
-  (map prepare-path-elem-re (str/split q #"\.")))
-
-(defn path-matches?
-  "Predicate testing a path against a query. partial? determines
-   whether the query should be treated as a prefix query or an
-   absolute query"
-  [partial? query path]
-  (let [path-elems (str/split path #"\.")]
-    (and (or partial? (= (count query) (count path-elems)))
-         (every? seq (map re-matches query path-elems)))))
-
-(defn truncate-path
-  "When doing prefix searches, we're only interested in returning
-   prefixes, this function yields a map of two keys:
-
-   * leaf: indicates whether this is a prefix or an actual point
-   * path: the prefix"
-  [query path]
-  (let [depth     (count (str/split query #"\."))
-        truncated (str/join "." (take depth (str/split path #"\.")))]
-    {:leaf (= truncated path) :path truncated}))
-
-(defn find-paths
-  "Find either prefix or absolute matches for a query"
-  [partial? query]
-  (let [depth    (count (str/split query #"\."))]
-    (filter (partial path-matches? partial? (prepare-path-query query))
-            @path-db)))
-
-(defn find-prefixes
-  "Find prefix matches for a query and then format for graphite output"
-  [query]
-  (->> (find-paths true query)
-       (map (partial truncate-path query))
-       (set)
-       (sort-by :path)))
-
-(defn update-path-db-every
-  "At each interval, fetch all known paths, and store the
-   resulting set in path-db"
-  [session interval]
-  (while true
-    (try
-      (->> (alia/execute session pathq)
-           (map :path)
-           (set)
-           (reset! path-db))
-      (catch Exception e
-        (error e "could not update path database")))
-    (Thread/sleep (* interval 1000))))
-
-(defn cassandra-metric-store
-  "Connect to cassandra and start a path fetching thread.
-   The interval is fixed for now, at 1minute"
-  [{:keys [keyspace cluster hints]
-    :or   {hints {:replication {:class "SimpleStrategy"
-                                :replication_factor 1}}}}]
-  (info "connecting to cassandra cluster")
-  (let [session (-> (alia/cluster {:contact-points [cluster]})
-                    (alia/connect))]
-    (try (alia/execute session (useq keyspace))
-         (future (update-path-db-every session 60))
-         session
-         (catch Exception e
-           (error e "could not connect to cassandra cluster")))))
-
-(defn channel-for
-  "Yields a lamina channel which expects lists of metrics and will
-   insert each for every resolution"
-  [session]
-  (let [ch    (channel)
-        query (insertq session)]
-    (receive-all
-     ch
-     (fn [payload]
-       (doseq [{:keys [metric path time rollup period ttl]} payload]
-         (alia/execute
-          session query
-          {:values [(int ttl) [metric] (int rollup) (int period) path time]}))))
-    ch))
 
 (defmulti aggregate-with
   "This transforms a raw list of points according to the provided aggregation
@@ -217,33 +121,64 @@ metrics. Right now it is way too expensive and should be computed differently"}
                  (sort-by :time)
                  (map :metric))))
 
-(defn fetch
-  "Fetch metrics for a given resolution. Once fetched, formats
-   metrics in a way graphite can easily consume"
-  [session agg paths rollup period from to]
-  (debug "fetching paths from store: " paths rollup period from to
-         (max-points paths rollup from to))
+(defn cassandra-metric-store
+  "Connect to cassandra and start a path fetching thread.
+   The interval is fixed for now, at 1minute"
+  [{:keys [keyspace cluster hints]
+    :or   {hints {:replication {:class "SimpleStrategy"
+                                :replication_factor 1}}}}]
+  (info "creating cassandra metric store with in-memory path index")
+  (let [session (-> (alia/cluster {:contact-points [cluster]})
+                    (alia/connect keyspace))
+        insert! (insertq session)
+        fetch!  (fetchq session)]
 
-  (if-let [data (and (seq paths)
-                     (->> (alia/execute
-                           session (fetchq session)
-                           {:values [paths (int rollup) (int period) from to
-                                     (max-points paths rollup from to)]})
-                          (map (partial aggregate-with (keyword agg)))
-                          (seq)))]
-    (let [min-point  (:time (first data))
-          max-point  (-> to (quot rollup) (* rollup))
-          nil-points (->> (range min-point (inc max-point) rollup)
-                          (map (fn [time] {time [{:time time}]}))
-                          (reduce merge {}))
-          by-path    (->> (group-by :path data)
-                          (map (partial fill-in nil-points))
-                          (reduce merge {}))]
-      {:from min-point
-       :to   max-point
-       :step rollup
-       :series by-path})
-    {:from from
-     :to to
-     :step rollup
-     :series {}}))
+    (reify
+      Metricstore
+      (channel-for [this]
+        (let [ch    (channel)]
+          (receive-all
+           ch
+           (fn [payload]
+             (doseq [{:keys [metric path time rollup period ttl]} payload]
+               (alia/execute
+                session insert!
+                {:values [(int ttl) [metric] (int rollup)
+                          (int period) path time]}))))
+          ch))
+      (insert [this ttl data tenant rollup period path time]
+        (alia/execute
+         session
+         insert!
+         :values [ttl data tenant rollup period path time]))
+      (fetch [this agg paths tenant rollup period from to]
+        (debug "fetching paths from store: " paths rollup period from to
+               (max-points paths rollup from to))
+        (if-let [data (and (seq paths)
+                           (->> (alia/execute
+                                 session fetch!
+                                 {:values [paths (int rollup) (int period)
+                                           from to
+                                           (max-points paths rollup from to)]})
+                                (map (partial aggregate-with (keyword agg)))
+                                (seq)))]
+          (let [min-point  (:time (first data))
+                max-point  (-> to (quot rollup) (* rollup))
+                nil-points (->> (range min-point (inc max-point) rollup)
+                                (map (fn [time] {time [{:time time}]}))
+                                (reduce merge {}))
+                by-path    (->> (group-by :path data)
+                                (map (partial fill-in nil-points))
+                                (reduce merge {}))]
+            {:from min-point
+             :to   max-point
+             :step rollup
+             :series by-path})
+          {:from from
+           :to to
+           :step rollup
+           :series {}}))
+
+
+
+      )))
