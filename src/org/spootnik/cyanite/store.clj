@@ -157,7 +157,8 @@
                            (->> (alia/execute
                                  session fetch!
                                  {:values [paths (int rollup) (int period)
-                                           from to Integer/MAX_VALUE]})
+                                           from to]
+                                  :fetch-size Integer/MAX_VALUE})
                                 (map (partial aggregate-with (keyword agg)))
                                 (seq)))]
           (let [min-point  (:time (first data))
