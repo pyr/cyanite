@@ -9,6 +9,7 @@
                  [org.clojure/tools.logging                 "0.2.6"]
                  [org.clojure/tools.cli                     "0.2.4"]
                  [org.spootnik/pickler                      "0.1.0"]
+                 [clojurewerkz/elastisch                "2.0.0-rc1"]
                  [commons-logging/commons-logging           "1.1.3"]
                  [ring/ring-codec                           "1.0.0"]
                  [aleph                                     "0.3.0"]
