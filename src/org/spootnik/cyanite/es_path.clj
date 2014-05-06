@@ -47,16 +47,17 @@
   "generate the filter portion of an es query"
   [path tenant leafs-only]
   (let [depth (path-depth path)
-        f (vector {:range {:depth {:from depth :to depth}}} {:term {:tenant tenant}})]
+        p (str/replace (str/replace path "." "\\.") "*" ".*")
+        f (vector
+           {:range {:depth {:from depth :to depth}}}
+           {:term {:tenant tenant}}
+           {:regexp {:path p :_cache true}})]
     (if leafs-only (conj f {:term {:leaf true}}) f)))
-
 
 (defn build-es-query
   "generate an ES query to return the proper result set"
   [path tenant leafs-only]
-  { :filtered {
-               :query {:bool {:must {:wildcard {:path path}}}}
-               :filter {:bool {:must (build-es-filter path tenant leafs-only)}}}})
+  {:filtered {:filter {:bool {:must (build-es-filter path tenant leafs-only)}}}})
 
 (defn search
   "search for a path"

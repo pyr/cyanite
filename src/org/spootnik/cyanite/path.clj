@@ -50,7 +50,8 @@
       (register [this tenant path]
         (swap! store update-in [tenant] #(set (conj % (split path #"\.")))))
       (prefixes [this tenant path]
-        (let [query (path-q path)]
+        (let [pstar (str path "*")
+              query (path-q pstar)]
           (->> (get @store tenant)
                (filter (partial prefix? query))
                (map (partial truncate (count query)))
