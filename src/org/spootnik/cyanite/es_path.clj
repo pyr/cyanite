@@ -10,6 +10,9 @@
             [clojurewerkz.elastisch.rest.index :as esri]
             [clojurewerkz.elastisch.rest.document :as esrd]))
 
+(def ES_DEF_TYPE "path")
+(def ES_TYPE_MAP {ES_DEF_TYPE {:properties {:tenant {:type "string" :index "not_analyzed"}
+                                        :path {:type "string" :index "not_analyzed"}}}})
 (defn path-depth
   "Get the depth of a path, with depth + 1 if it ends in a period"
   [path]
@@ -20,9 +23,9 @@
 
 (defn build-doc
   "Generate a associate array of form {path: 'path', leaf: true} from the path"
-  [orig-path path]
+  [orig-path tenant path]
   (let [depth (path-depth path)]
-    (if (= orig-path path) {:path path :leaf true :depth depth} {:path path :leaf false :depth depth})))
+    (if (= orig-path path) {:path path :tenant tenant :leaf true :depth depth} {:path path :tenant tenant :leaf false :depth depth})))
 
 
 (defn concat-path
@@ -34,31 +37,31 @@
 (defn es-all-paths
   "Generate a collection of docs of {path: 'path', leaf: true} documents
   suitable for writing to elastic search"
-  [path]
+  [path tenant]
   (let [parts (split path #"\.")
         paths (reduce concat-path (vector) parts)]
-    (map (partial build-doc path) paths)))
+    (map (partial build-doc path tenant) paths)))
 
 
 (defn build-es-filter
   "generate the filter portion of an es query"
-  [path leafs-only]
+  [path tenant leafs-only]
   (let [depth (path-depth path)
-        f (vector {:range {:depth {:from depth :to depth}}})]
+        f (vector {:range {:depth {:from depth :to depth}}} {:term {:tenant tenant}})]
     (if leafs-only (conj f {:term {:leaf true}}) f)))
 
 
 (defn build-es-query
   "generate an ES query to return the proper result set"
-  [path leafs-only]
+  [path tenant leafs-only]
   { :filtered {
                :query {:bool {:must {:wildcard {:path path}}}}
-               :filter {:bool {:must (build-es-filter path leafs-only)}}}})
+               :filter {:bool {:must (build-es-filter path tenant leafs-only)}}}})
 
 (defn search
   "search for a path"
   [query scroll tenant path leafs-only]
-  (let [res (query (str tenant "path") :query (build-es-query path leafs-only) :size 100 :search_type "query_then_fetch" :scroll "1m")
+  (let [res (query :query (build-es-query path tenant leafs-only) :size 100 :search_type "query_then_fetch" :scroll "1m")
         hits (scroll res)]
     (map #(:_source %) hits)))
 
@@ -66,20 +69,20 @@
 (defn add-path
   "write a path into elasticsearch if it doesn't exist"
   [write-key path-exists? tenant path]
-  (let [paths (es-all-paths path)]
-    (dorun (map #(if (not (path-exists? (str tenant "path") (:path %)))
-                   (write-key (str tenant "path") (:path %) %)) paths))))
+  (let [paths (es-all-paths path tenant)]
+    (dorun (map #(if (not (path-exists? (:path %)))
+                   (write-key (:path %) %)) paths))))
 
 (defn es-rest
   [{:keys [index url]
     :or {index "cyanite_paths" url "http://localhost:9200"}}]
   (let [conn (esr/connect url)
-        existsfn (partial esrd/present? conn index)
-        updatefn (partial esrd/put conn index)
+        existsfn (partial esrd/present? conn index ES_DEF_TYPE)
+        updatefn (partial esrd/put conn index ES_DEF_TYPE)
         scrollfn (partial esrd/scroll-seq conn)
-        queryfn (partial esrd/search conn index)]
-    (if (not (esri/exists? conn "cyanite_paths"))
-      (esri/create conn "cyanite_paths" :mappings {"path" {:properties {:path {:type "string" :index "not_analyzed"}}}}))
+        queryfn (partial esrd/search conn index ES_DEF_TYPE)]
+    (if (not (esri/exists? conn index))
+      (esri/create conn index :mappings ES_TYPE_MAP))
     (reify Pathstore
       (register [this tenant path]
                 (add-path updatefn existsfn tenant path))
@@ -93,12 +96,12 @@
     :or {index "cyanite_paths" host "localhost" port 9300}}]
   (let [conn (esn/connect [[host port]]
                          {"cluster.name" cluster_name})
-        existsfn (partial esnd/present? conn index)
-        updatefn (partial esnd/put conn index)
+        existsfn (partial esnd/present? conn index ES_DEF_TYPE)
+        updatefn (partial esnd/put conn index ES_DEF_TYPE)
         scrollfn (partial esnd/scroll-seq conn)
-        queryfn (partial esnd/search conn index)]
-    (if (not (esni/exists? conn "cyanite_paths"))
-      (esni/create conn "cyanite_paths" :mappings {"path" {:properties {:path {:type "string" :index "not_analyzed"}}}}))
+        queryfn (partial esnd/search conn index ES_DEF_TYPE)]
+    (if (not (esni/exists? conn index))
+      (esni/create conn index :mappings ES_TYPE_MAP))
     (reify Pathstore
       (register [this tenant path]
                 (add-path updatefn existsfn tenant path))
