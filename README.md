@@ -110,6 +110,30 @@ carbon:
     - "10m:1y"
 ```
 
+## Path Store
+By default, cyanite stores all the graphite paths in memory. For small amounts of data or in non-HA setups,
+this works pretty well. However, for metrics datasets with a large number of metrics or where HA is required,
+elasticsearch can be used to store metrics instead, which results in faster response time and no in memory cache for
+cyanite. This can be used both via the native Java elasticsearch interface, or the RESTful HTTP interface.
+
+For REST API:
+```yaml
+index:
+  use: "org.spootnik.cyanite.es_path/es-rest"
+  index: "my_paths" #defaults to "cyanite_paths"
+  url: "http://myes.host.com:9200" #defaults to http://localhost:9200
+```
+
+For Native Java:
+```yaml
+index:
+  use: "org.spootnik.cyanite.es_path/es-native"
+  index: "my_paths" #defaults to "cyanite_paths"
+  host: "192.168.1.1" # defaults to localhost
+  port: 9300 # defaults to 9300
+  cluster_name: "" #REQUIRED! this is specific to your cluster and has no sensible default
+```
+
 ## Running
 
 ```

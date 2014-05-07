@@ -7,6 +7,7 @@
             [org.spootnik.cyanite.store :as store]
             [org.spootnik.cyanite.path  :as path]
             [cheshire.core              :as json]
+            [clojure.string             :as str]
             [lamina.core                :refer [enqueue]]
             [clojure.string             :refer [lower-case]]
             [clojure.tools.logging      :refer [info error debug]]))
@@ -69,7 +70,7 @@
 (defmethod process :paths
   [{{:keys [query]} :params :keys [index] :as request}]
   (debug "query now: " query)
-  (path/prefixes index "" (str query "*")))
+  (path/prefixes index "" (if (str/blank? query) "*" query)))
 
 (defmethod process :metrics
   [{{:keys [from to path agg]} :params :keys [index store rollups]}]
