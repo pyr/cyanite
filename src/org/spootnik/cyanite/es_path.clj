@@ -77,11 +77,20 @@
     (dorun (map #(if (not (path-exists? (:path %)))
                    (write-key (:path %) %)) paths))))
 
+(defn path-exists-cache?
+  [path-exists? store path]
+  (if (contains? @store path)
+    true
+    (if (path-exists? path)
+      (do (swap! store assoc path true) true)
+      false)))
+
 (defn es-rest
   [{:keys [index url]
     :or {index "cyanite_paths" url "http://localhost:9200"}}]
-  (let [conn (esr/connect url)
-        existsfn (partial esrd/present? conn index ES_DEF_TYPE)
+  (let [store (atom {})
+        conn (esr/connect url)
+        existsfn (partial path-exists-cache? (partial esrd/present? conn index ES_DEF_TYPE) store)
         updatefn (partial esrd/put conn index ES_DEF_TYPE)
         scrollfn (partial esrd/scroll-seq conn)
         queryfn (partial esrd/search conn index ES_DEF_TYPE)]
@@ -95,12 +104,14 @@
       (lookup [this tenant path]
               (map :path (search queryfn scrollfn tenant path true))))))
 
+
 (defn es-native
   [{:keys [index host port cluster_name]
     :or {index "cyanite_paths" host "localhost" port 9300}}]
-  (let [conn (esn/connect [[host port]]
+  (let [store (atom {})
+        conn (esn/connect [[host port]]
                          {"cluster.name" cluster_name})
-        existsfn (partial esnd/present? conn index ES_DEF_TYPE)
+        existsfn (partial path-exists-cache? (partial esnd/present? conn index ES_DEF_TYPE) store)
         updatefn (partial esnd/put conn index ES_DEF_TYPE)
         scrollfn (partial esnd/scroll-seq conn)
         queryfn (partial esnd/search conn index ES_DEF_TYPE)]
