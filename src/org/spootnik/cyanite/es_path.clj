@@ -62,7 +62,10 @@
 (defn search
   "search for a path"
   [query scroll tenant path leafs-only]
-  (let [res (query :query (build-es-query path tenant leafs-only) :size 100 :search_type "query_then_fetch" :scroll "1m")
+  (let [res (query :query (build-es-query path tenant leafs-only)
+                   :size 100
+                   :search_type "query_then_fetch"
+                   :scroll "1m")
         hits (scroll res)]
     (map #(:_source %) hits)))
 
