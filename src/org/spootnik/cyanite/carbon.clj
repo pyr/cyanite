@@ -12,6 +12,7 @@
   "Split each line on whitespace, discard nan metric lines
    and format correct lines for each resolution"
   [index rollups input]
+  (debug "F: " input)
   (let [[path metric time] (s/split (.trim input) #" ")]
     (when (not= metric "nan")
       ;; hardcode empty tenant for now

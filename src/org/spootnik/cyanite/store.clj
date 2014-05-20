@@ -176,8 +176,22 @@
           {:from from
            :to to
            :step rollup
-           :series {}}))
+           :series {}})))))
 
 
-
-      )))
+(defn devnull
+  [_]
+  (reify
+    Metricstore
+    (insert [this ttl data tenant rollup period path time]
+      true)
+    (channel-for [this]
+      (let [ch (channel)]
+          (receive-all
+           ch
+           (fn [payload]
+             (debug "P: " payload)))
+          ch))
+    (fetch [this agg paths tenant rollup period from to]
+      nil))
+  )
