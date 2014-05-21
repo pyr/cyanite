@@ -141,16 +141,18 @@
            ch
            (fn [payload]
              (doseq [{:keys [metric path time rollup period ttl]} payload]
-               (alia/execute
+               (alia/execute-async
                 session insert!
                 {:values [(int ttl) [metric] (int rollup)
-                          (int period) path time]}))))
+                          (int period) path time]
+                 :success (fn [_] (debug "write"))
+                 :error (fn [_] (debug "failed"))}))))
           ch))
       (insert [this ttl data tenant rollup period path time]
-        (alia/execute
+        (alia/execute-async
          session
          insert!
-         :values [ttl data tenant rollup period path time]))
+         {:values [ttl data tenant rollup period path time]}))
       (fetch [this agg paths tenant rollup period from to]
         (debug "fetching paths from store: " paths rollup period from to)
         (if-let [data (and (seq paths)
@@ -190,7 +192,8 @@
           (receive-all
            ch
            (fn [payload]
-             (debug "P: " payload)))
+;             (debug "P: " payload)
+             ))
           ch))
     (fetch [this agg paths tenant rollup period from to]
       nil))

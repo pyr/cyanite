@@ -110,4 +110,3 @@
                 (search queryfn scrollfn tenant path false))
       (lookup [this tenant path]
               (map :path (search queryfn scrollfn tenant path true))))))
-

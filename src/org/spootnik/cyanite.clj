@@ -6,6 +6,8 @@
             [org.spootnik.cyanite.config :as config]
             [clojure.tools.cli           :refer [cli]]))
 
+(set! *warn-on-reflection* true)
+
 (defn get-cli
   "Call cli parsing with our known options"
   [args]
