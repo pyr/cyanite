@@ -17,8 +17,8 @@
 
 (def ^{:doc "handle storage with cassandra-metric-store by default"}
   default-store
-;    {:use "org.spootnik.cyanite.store/devnull"}
-  {:use "org.spootnik.cyanite.store/cassandra-metric-store"}
+    {:use "org.spootnik.cyanite.store/devnull"}
+;  {:use "org.spootnik.cyanite.store/cassandra-metric-store"}
     )
 
 (def ^{:doc "let carbon listen on 2003 by default"}
@@ -58,7 +58,9 @@
     (let [[rollup-string retention-string] (split rollup #":" 2)
           rollup-secs (to-seconds rollup-string)
           retention-secs (to-seconds retention-string)]
-      {:rollup rollup-secs :period (/ retention-secs rollup-secs)})
+      {:rollup rollup-secs
+       :period (/ retention-secs rollup-secs)
+       :ttl (* rollup-secs (/ retention-secs rollup-secs))})
     rollup))
 
 (defn convert-shorthand-rollups
@@ -82,8 +84,8 @@
     (let [n (namespace (symbol s))]
       (require (symbol n))
       (find-var (symbol s)))
-    (catch Exception _
-      nil)))
+    (catch Exception e
+      (prn "Exception: " e))))
 
 (defn instantiate
   "Find a symbol pointing to a function of a single argument and

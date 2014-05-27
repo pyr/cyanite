@@ -8,7 +8,8 @@
             [clojurewerkz.elastisch.native.document :as esnd]
             [clojurewerkz.elastisch.rest :as esr]
             [clojurewerkz.elastisch.rest.index :as esri]
-            [clojurewerkz.elastisch.rest.document :as esrd]))
+            [clojurewerkz.elastisch.rest.document :as esrd]
+            [clojure.core.async :as async :refer [<! >! go chan]]))
 
 (def ES_DEF_TYPE "path")
 (def ES_TYPE_MAP {ES_DEF_TYPE {:properties {:tenant {:type "string" :index "not_analyzed"}
@@ -25,7 +26,9 @@
   "Generate a associate array of form {path: 'path', leaf: true} from the path"
   [orig-path tenant path]
   (let [depth (path-depth path)]
-    (if (= orig-path path) {:path path :tenant tenant :leaf true :depth depth} {:path path :tenant tenant :leaf false :depth depth})))
+    (if (= orig-path path)
+      {:path path :tenant tenant :leaf true :depth depth}
+      {:path path :tenant tenant :leaf false :depth depth})))
 
 
 (defn concat-path
@@ -87,6 +90,31 @@
     (reify Pathstore
       (register [this tenant path]
                 (add-path updatefn existsfn tenant path))
+      (channel-for [this]
+        (let [es-chan (chan 10000)
+              all-paths (chan 10000)
+              create-path (chan 10000)]
+          (go
+            (while true
+              (let [ps (<! (async/partition 1000 es-chan 10))]
+                (go
+                  (doseq [p ps]
+                    (doseq [ap (es-all-paths p "")]
+                      (>! all-paths ap)))))))
+          (go
+            (while true
+              (let [ps (<! (async/partition 1000 all-paths))]
+                (go
+                  (doseq [p ps]
+                      (when-not (existsfn (:path p))
+                        (>! create-path p)))))))
+          (go
+            (while true
+              (let [ps (<! (async/partition 100 create-path))]
+                (doseq [p ps]
+                  (go
+                    (updatefn (:path p) p))))))
+          es-chan))
       (prefixes [this tenant path]
                 (search queryfn scrollfn tenant path false))
       (lookup [this tenant path]
@@ -94,18 +122,37 @@
 
 (defn es-native
   [{:keys [index host port cluster_name]
-    :or {index "cyanite_paths" host "localhost" port 9300}}]
+    :or {index "cyanite" host "localhost" port 9300 cluster_name "elasticsearch"}}]
   (let [conn (esn/connect [[host port]]
                          {"cluster.name" cluster_name})
         existsfn (partial esnd/present? conn index ES_DEF_TYPE)
-        updatefn (partial esnd/put conn index ES_DEF_TYPE)
+        updatefn (partial esnd/async-put conn index ES_DEF_TYPE)
         scrollfn (partial esnd/scroll-seq conn)
         queryfn (partial esnd/search conn index ES_DEF_TYPE)]
     (if (not (esni/exists? conn index))
       (esni/create conn index :mappings ES_TYPE_MAP))
     (reify Pathstore
       (register [this tenant path]
-                (add-path updatefn existsfn tenant path))
+        (add-path updatefn existsfn tenant path))
+      (channel-for [this]
+        (let [es-chan (chan 1000)
+              all-paths (chan 1000)
+              create-path (chan 1000)]
+          (go
+            (while true
+              (let [p (<! es-chan)]
+                (doseq [ap (es-all-paths p "")]
+                  (>! all-paths)))))
+          (go
+            (while true
+              (let [p (<! all-paths)]
+                (when-not (existsfn (:path p))
+                  (>! create-path p)))))
+          (go
+            (while true
+              (let [p (<! create-path)]
+                (updatefn (:path p) p))))
+          es-chan))
       (prefixes [this tenant path]
                 (search queryfn scrollfn tenant path false))
       (lookup [this tenant path]
