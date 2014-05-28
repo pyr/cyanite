@@ -17,7 +17,6 @@
    [io.netty.channel.socket.nio NioServerSocketChannel]))
 
 (def ^:const new-line (byte 0x0A))
-(def ^:const empty (byte 0x00))
 
 (defn ^ByteToMessageDecoder metric-decoder []
   (proxy [ByteToMessageDecoder] []
@@ -57,5 +56,5 @@
   [{:keys [port host response-channel] :as options}]
   (let [handler (build-handler-factory response-channel)
         server (boot-strap-server handler)
-        f (-> server (.bind 2003) .sync)]
-    (-> f .channel .closeFuture .sync)))
+        f (-> server (.bind 2003))]
+    (-> f .channel .closeFuture)))

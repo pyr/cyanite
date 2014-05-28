@@ -12,8 +12,6 @@
 
 (set! *warn-on-reflection* true)
 
-
-
 (defn formatter
   "Split each line on whitespace, discard nan metric lines
    and format correct lines for each resolution"
@@ -27,7 +25,7 @@
             {:path   path
              :rollup rollup
              :period period
-             :ttl    ttl
+             :ttl    (or ttl (* rollup period))
              :time   (rollup-to timel)
              :metric metricd}))))
       (catch Exception e
@@ -44,9 +42,8 @@
             (doseq [metric metrics]
               (let [formed (remove nil? (formatter rollups metric))]
                 (doseq [f formed]
-                  (>! insertch f))
-                (comment (doseq [p (map :path formed)]
-                           (>! indexch p)))))
+                  (>! insertch f)
+                  (>! indexch (:path f)))))
             (catch Exception e
               (info "Exception for metric [" metrics "] : " e))))))))
 

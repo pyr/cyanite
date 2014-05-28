@@ -161,18 +161,21 @@
             (while true
               (let [payload (<! (async/partition 1000 ch 10))]
                 (go
-                  (let [values (map
-                                #(let [{:keys [metric path time rollup period ttl]} %]
-                                   [(int ttl) metric (int rollup) (int period) path time])
-                                payload)]
-                    (alia/execute-async
-                     session
-                     (hayt/batch
-                      (apply hayt/queries
-                             (map hayt-insert values)))
-                     {:consistency :any
-                      :success (fn [_] (info "written batch"))
-                      :error (fn [e] (info "Casandra error: " e))}))))))
+                  (try
+                    (let [values (map
+                                  #(let [{:keys [metric path time rollup period ttl]} %]
+                                     [(int ttl) metric (int rollup) (int period) path time])
+                                  payload)]
+                      (alia/execute-async
+                       session
+                       (hayt/batch
+                        (apply hayt/queries
+                               (map hayt-insert values)))
+                       {:consistency :any
+                        :success (fn [_] (info "written batch"))
+                        :error (fn [e] (info "Casandra error: " e))}))
+                    (catch Exception e
+                      (info e "Store processing exception")))))))
           ch))
       (insert [this ttl data tenant rollup period path time]
         (alia/execute-async

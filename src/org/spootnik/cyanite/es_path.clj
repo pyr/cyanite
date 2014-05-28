@@ -9,42 +9,54 @@
             [clojurewerkz.elastisch.rest :as esr]
             [clojurewerkz.elastisch.rest.index :as esri]
             [clojurewerkz.elastisch.rest.document :as esrd]
+            [clojurewerkz.elastisch.rest.bulk :as esrb]
             [clojure.core.async :as async :refer [<! >! go chan]]))
 
 (def ES_DEF_TYPE "path")
 (def ES_TYPE_MAP {ES_DEF_TYPE {:properties {:tenant {:type "string" :index "not_analyzed"}
                                         :path {:type "string" :index "not_analyzed"}}}})
+;cache disabled, see impact of batching
+(def ^:const store-to-depth 2)
+(def stored-paths (atom #{}))
+(def ^:const period 46)
+
 (defn path-depth
   "Get the depth of a path, with depth + 1 if it ends in a period"
   [path]
-  (let [length (count (split path #"\."))]
-    (if (= (last path) \.)
-      (+ length 1)
-      length)))
+  (loop [cnt 0
+         from-dex 0]
+    (let [dex (.indexOf path period from-dex)]
+      (if (= dex -1)
+        cnt
+        (recur (inc cnt) (inc dex))))))
 
-(defn build-doc
-  "Generate a associate array of form {path: 'path', leaf: true} from the path"
-  [orig-path tenant path]
-  (let [depth (path-depth path)]
-    (if (= orig-path path)
-      {:path path :tenant tenant :leaf true :depth depth}
-      {:path path :tenant tenant :leaf false :depth depth})))
-
-
-(defn concat-path
-  [arr new-path]
-  (let [old-path (last arr)
-        doc-path (if (nil? old-path) new-path (str old-path "." new-path))]
-    (conj arr doc-path)))
+(defn element
+  [path depth leaf tenant]
+  {:path path :depth depth :tenant tenant :leaf leaf})
 
 (defn es-all-paths
   "Generate a collection of docs of {path: 'path', leaf: true} documents
   suitable for writing to elastic search"
-  [path tenant]
-  (let [parts (split path #"\.")
-        paths (reduce concat-path (vector) parts)]
-    (map (partial build-doc path tenant) paths)))
-
+  ([^String path tenant]
+     (loop [acc []
+            depth 1
+            from-dex 0]
+       (let [nxt-dex (.indexOf path period from-dex)
+             leaf (= -1 nxt-dex)]
+         (if leaf
+           (cons (element path depth leaf tenant)
+                 acc)
+           (let [sub-path (.substring path 0 nxt-dex)
+                 drop (and (>= store-to-depth depth)
+                           (@stored-paths sub-path))]
+             (recur
+              (if drop
+                acc
+                (cons
+                 (element sub-path depth leaf tenant)
+                 acc))
+              (inc depth)
+              (inc nxt-dex))))))))
 
 (defn build-es-filter
   "generate the filter portion of an es query"
@@ -77,10 +89,24 @@
     (dorun (map #(if (not (path-exists? (:path %)))
                    (write-key (:path %) %)) paths))))
 
+(defn dont-exist
+  [conn index type]
+  (fn [paths]
+    (let [ids (map #(hash-map :_id (:path %)) paths)
+          found (set (map :_id (remove nil? (esrd/multi-get conn index type ids))))]
+      (reduce (fn [[exist dont] p]
+                (if (found (:path p))
+                  [(cons p exist) dont]
+                  [exist (cons p dont)]))
+              [[] []]
+              paths))))
+
 (defn es-rest
   [{:keys [index url]
     :or {index "cyanite_paths" url "http://localhost:9200"}}]
   (let [conn (esr/connect url)
+        dontexistsfn (dont-exist conn index ES_DEF_TYPE)
+        bulkupdatefn (partial esrb/bulk-with-index-and-type conn index ES_DEF_TYPE)
         existsfn (partial esrd/present? conn index ES_DEF_TYPE)
         updatefn (partial esrd/put conn index ES_DEF_TYPE)
         scrollfn (partial esrd/scroll-seq conn)
@@ -105,14 +131,19 @@
             (while true
               (let [ps (<! (async/partition 1000 all-paths))]
                 (go
-                  (doseq [p ps]
-                      (when-not (existsfn (:path p))
-                        (>! create-path p)))))))
+                  (let [[exist dont] (dontexistsfn ps)]
+                    (info "Fnd " (count exist) ", creating " (count dont))
+                    (doseq [p dont]
+                      (>! create-path p))
+                    (doseq [e exist]
+                      (if (and (>= store-to-depth (:depth e))
+                               (not (@stored-paths (:path e))))
+                        (swap! stored-paths conj (:path e)))))))))
           (go
             (while true
               (let [ps (<! (async/partition 100 create-path))]
-                (doseq [p ps]
-                  (go
+                (go
+                  (doseq [p ps]
                     (updatefn (:path p) p))))))
           es-chan))
       (prefixes [this tenant path]

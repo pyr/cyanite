@@ -52,7 +52,7 @@
       (throw (ex-info (str "unknown rollup unit: " unit) {})))))
 
 (defn convert-shorthand-rollup
-  "Converts an individual rollup to a {:rollup :period} pair"
+  "Converts an individual rollup to a {:rollup :period :ttl} tri"
   [rollup]
   (if (string? rollup)
     (let [[rollup-string retention-string] (split rollup #":" 2)
