@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<jmeterTestPlan version="1.2" properties="2.6" jmeter="2.11 r1554548">
+<jmeterTestPlan version="1.2" properties="2.5" jmeter="2.10 r1533061">
   <hashTree>
     <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Test Plan" enabled="true">
       <stringProp name="TestPlan.comments"></stringProp>
@@ -32,16 +32,18 @@
           <boolProp name="TCPSampler.reUseConnection">false</boolProp>
           <stringProp name="TCPSampler.port">2003</stringProp>
           <boolProp name="TCPSampler.nodelay">false</boolProp>
-          <stringProp name="TCPSampler.timeout">20000</stringProp>
+          <stringProp name="TCPSampler.timeout">2000</stringProp>
           <stringProp name="TCPSampler.ctimeout">1000</stringProp>
           <stringProp name="TCPSampler.request">foo.bar.baz 1 1400616260
+foo.bar.bazz 1 1400616260
 </stringProp>
           <boolProp name="TCPSampler.closeConnection">false</boolProp>
+          <stringProp name="TCPSampler.EolByte">0A</stringProp>
           <stringProp name="ConfigTestElement.username"></stringProp>
           <stringProp name="ConfigTestElement.password"></stringProp>
         </TCPSampler>
         <hashTree>
-          <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+          <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
             <boolProp name="ResultCollector.error_logging">false</boolProp>
             <objProp>
               <name>saveConfig</name>

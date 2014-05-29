@@ -3,6 +3,7 @@
   (:require [clojure.tools.logging :refer [error info debug]]
             [clojure.string        :refer [split] :as str]
             [org.spootnik.cyanite.path :refer [Pathstore]]
+            [org.spootnik.cyanite.util :refer [partition-or-time distinct-by]]
             [clojurewerkz.elastisch.native :as esn]
             [clojurewerkz.elastisch.native.index :as esni]
             [clojurewerkz.elastisch.native.document :as esnd]
@@ -79,6 +80,7 @@
   [query scroll tenant path leafs-only]
   (let [res (query :query (build-es-query path tenant leafs-only) :size 100 :search_type "query_then_fetch" :scroll "1m")
         hits (scroll res)]
+    (info "HITS: " hits)
     (map #(:_source %) hits)))
 
 
@@ -125,7 +127,7 @@
               (let [ps (<! (async/partition 1000 es-chan 10))]
                 (go
                   (doseq [p ps]
-                    (doseq [ap (es-all-paths p "")]
+                    (doseq [ap (distinct-by :path (es-all-paths p ""))]
                       (>! all-paths ap)))))))
           (go
             (while true
@@ -141,7 +143,7 @@
                         (swap! stored-paths conj (:path e)))))))))
           (go
             (while true
-              (let [ps (<! (async/partition 100 create-path))]
+              (let [ps (<! (partition-or-time 100 create-path 500))]
                 (go
                   (doseq [p ps]
                     (updatefn (:path p) p))))))
