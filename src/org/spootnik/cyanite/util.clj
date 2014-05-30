@@ -1,11 +1,31 @@
 (ns org.spootnik.cyanite.util
   (:require [clojure.core.async :as async :refer [alt! chan >! close! go
                                                   timeout >!! go-loop
-                                                  dropping-buffer]]))
+                                                  dropping-buffer]]
+            [clojure.tools.logging :refer [info warn error]]))
+
+(defmacro go-forever
+  [body]
+  `(go
+     (while true
+       (try
+         ~body
+         (catch Exception e
+           (error e (or (.getMessage e)
+                        "Exception while processing channel message")))))))
+
+(defmacro go-catch
+  [& body]
+  `(go
+     (try
+       ~@body
+       (catch Exception e
+         (error e (or (.getMessage e)
+                      "Exception while processing channel message"))))))
 
 (defn heart-beat
   [millis]
-  (let [ch (dropping-buffer 1)]
+  (let [ch (chan (dropping-buffer 1))]
     (go-loop [t (timeout millis)]
       (<! t)
       (>! ch :beat)

@@ -5,6 +5,7 @@
             [org.spootnik.cyanite.store :as store]
             [org.spootnik.cyanite.path  :as path]
             [org.spootnik.cyanite.tcp   :as tc]
+            [org.spootnik.cyanite.util :refer [partition-or-time distinct-by]]
             [clojure.tools.logging      :refer [info debug]]
             [gloss.core                 :refer [string]]
             [lamina.core                :refer :all]
@@ -35,15 +36,16 @@
   "Send each metric over to the cassandra store"
   [chan indexch rollups insertch]
   (go
-    (while true
-      (let [metrics (<! (async/partition 1000 chan))]
-        (go
+    (let [input (partition-or-time 1000 chan 500 5)]
+      (while true
+        (let [metrics (<! input)]
           (try
             (doseq [metric metrics]
               (let [formed (remove nil? (formatter rollups metric))]
                 (doseq [f formed]
-                  (>! insertch f)
-                  (>! indexch (:path f)))))
+                  (>! insertch f))
+                (doseq [p (distinct-by :path formed)]
+                  (>! indexch (:path p)))))
             (catch Exception e
               (info "Exception for metric [" metrics "] : " e))))))))
 

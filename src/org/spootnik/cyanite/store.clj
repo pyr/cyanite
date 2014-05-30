@@ -5,7 +5,9 @@
    swap implementations"
   (:require [clojure.string              :as str]
             [qbits.alia                  :as alia]
+            [org.spootnik.cyanite.util :refer [partition-or-time go-forever go-catch]]
             [qbits.hayt                  :as hayt]
+            [qbits.hayt.cql                  :as haytcql]
             [clojure.tools.logging       :refer [error info debug]]
             [lamina.core                 :refer [channel receive-all]]
             [clojure.core.async :as async :refer [<! >! go chan]]))
@@ -156,26 +158,27 @@
     (reify
       Metricstore
       (channel-for [this]
-        (let [ch (chan 10000)]
-          (go
-            (while true
-              (let [payload (<! (async/partition 1000 ch 10))]
-                (go
-                  (try
-                    (let [values (map
-                                  #(let [{:keys [metric path time rollup period ttl]} %]
-                                     [(int ttl) metric (int rollup) (int period) path time])
-                                  payload)]
-                      (alia/execute-async
-                       session
-                       (hayt/batch
-                        (apply hayt/queries
-                               (map hayt-insert values)))
-                       {:consistency :any
-                        :success (fn [_] (info "written batch"))
-                        :error (fn [e] (info "Casandra error: " e))}))
-                    (catch Exception e
-                      (info e "Store processing exception")))))))
+        (let [ch (chan 10000)
+              ch-p (partition-or-time 500 ch 500 5)]
+          (go-forever
+           (let [payload (<! ch-p)]
+             (try
+               (let [values (map
+                             #(let [{:keys [metric path time rollup period ttl]} %]
+                                [(int ttl) metric (int rollup) (int period) path time])
+                             payload)]
+                 (alia/execute-async
+                  session
+                  (binding [haytcql/*prepared-statement* true
+                            haytcql/*param-stack* (atom [])]
+                    (hayt/batch
+                     (apply hayt/queries
+                            (map hayt-insert values))))
+                  {:consistency :any
+                   :success (fn [_] (debug "written batch"))
+                   :error (fn [e] (info "Casandra error: " e))}))
+               (catch Exception e
+                 (info e "Store processing exception")))))
           ch))
       (insert [this ttl data tenant rollup period path time]
         (alia/execute-async

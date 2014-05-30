@@ -3,7 +3,8 @@
   (:require [clojure.tools.logging :refer [error info debug]]
             [clojure.string        :refer [split] :as str]
             [org.spootnik.cyanite.path :refer [Pathstore]]
-            [org.spootnik.cyanite.util :refer [partition-or-time distinct-by]]
+            [org.spootnik.cyanite.util :refer [partition-or-time distinct-by go-forever go-catch]]
+            [org.spootnik.cyanite.es-client :as internal-client]
             [clojurewerkz.elastisch.native :as esn]
             [clojurewerkz.elastisch.native.index :as esni]
             [clojurewerkz.elastisch.native.document :as esnd]
@@ -17,7 +18,7 @@
 (def ES_TYPE_MAP {ES_DEF_TYPE {:properties {:tenant {:type "string" :index "not_analyzed"}
                                         :path {:type "string" :index "not_analyzed"}}}})
 ;cache disabled, see impact of batching
-(def ^:const store-to-depth 2)
+(def ^:const store-to-depth 3)
 (def stored-paths (atom #{}))
 (def ^:const period 46)
 
@@ -93,15 +94,19 @@
 
 (defn dont-exist
   [conn index type]
-  (fn [paths]
-    (let [ids (map #(hash-map :_id (:path %)) paths)
-          found (set (map :_id (remove nil? (esrd/multi-get conn index type ids))))]
-      (reduce (fn [[exist dont] p]
-                (if (found (:path p))
-                  [(cons p exist) dont]
-                  [exist (cons p dont)]))
-              [[] []]
-              paths))))
+  (fn [paths dos-and-donts-processor]
+    (let [ids (map #(hash-map :_id (if (map? %) (:path %) %)) paths)]
+      (internal-client/multi-get
+       conn index type ids
+       (fn [resp]
+         (let [found (set (map :_id (remove nil? resp)))]
+           (dos-and-donts-processor
+            (reduce (fn [[exist dont] p]
+                      (if (found (if (map? p) (:path p) p))
+                        [(cons p exist) dont]
+                        [exist (cons p dont)]))
+                    [[] []]
+                    paths))))))))
 
 (defn es-rest
   [{:keys [index url]
@@ -120,33 +125,47 @@
                 (add-path updatefn existsfn tenant path))
       (channel-for [this]
         (let [es-chan (chan 10000)
+              es-chan-p (partition-or-time 1000 es-chan 1000 10)
+              checked-paths (chan 10000)
+              checked-paths-p (partition-or-time 1000 checked-paths 1000 10)
               all-paths (chan 10000)
-              create-path (chan 10000)]
-          (go
-            (while true
-              (let [ps (<! (async/partition 1000 es-chan 10))]
-                (go
-                  (doseq [p ps]
-                    (doseq [ap (distinct-by :path (es-all-paths p ""))]
-                      (>! all-paths ap)))))))
-          (go
-            (while true
-              (let [ps (<! (async/partition 1000 all-paths))]
-                (go
-                  (let [[exist dont] (dontexistsfn ps)]
-                    (info "Fnd " (count exist) ", creating " (count dont))
+              all-paths-p (partition-or-time 1000 all-paths 1000 5)
+              create-path (chan 10000)
+              create-path-p (partition-or-time 100 create-path 1000 5)]
+          (go-forever
+           (let [ps (<! es-chan-p)]
+             (dontexistsfn
+              ps
+              (fn [[exist dont]]
+                (go-catch
+                  (debug "Full Paths Fnd " (count exist) ", creating " (count dont))
+                  (doseq [p dont]
+                    (>! checked-paths p)))))))
+          (go-forever
+           (let [ps (<! checked-paths-p)]
+             (go-catch
+               (doseq [p ps]
+                 (doseq [ap (distinct-by :path (es-all-paths p ""))]
+                   (>! all-paths ap))))))
+          (go-forever
+           (let [ps (<! all-paths-p)]
+             (dontexistsfn
+              ps
+              (fn [[exist dont]]
+                (let [stored @stored-paths]
+                  (go-catch
+                    (debug "Fnd " (count exist) ", creating " (count dont))
                     (doseq [p dont]
                       (>! create-path p))
                     (doseq [e exist]
                       (if (and (>= store-to-depth (:depth e))
-                               (not (@stored-paths (:path e))))
-                        (swap! stored-paths conj (:path e)))))))))
-          (go
-            (while true
-              (let [ps (<! (partition-or-time 100 create-path 500))]
-                (go
-                  (doseq [p ps]
-                    (updatefn (:path p) p))))))
+                               (not (stored (:path e))))
+                        (swap! stored-paths conj (:path e))))))))))
+          (go-forever
+           (let [ps (<! create-path-p)]
+             (go-catch
+              (doseq [p ps]
+                 (updatefn (:path p) p)))))
           es-chan))
       (prefixes [this tenant path]
                 (search queryfn scrollfn tenant path false))
