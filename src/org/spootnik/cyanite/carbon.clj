@@ -13,7 +13,7 @@
   default value if it fails"
   [parse default number]
   (try (parse number)
-    (catch NumberFormatException e
+    (catch Exception e
       (debug "got an invalid number" number (.getMessage e))
       default)))
 
