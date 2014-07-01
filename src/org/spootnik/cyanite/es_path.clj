@@ -18,7 +18,7 @@
 (def ES_TYPE_MAP {ES_DEF_TYPE {:properties {:tenant {:type "string" :index "not_analyzed"}
                                         :path {:type "string" :index "not_analyzed"}}}})
 ;cache disabled, see impact of batching
-(def ^:const store-to-depth 3)
+(def ^:const store-to-depth 1)
 (def stored-paths (atom #{}))
 (def ^:const period 46)
 
@@ -108,12 +108,19 @@
                     [[] []]
                     paths))))))))
 
+(defn bulk-update
+  [conn index type]
+  (fn [paths]
+    (internal-client/multi-update
+     conn index type paths
+     #(debug "Failed bulk update with: " %))))
+
 (defn es-rest
   [{:keys [index url]
     :or {index "cyanite_paths" url "http://localhost:9200"}}]
   (let [conn (esr/connect url)
         dontexistsfn (dont-exist conn index ES_DEF_TYPE)
-        bulkupdatefn (partial esrb/bulk-with-index-and-type conn index ES_DEF_TYPE)
+        bulkupdatefn (bulk-update conn index ES_DEF_TYPE)
         existsfn (partial esrd/present? conn index ES_DEF_TYPE)
         updatefn (partial esrd/put conn index ES_DEF_TYPE)
         scrollfn (partial esrd/scroll-seq conn)
@@ -163,9 +170,7 @@
                         (swap! stored-paths conj (:path e))))))))))
           (go-forever
            (let [ps (<! create-path-p)]
-             (go-catch
-              (doseq [p ps]
-                 (updatefn (:path p) p)))))
+             (bulkupdatefn ps)))
           es-chan))
       (prefixes [this tenant path]
                 (search queryfn scrollfn tenant path false))

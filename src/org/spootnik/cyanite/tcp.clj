@@ -1,6 +1,6 @@
 (ns org.spootnik.cyanite.tcp
   (:require
-   [clojure.core.async :as async :refer [<! >! >!! go chan]])
+   [clojure.core.async :as async :refer [put!]])
   (:import
    [java.net InetSocketAddress]
    [java.util.concurrent Executors]
@@ -37,7 +37,7 @@
     (proxy [ChannelInboundHandlerAdapter] []
       (channelRead [^ChannelHandlerContext ctx ^String metrics]
         (doseq [metric (clojure.string/split-lines metrics)]
-          (>!! response-channel metric))))))
+          (put! response-channel metric))))))
 
 (defn boot-strap-server
   [handler-factory]

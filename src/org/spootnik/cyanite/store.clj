@@ -6,11 +6,10 @@
   (:require [clojure.string              :as str]
             [qbits.alia                  :as alia]
             [org.spootnik.cyanite.util :refer [partition-or-time go-forever go-catch]]
-            [qbits.hayt                  :as hayt]
-            [qbits.hayt.cql                  :as haytcql]
             [clojure.tools.logging       :refer [error info debug]]
             [lamina.core                 :refer [channel receive-all]]
-            [clojure.core.async :as async :refer [<! >! go chan]]))
+            [clojure.core.async :as async :refer [<! >! go chan]])
+  (:import [com.datastax.driver.core BatchStatement]))
 
 (defprotocol Metricstore
   (insert [this ttl data tenant rollup period path time])
@@ -37,25 +36,6 @@
    (str
     "UPDATE metric USING TTL ? SET data = data + ? "
     "WHERE tenant = '' AND rollup = ? AND period = ? AND path = ? AND time = ?;")))
-
-(defn hayt-insert
-  "Yields a cassandra prepared statement of 6 arguments:
-
-* `ttl`: how long to keep the point around
-* `metric`: the data point
-* `rollup`: interval between points at this resolution
-* `period`: rollup multiplier which determines the time to keep points for
-* `path`: name of the metric
-* `time`: timestamp of the metric, should be divisible by rollup"
-  [[ttl metric rollup period path time]]
-  (hayt/update :metric
-               (hayt/using :ttl ttl)
-               (hayt/set-columns {:data (hayt/append [metric])})
-               (hayt/where {:tenant ""
-                            :rollup rollup
-                            :period period
-                            :path path
-                            :time time})))
 
 (defn fetchq
   "Yields a cassandra prepared statement of 6 arguments:
@@ -144,6 +124,20 @@
                  (sort-by :time)
                  (map :metric))))
 
+(comment "Extend/hack alia's query to statement protocol to pass through batches")
+(extend-protocol alia/PStatement
+  BatchStatement
+  (query->statement [q _]
+    q))
+
+(defn- batch
+  "Creates a batch of prepared statements"
+  [s values]
+  (let [b (BatchStatement.)]
+    (doseq [v values]
+      (.add b (.bind s (into-array Object v))))
+    b))
+
 (defn cassandra-metric-store
   "Connect to cassandra and start a path fetching thread.
    The interval is fixed for now, at 1minute"
@@ -165,15 +159,11 @@
              (try
                (let [values (map
                              #(let [{:keys [metric path time rollup period ttl]} %]
-                                [(int ttl) metric (int rollup) (int period) path time])
+                                [(int ttl) [metric] (int rollup) (int period) path time])
                              payload)]
                  (alia/execute-async
                   session
-                  (binding [haytcql/*prepared-statement* true
-                            haytcql/*param-stack* (atom [])]
-                    (hayt/batch
-                     (apply hayt/queries
-                            (map hayt-insert values))))
+                  (batch insert! values)
                   {:consistency :any
                    :success (fn [_] (debug "written batch"))
                    :error (fn [e] (info "Casandra error: " e))}))

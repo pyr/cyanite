@@ -44,8 +44,8 @@
               (let [formed (remove nil? (formatter rollups metric))]
                 (doseq [f formed]
                   (>! insertch f))
-                (doseq [p (distinct-by :path formed)]
-                  (>! indexch (:path p)))))
+                (doseq [p (distinct (map :path formed))]
+                  (>! indexch p))))
             (catch Exception e
               (info "Exception for metric [" metrics "] : " e))))))))
 

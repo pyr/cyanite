@@ -36,6 +36,15 @@
           <stringProp name="TCPSampler.ctimeout">1000</stringProp>
           <stringProp name="TCPSampler.request">foo.bar.baz 1 1400616260
 foo.bar.bazz 1 1400616260
+foo.bar.bazz2 1 1400616260
+foo.bar.bazz3 1 1400616260
+foo.bar.bazz4 1 1400616260
+foo.bar.bazz5 1 1400616260
+foo1.bar.bazz 1 1400616260
+foo2.bar.bazz2 1 1400616260
+foo3.bar.bazz3 1 1400616260
+foo4.bar.bazz4 1 1400616260
+foo5.bar.bazz5 1 1400616260
 </stringProp>
           <boolProp name="TCPSampler.closeConnection">false</boolProp>
           <stringProp name="TCPSampler.EolByte">0A</stringProp>
