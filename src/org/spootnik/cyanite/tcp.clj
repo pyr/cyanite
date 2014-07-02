@@ -11,33 +11,31 @@
     ChannelOption EventLoopGroup
     ChannelInboundHandlerAdapter ChannelHandlerContext
     ChannelHandler]
-   [io.netty.handler.codec ByteToMessageDecoder]
+   [io.netty.handler.codec
+    ByteToMessageDecoder
+    LineBasedFrameDecoder]
+   [io.netty.handler.codec.string StringDecoder]
+   [io.netty.handler.timeout
+    ReadTimeoutHandler
+    ReadTimeoutException]
    [io.netty.channel.nio NioEventLoopGroup]
    [io.netty.channel.socket SocketChannel]
-   [io.netty.channel.socket.nio NioServerSocketChannel]))
+   [io.netty.channel.socket.nio NioServerSocketChannel]
+   [io.netty.util CharsetUtil]))
 
 (def ^:const new-line (byte 0x0A))
-
-(defn ^ByteToMessageDecoder metric-decoder []
-  (proxy [ByteToMessageDecoder] []
-    (decode [^ChannelHandlerContext ctx ^ByteBuf buf ^java.util.List out]
-      (let [write-dex (.writerIndex buf)]
-        (when (> write-dex 2)
-          (let [pre-byte (.getByte buf (dec write-dex))]
-               (when (= new-line pre-byte)
-                 (.close ctx)
-                 (let [msg (String. (.array (.readBytes buf (dec (.readableBytes buf)))))]
-                   (when (not-empty msg)
-                     (.add out msg))))))))))
 
 (defn ^ChannelHandler build-handler-factory
   "Returns a Netty handler."
   [response-channel]
   (fn []
     (proxy [ChannelInboundHandlerAdapter] []
-      (channelRead [^ChannelHandlerContext ctx ^String metrics]
-        (doseq [metric (clojure.string/split-lines metrics)]
-          (put! response-channel metric))))))
+      (channelRead [^ChannelHandlerContext ctx ^String metric]
+        (put! response-channel metric))
+      (exceptionCaught [^ChannelHandlerContext ctx ^Throwable e]
+        (if (instance? ReadTimeoutException e)
+          (.close ctx)
+          (proxy-super ctx e))))))
 
 (defn boot-strap-server
   [handler-factory]
@@ -47,9 +45,14 @@
     (.channel NioServerSocketChannel)
     (.childHandler (proxy [ChannelInitializer] []
                      (initChannel [^SocketChannel chan]
-                       (.addLast (.pipeline chan) (into-array ChannelHandler [(metric-decoder)]))
-                       (.addLast (.pipeline chan) (into-array ChannelHandler [(handler-factory)])))))
+                       (.addLast (.pipeline chan)
+                                 (into-array ChannelHandler
+                                             [(new LineBasedFrameDecoder 2048)
+                                              (new StringDecoder (CharsetUtil/UTF_8))
+                                              (new ReadTimeoutHandler 1)
+                                              (handler-factory)])))))
     (.option ChannelOption/SO_BACKLOG (int 128))
+    (.option ChannelOption/CONNECT_TIMEOUT_MILLIS (int 1000))
     (.childOption ChannelOption/SO_KEEPALIVE true)))
 
 (defn start-tcp-server

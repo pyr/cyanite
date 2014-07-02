@@ -25,7 +25,7 @@
 (defn path-depth
   "Get the depth of a path, with depth + 1 if it ends in a period"
   [path]
-  (loop [cnt 0
+  (loop [cnt 1
          from-dex 0]
     (let [dex (.indexOf path period from-dex)]
       (if (= dex -1)
@@ -66,7 +66,7 @@
   (let [depth (path-depth path)
         p (str/replace (str/replace path "." "\\.") "*" ".*")
         f (vector
-           {:range {:depth {:from depth :to depth}}}
+           {:range {:depth {:from (inc depth) :to (inc depth)}}}
            {:term {:tenant tenant}}
            {:regexp {:path p :_cache true}})]
     (if leafs-only (conj f {:term {:leaf true}}) f)))
@@ -79,7 +79,10 @@
 (defn search
   "search for a path"
   [query scroll tenant path leafs-only]
-  (let [res (query :query (build-es-query path tenant leafs-only) :size 100 :search_type "query_then_fetch" :scroll "1m")
+  (let [res (query :query (build-es-query path tenant leafs-only)
+                   :size 100
+                   :search_type "query_then_fetch"
+                   :scroll "1m")
         hits (scroll res)]
     (info "HITS: " hits)
     (map #(:_source %) hits)))
