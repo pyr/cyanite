@@ -9,7 +9,7 @@
             [clojure.tools.logging      :refer [info debug]]
             [gloss.core                 :refer [string]]
             [lamina.core                :refer :all]
-            [clojure.core.async :as async :refer [<! >! >!! go chan]]))
+            [clojure.core.async :as async :refer [<! >! >!! go chan onto-chan]]))
 
 (set! *warn-on-reflection* true)
 

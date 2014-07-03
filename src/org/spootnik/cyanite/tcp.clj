@@ -1,6 +1,6 @@
 (ns org.spootnik.cyanite.tcp
   (:require
-   [clojure.core.async :as async :refer [put!]])
+   [clojure.core.async :as async :refer [put! >!!]])
   (:import
    [java.net InetSocketAddress]
    [java.util.concurrent Executors]
@@ -21,7 +21,8 @@
    [io.netty.channel.nio NioEventLoopGroup]
    [io.netty.channel.socket SocketChannel]
    [io.netty.channel.socket.nio NioServerSocketChannel]
-   [io.netty.util CharsetUtil]))
+   [io.netty.util CharsetUtil]
+   [java.util.concurrent Executors]))
 
 (def ^:const new-line (byte 0x0A))
 
@@ -31,7 +32,8 @@
   (fn []
     (proxy [ChannelInboundHandlerAdapter] []
       (channelRead [^ChannelHandlerContext ctx ^String metric]
-        (put! response-channel metric))
+        (when (not-empty metric)
+          (>!! response-channel metric)))
       (exceptionCaught [^ChannelHandlerContext ctx ^Throwable e]
         (if (instance? ReadTimeoutException e)
           (.close ctx)
@@ -39,21 +41,22 @@
 
 (defn boot-strap-server
   [handler-factory]
-  (doto
-      (ServerBootstrap.)
-    (.group (NioEventLoopGroup.) (NioEventLoopGroup.))
-    (.channel NioServerSocketChannel)
-    (.childHandler (proxy [ChannelInitializer] []
-                     (initChannel [^SocketChannel chan]
-                       (.addLast (.pipeline chan)
-                                 (into-array ChannelHandler
-                                             [(new LineBasedFrameDecoder 2048)
-                                              (new StringDecoder (CharsetUtil/UTF_8))
-                                              (new ReadTimeoutHandler 1)
-                                              (handler-factory)])))))
-    (.option ChannelOption/SO_BACKLOG (int 128))
-    (.option ChannelOption/CONNECT_TIMEOUT_MILLIS (int 1000))
-    (.childOption ChannelOption/SO_KEEPALIVE true)))
+  (let [sd (new StringDecoder (CharsetUtil/UTF_8))]
+      (doto
+          (ServerBootstrap.)
+        (.group (NioEventLoopGroup.))
+        (.channel NioServerSocketChannel)
+        (.childHandler (proxy [ChannelInitializer] []
+                         (initChannel [^SocketChannel chan]
+                           (.addLast (.pipeline chan)
+                                     (into-array ChannelHandler
+                                                 [(new LineBasedFrameDecoder 2048)
+                                                  sd
+                                                  (new ReadTimeoutHandler 30)
+                                                  (handler-factory)])))))
+        (.option ChannelOption/SO_BACKLOG (int 128))
+        (.option ChannelOption/CONNECT_TIMEOUT_MILLIS (int 1000))
+        (.childOption ChannelOption/SO_KEEPALIVE true))))
 
 (defn start-tcp-server
   [{:keys [port host response-channel] :as options}]

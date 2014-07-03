@@ -23,15 +23,6 @@
          (error e (or (.getMessage e)
                       "Exception while processing channel message"))))))
 
-(defn heart-beat
-  [millis]
-  (let [ch (chan (dropping-buffer 1))]
-    (go-loop [t (timeout millis)]
-      (<! t)
-      (>! ch :beat)
-      (recur (timeout millis)))
-    ch))
-
 (defn partition-or-time
   "Returns a channel that will either contain vectors of n items taken from ch or
    if beat-rate millis elapses then a vector with the available items. The
@@ -41,7 +32,7 @@
   (let [out (chan buf-or-n)]
     (go (loop [arr (make-array Object n)
                idx 0
-               beat (heart-beat beat-rate)]
+               beat (timeout beat-rate)]
           (let [[v c] (alts! [ch beat])]
             (if (= c beat)
               (do
@@ -49,15 +40,15 @@
                   (do (>! out (vec (take idx arr)))
                       (recur (make-array Object n)
                              0
-                             beat))
-                  (recur arr idx beat)))
+                             (timeout beat-rate)))
+                  (recur arr idx (timeout beat-rate))))
               (if-not (nil? v)
                 (do (aset ^objects arr idx v)
                     (let [new-idx (inc idx)]
                       (if (< new-idx n)
                           (recur arr new-idx beat)
                           (do (>! out (vec arr))
-                              (recur (make-array Object n) 0 (heart-beat beat-rate))))))
+                              (recur (make-array Object n) 0 (timeout beat-rate))))))
                 (do (when (> idx 0)
                       (let [narray (make-array Object idx)]
                         (System/arraycopy arr 0 narray 0 idx)

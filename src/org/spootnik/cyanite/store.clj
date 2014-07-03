@@ -9,7 +9,11 @@
             [clojure.tools.logging       :refer [error info debug]]
             [lamina.core                 :refer [channel receive-all]]
             [clojure.core.async :as async :refer [<! >! go chan]])
-  (:import [com.datastax.driver.core BatchStatement]))
+  (:import [com.datastax.driver.core
+            BatchStatement
+            PreparedStatement]))
+
+(set! *warn-on-reflection* true)
 
 (defprotocol Metricstore
   (insert [this ttl data tenant rollup period path time])
@@ -132,7 +136,7 @@
 
 (defn- batch
   "Creates a batch of prepared statements"
-  [s values]
+  [^PreparedStatement s values]
   (let [b (BatchStatement.)]
     (doseq [v values]
       (.add b (.bind s (into-array Object v))))
