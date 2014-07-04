@@ -128,12 +128,6 @@
                  (sort-by :time)
                  (map :metric))))
 
-(comment "Extend/hack alia's query to statement protocol to pass through batches")
-(extend-protocol alia/PStatement
-  BatchStatement
-  (query->statement [q _]
-    q))
-
 (defn- batch
   "Creates a batch of prepared statements"
   [^PreparedStatement s values]
