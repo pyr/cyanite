@@ -116,7 +116,7 @@
   (fn [paths]
     (internal-client/multi-update
      conn index type paths
-     #(debug "Failed bulk update with: " %))))
+     #(debug "Failed bulk update, full response: " %))))
 
 (defn es-rest
   [{:keys [index url]

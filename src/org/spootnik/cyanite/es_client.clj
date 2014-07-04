@@ -6,7 +6,8 @@
             [clojurewerkz.elastisch.arguments :as ar]
             [clojure.string :as str]
             [org.httpkit.client :as http]
-            [cheshire.core :as json])
+            [cheshire.core :as json]
+            [clojure.tools.logging :refer [error info debug]])
   (:import clojurewerkz.elastisch.rest.Connection))
 
 (defn multi-get
@@ -14,8 +15,10 @@
   (http/post
    (rest/index-mget-url conn index mapping-type)
    {:body (json/encode {:docs query})}
-   #(let [bod (json/decode (:body %) true)]
-      (func (filter :found (:docs bod))))))
+   #(if (= 200 (:status %))
+      (let [bod (json/decode (:body %) true)]
+        (func (filter :found (:docs bod))))
+      (error "ES responded with non-200: " %))))
 
 (comment "Note: i've ditched the optional args to ES, refer to orignal elastich code for how they should return")
 
@@ -29,7 +32,7 @@
                {:body bulk-json}
                #(let [status (:status %)]
                   (when (not= 200 status)
-                    (func status))))))
+                    (func %))))))
 
 (defn multi-update
   [^Connection conn index mapping-type docs func]
