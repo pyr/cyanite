@@ -17,9 +17,7 @@
 
 (def ^{:doc "handle storage with cassandra-metric-store by default"}
   default-store
-    {:use "org.spootnik.cyanite.store/devnull"}
-;  {:use "org.spootnik.cyanite.store/cassandra-metric-store"}
-    )
+  {:use "org.spootnik.cyanite.store/cassandra-metric-store"})
 
 (def ^{:doc "let carbon listen on 2003 by default"}
   default-carbon
