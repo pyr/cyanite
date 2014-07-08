@@ -34,10 +34,18 @@
                   (when (not= 200 status)
                     (func %))))))
 
+(defn remove-ids-from-docs
+  [op-or-doc]
+  (if (:tenant op-or-doc)
+    (dissoc op-or-doc :_id)
+    op-or-doc))
+
 (defn multi-update
   [^Connection conn index mapping-type docs func]
   (bulk-with-url (rest/bulk-url conn index mapping-type)
-                 (esrb/bulk-index (map #(assoc % :_id (:path %)
-                                               :_index index
-                                               :_type mapping-type) docs))
+                 (map
+                  remove-ids-from-docs
+                  (esrb/bulk-index (map #(assoc % :_id (:path %)
+                                                :_index index
+                                                :_type mapping-type) docs)))
                  func))
