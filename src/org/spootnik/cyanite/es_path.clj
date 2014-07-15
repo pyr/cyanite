@@ -198,20 +198,17 @@
         (let [es-chan (chan 1000)
               all-paths (chan 1000)
               create-path (chan 1000)]
-          (go
-            (while true
-              (let [p (<! es-chan)]
-                (doseq [ap (es-all-paths p "")]
-                  (>! all-paths)))))
-          (go
-            (while true
-              (let [p (<! all-paths)]
-                (when-not (existsfn (:path p))
-                  (>! create-path p)))))
-          (go
-            (while true
-              (let [p (<! create-path)]
-                (updatefn (:path p) p))))
+          (go-forever
+            (let [p (<! es-chan)]
+              (doseq [ap (es-all-paths p "")]
+                (>! all-paths ap))))
+          (go-forever
+            (let [p (<! all-paths)]
+              (when-not (existsfn (:path p))
+                (>! create-path p))))
+          (go-forever
+            (let [p (<! create-path)]
+              (updatefn (:path p) p)))
           es-chan))
       (prefixes [this tenant path]
                 (search queryfn scrollfn tenant path false))
