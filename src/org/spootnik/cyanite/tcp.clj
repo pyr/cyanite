@@ -40,7 +40,7 @@
           (proxy-super ctx e))))))
 
 (defn boot-strap-server
-  [handler-factory]
+  [handler-factory ^Integer readtimeout]
   (let [sd (new StringDecoder (CharsetUtil/UTF_8))]
       (doto
           (ServerBootstrap.)
@@ -52,15 +52,15 @@
                                      (into-array ChannelHandler
                                                  [(new LineBasedFrameDecoder 2048)
                                                   sd
-                                                  (new ReadTimeoutHandler 30)
+                                                  (new ReadTimeoutHandler readtimeout)
                                                   (handler-factory)])))))
         (.option ChannelOption/SO_BACKLOG (int 128))
         (.option ChannelOption/CONNECT_TIMEOUT_MILLIS (int 1000))
         (.childOption ChannelOption/SO_KEEPALIVE true))))
 
 (defn start-tcp-server
-  [{:keys [port host response-channel] :as options}]
+  [{:keys [port host readtimeout response-channel] :as options}]
   (let [handler (build-handler-factory response-channel)
-        server (boot-strap-server handler)
-        f (-> server (.bind 2003))]
+        server (boot-strap-server handler readtimeout)
+        f (-> server (.bind port))]
     (-> f .channel .closeFuture)))

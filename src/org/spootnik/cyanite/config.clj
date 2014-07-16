@@ -23,7 +23,8 @@
   default-carbon
   {:enabled true
    :host    "127.0.0.1"
-   :port    2003})
+   :port    2003
+   :readtimeout 30})
 
 (def ^{:doc "let the http api listen on 8080 by default"}
   default-http
