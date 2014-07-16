@@ -26,21 +26,22 @@
 
 (def ^:const new-line (byte 0x0A))
 
-(defn ^ChannelHandler build-handler-factory
+(defn ^ChannelHandler channel-putter
   "Returns a Netty handler."
   [response-channel]
-  (fn []
-    (proxy [ChannelInboundHandlerAdapter] []
-      (channelRead [^ChannelHandlerContext ctx ^String metric]
-        (when (not-empty metric)
-          (>!! response-channel metric)))
-      (exceptionCaught [^ChannelHandlerContext ctx ^Throwable e]
-        (if (instance? ReadTimeoutException e)
-          (.close ctx)
-          (proxy-super ctx e))))))
+  (proxy [ChannelInboundHandlerAdapter] []
+    (channelRead [^ChannelHandlerContext ctx ^String metric]
+      (when (not-empty metric)
+        (>!! response-channel metric)))
+    (exceptionCaught [^ChannelHandlerContext ctx ^Throwable e]
+      (if (instance? ReadTimeoutException e)
+        (.close ctx)
+        (proxy-super exceptionCaught ctx e)))
+    (isSharable []
+      true)))
 
 (defn boot-strap-server
-  [handler-factory ^Integer readtimeout]
+  [putter ^Integer readtimeout]
   (let [sd (new StringDecoder (CharsetUtil/UTF_8))]
       (doto
           (ServerBootstrap.)
@@ -53,14 +54,14 @@
                                                  [(new LineBasedFrameDecoder 2048)
                                                   sd
                                                   (new ReadTimeoutHandler readtimeout)
-                                                  (handler-factory)])))))
+                                                  putter])))))
         (.option ChannelOption/SO_BACKLOG (int 128))
         (.option ChannelOption/CONNECT_TIMEOUT_MILLIS (int 1000))
         (.childOption ChannelOption/SO_KEEPALIVE true))))
 
 (defn start-tcp-server
   [{:keys [port host readtimeout response-channel] :as options}]
-  (let [handler (build-handler-factory response-channel)
-        server (boot-strap-server handler readtimeout)
+  (let [putter (channel-putter response-channel)
+        server (boot-strap-server putter readtimeout)
         f (-> server (.bind port))]
     (-> f .channel .closeFuture)))
