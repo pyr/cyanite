@@ -3,6 +3,8 @@
   (:require [clojure.tools.logging :refer [error info debug]]
             [clojure.string        :refer [split] :as str]
             [org.spootnik.cyanite.path :refer [Pathstore]]
+            [org.spootnik.cyanite.util :refer [partition-or-time distinct-by go-forever go-catch]]
+            [org.spootnik.cyanite.es-client :as internal-client]
             [clojurewerkz.elastisch.native :as esn]
             [clojurewerkz.elastisch.native.index :as esni]
             [clojurewerkz.elastisch.native.document :as esnd]
@@ -23,7 +25,7 @@
 (defn path-depth
   "Get the depth of a path, with depth + 1 if it ends in a period"
   [path]
-  (loop [cnt 0
+  (loop [cnt 1
          from-dex 0]
     (let [dex (.indexOf path period from-dex)]
       (if (= dex -1)
@@ -92,21 +94,28 @@
     (dorun (map #(if (not (path-exists? (:path %)))
                    (write-key (:path %) %)) paths))))
 
-(defn cache-path
-  [store path]
-  (swap! store conj path))
-
 (defn dont-exist
   [conn index type]
+  (fn [paths dos-and-donts-processor]
+    (let [ids (map #(hash-map :_id (if (map? %) (:path %) %)) paths)]
+      (internal-client/multi-get
+       conn index type ids
+       (fn [resp]
+         (let [found (set (map :_id (remove nil? resp)))]
+           (dos-and-donts-processor
+            (reduce (fn [[exist dont] p]
+                      (if (found (if (map? p) (:path p) p))
+                        [(cons p exist) dont]
+                        [exist (cons p dont)]))
+                    [[] []]
+                    paths))))))))
+
+(defn bulk-update
+  [conn index type]
   (fn [paths]
-    (let [ids (map #(hash-map :_id (:path %)) paths)
-          found (set (map :_id (remove nil? (esrd/multi-get conn index type ids))))]
-      (reduce (fn [[exist dont] p]
-                (if (found (:path p))
-                  [(cons p exist) dont]
-                  [exist (cons p dont)]))
-              [[] []]
-              paths))))
+    (internal-client/multi-update
+     conn index type paths
+     #(debug "Failed bulk update, full response: " %))))
 
 (defn es-rest
   [{:keys [index url]
@@ -114,7 +123,7 @@
   (let [store (atom #{})
         conn (esr/connect url)
         dontexistsfn (dont-exist conn index ES_DEF_TYPE)
-        bulkupdatefn (partial esrb/bulk-with-index-and-type conn index ES_DEF_TYPE)
+        bulkupdatefn (bulk-update conn index ES_DEF_TYPE)
         existsfn (partial esrd/present? conn index ES_DEF_TYPE)
         updatefn (partial esrd/put conn index ES_DEF_TYPE)
         scrollfn (partial esrd/scroll-seq conn)
@@ -126,35 +135,47 @@
                 (add-path updatefn existsfn tenant path))
       (channel-for [this]
         (let [es-chan (chan 10000)
+              es-chan-p (partition-or-time 1000 es-chan 1000 10)
+              checked-paths (chan 10000)
+              checked-paths-p (partition-or-time 1000 checked-paths 1000 10)
               all-paths (chan 10000)
-              create-path (chan 10000)]
-          (go
-            (while true
-              (let [ps (<! (async/partition 1000 es-chan 10))
-                    cache @store]
-                (go
-                  (doseq [p ps]
-                    (doseq [ap (es-all-paths p "")]
-                      (when-not (store ap)
-                        (>! all-paths ap))))))))
-          (go
-            (while true
-              (let [ps (<! (async/partition 1000 all-paths))]
-                (go
-                  (let [[exist dont] (dontexistsfn ps)]
-                    (info "Fnd " (count exist) ", creating " (count dont))
+              all-paths-p (partition-or-time 1000 all-paths 1000 5)
+              create-path (chan 10000)
+              create-path-p (partition-or-time 100 create-path 1000 5)]
+          (go-forever
+           (let [ps (<! es-chan-p)
+                 cache @store]
+             (dontexistsfn
+              (remove cache ps)
+              (fn [[exist dont]]
+                (go-catch
+                  (debug "Full Paths Fnd " (count exist) ", creating " (count dont))
+                  (doseq [p dont]
+                    (>! checked-paths p)))))))
+          (go-forever
+           (let [ps (<! checked-paths-p)]
+             (go-catch
+               (doseq [p ps]
+                 (doseq [ap (distinct-by :path (es-all-paths p ""))]
+                   (>! all-paths ap))))))
+          (go-forever
+           (let [ps (<! all-paths-p)]
+             (dontexistsfn
+              ps
+              (fn [[exist dont]]
+                (let [stored @stored-paths]
+                  (go-catch
+                    (debug "Fnd " (count exist) ", creating " (count dont))
                     (doseq [p dont]
                       (>! create-path p))
                     (doseq [e exist]
                       (if (and (>= store-to-depth (:depth e))
-                               (not (@stored-paths (:path e))))
-                        (swap! stored-paths conj (:path e)))))))))
-          (go
-            (while true
-              (let [ps (<! (async/partition 100 create-path))]
-                (go
-                  (doseq [p ps]
-                    (updatefn (:path p) p))))))
+                               (not (stored (:path e))))
+                        (swap! stored-paths conj (:path e))))))))))
+          (go-forever
+           (let [ps (<! create-path-p)]
+             (bulkupdatefn ps)
+             (swap! store clojure.set/union (set ps))
           es-chan))
       (prefixes [this tenant path]
                 (search queryfn scrollfn tenant path false))
@@ -179,23 +200,19 @@
         (let [es-chan (chan 1000)
               all-paths (chan 1000)
               create-path (chan 1000)]
-          (go
-            (while true
-              (let [p (<! es-chan)]
-                (doseq [ap (es-all-paths p "")]
-                  (>! all-paths)))))
-          (go
-            (while true
-              (let [p (<! all-paths)]
-                (when-not (existsfn (:path p))
-                  (>! create-path p)))))
-          (go
-            (while true
-              (let [p (<! create-path)]
-                (updatefn (:path p) p))))
+          (go-forever
+            (let [p (<! es-chan)]
+              (doseq [ap (es-all-paths p "")]
+                (>! all-paths ap))))
+          (go-forever
+            (let [p (<! all-paths)]
+              (when-not (existsfn (:path p))
+                (>! create-path p))))
+          (go-forever
+            (let [p (<! create-path)]
+              (updatefn (:path p) p)))
           es-chan))
       (prefixes [this tenant path]
                 (search queryfn scrollfn tenant path false))
       (lookup [this tenant path]
               (map :path (search queryfn scrollfn tenant path true))))))
-

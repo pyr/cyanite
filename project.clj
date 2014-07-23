@@ -15,13 +15,13 @@
                  [aleph                                     "0.3.0"]
                  [clj-yaml                                  "0.4.0"]
                  [cc.qbits/alia                             "2.0.0-rc1"]
-                 [cc.qbits/hayt "2.0.0-beta4"]
                  [net.jpountz.lz4/lz4                       "1.2.0"]
                  [org.xerial.snappy/snappy-java             "1.0.5"]
                  [org.slf4j/slf4j-log4j12                   "1.6.4"]
                  [log4j/apache-log4j-extras                 "1.0"]
                  [io.netty/netty-all "4.0.19.Final"]
                  [org.clojure/core.async "0.1.278.0-76b25b-alpha"]
+                 [http-kit "2.1.16"]
                  [log4j/log4j                               "1.2.16"
                   :exclusions [javax.mail/mail
                                javax.jms/jms

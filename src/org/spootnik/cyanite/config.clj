@@ -17,15 +17,14 @@
 
 (def ^{:doc "handle storage with cassandra-metric-store by default"}
   default-store
-    {:use "org.spootnik.cyanite.store/devnull"}
-;  {:use "org.spootnik.cyanite.store/cassandra-metric-store"}
-    )
+  {:use "org.spootnik.cyanite.store/cassandra-metric-store"})
 
 (def ^{:doc "let carbon listen on 2003 by default"}
   default-carbon
   {:enabled true
    :host    "127.0.0.1"
-   :port    2003})
+   :port    2003
+   :readtimeout 30})
 
 (def ^{:doc "let the http api listen on 8080 by default"}
   default-http

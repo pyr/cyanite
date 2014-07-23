@@ -5,10 +5,15 @@
    swap implementations"
   (:require [clojure.string              :as str]
             [qbits.alia                  :as alia]
-            [qbits.hayt                  :as hayt]
+            [org.spootnik.cyanite.util :refer [partition-or-time go-forever go-catch]]
             [clojure.tools.logging       :refer [error info debug]]
             [lamina.core                 :refer [channel receive-all]]
-            [clojure.core.async :as async :refer [<! >! go chan]]))
+            [clojure.core.async :as async :refer [<! >! go chan]])
+  (:import [com.datastax.driver.core
+            BatchStatement
+            PreparedStatement]))
+
+(set! *warn-on-reflection* true)
 
 (defprotocol Metricstore
   (insert [this ttl data tenant rollup period path time])
@@ -35,25 +40,6 @@
    (str
     "UPDATE metric USING TTL ? SET data = data + ? "
     "WHERE tenant = '' AND rollup = ? AND period = ? AND path = ? AND time = ?;")))
-
-(defn hayt-insert
-  "Yields a cassandra prepared statement of 6 arguments:
-
-* `ttl`: how long to keep the point around
-* `metric`: the data point
-* `rollup`: interval between points at this resolution
-* `period`: rollup multiplier which determines the time to keep points for
-* `path`: name of the metric
-* `time`: timestamp of the metric, should be divisible by rollup"
-  [[ttl metric rollup period path time]]
-  (hayt/update :metric
-               (hayt/using :ttl ttl)
-               (hayt/set-columns {:data (hayt/append [metric])})
-               (hayt/where {:tenant ""
-                            :rollup rollup
-                            :period period
-                            :path path
-                            :time time})))
 
 (defn fetchq
   "Yields a cassandra prepared statement of 6 arguments:
@@ -142,6 +128,14 @@
                  (sort-by :time)
                  (map :metric))))
 
+(defn- batch
+  "Creates a batch of prepared statements"
+  [^PreparedStatement s values]
+  (let [b (BatchStatement.)]
+    (doseq [v values]
+      (.add b (.bind s (into-array Object v))))
+    b))
+
 (defn cassandra-metric-store
   "Connect to cassandra and start a path fetching thread.
    The interval is fixed for now, at 1minute"
@@ -156,26 +150,23 @@
     (reify
       Metricstore
       (channel-for [this]
-        (let [ch (chan 10000)]
-          (go
-            (while true
-              (let [payload (<! (async/partition 1000 ch 10))]
-                (go
-                  (try
-                    (let [values (map
-                                  #(let [{:keys [metric path time rollup period ttl]} %]
-                                     [(int ttl) metric (int rollup) (int period) path time])
-                                  payload)]
-                      (alia/execute-async
-                       session
-                       (hayt/batch
-                        (apply hayt/queries
-                               (map hayt-insert values)))
-                       {:consistency :any
-                        :success (fn [_] (info "written batch"))
-                        :error (fn [e] (info "Casandra error: " e))}))
-                    (catch Exception e
-                      (info e "Store processing exception")))))))
+        (let [ch (chan 10000)
+              ch-p (partition-or-time 500 ch 500 5)]
+          (go-forever
+           (let [payload (<! ch-p)]
+             (try
+               (let [values (map
+                             #(let [{:keys [metric path time rollup period ttl]} %]
+                                [(int ttl) [metric] (int rollup) (int period) path time])
+                             payload)]
+                 (alia/execute-async
+                  session
+                  (batch insert! values)
+                  {:consistency :any
+                   :success (fn [_] (debug "written batch"))
+                   :error (fn [e] (info "Casandra error: " e))}))
+               (catch Exception e
+                 (info e "Store processing exception")))))
           ch))
       (insert [this ttl data tenant rollup period path time]
         (alia/execute-async

@@ -1,6 +1,7 @@
 carbon:
   host: "127.0.0.1"
   port: 2003
+  readtimeout: 30
   rollups:
     - period: 60480
       rollup: 10
