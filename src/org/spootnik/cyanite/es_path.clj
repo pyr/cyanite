@@ -77,7 +77,10 @@
 (defn search
   "search for a path"
   [query scroll tenant path leafs-only]
-  (let [res (query :query (build-es-query path tenant leafs-only) :size 100 :search_type "query_then_fetch" :scroll "1m")
+  (let [res (query :query (build-es-query path tenant leafs-only)
+                   :size 100
+                   :search_type "query_then_fetch"
+                   :scroll "1m")
         hits (scroll res)]
     (map #(:_source %) hits)))
 
@@ -88,6 +91,10 @@
   (let [paths (es-all-paths path tenant)]
     (dorun (map #(if (not (path-exists? (:path %)))
                    (write-key (:path %) %)) paths))))
+
+(defn cache-path
+  [store path]
+  (swap! store conj path))
 
 (defn dont-exist
   [conn index type]
@@ -104,7 +111,8 @@
 (defn es-rest
   [{:keys [index url]
     :or {index "cyanite_paths" url "http://localhost:9200"}}]
-  (let [conn (esr/connect url)
+  (let [store (atom #{})
+        conn (esr/connect url)
         dontexistsfn (dont-exist conn index ES_DEF_TYPE)
         bulkupdatefn (partial esrb/bulk-with-index-and-type conn index ES_DEF_TYPE)
         existsfn (partial esrd/present? conn index ES_DEF_TYPE)
@@ -122,11 +130,13 @@
               create-path (chan 10000)]
           (go
             (while true
-              (let [ps (<! (async/partition 1000 es-chan 10))]
+              (let [ps (<! (async/partition 1000 es-chan 10))
+                    cache @store]
                 (go
                   (doseq [p ps]
                     (doseq [ap (es-all-paths p "")]
-                      (>! all-paths ap)))))))
+                      (when-not (store ap)
+                        (>! all-paths ap))))))))
           (go
             (while true
               (let [ps (<! (async/partition 1000 all-paths))]
@@ -188,3 +198,4 @@
                 (search queryfn scrollfn tenant path false))
       (lookup [this tenant path]
               (map :path (search queryfn scrollfn tenant path true))))))
+
