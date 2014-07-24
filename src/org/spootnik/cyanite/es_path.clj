@@ -19,7 +19,7 @@
                                         :path {:type "string" :index "not_analyzed"}}}})
 ;cache disabled, see impact of batching
 (def ^:const store-to-depth 2)
-(def stored-paths (atom #{}))
+(def sub-path-cache (atom #{}))
 (def ^:const period 46)
 
 (defn path-depth
@@ -40,25 +40,26 @@
   "Generate a collection of docs of {path: 'path', leaf: true} documents
   suitable for writing to elastic search"
   ([^String path tenant]
-     (loop [acc []
-            depth 1
-            from-dex 0]
-       (let [nxt-dex (.indexOf path period from-dex)
-             leaf (= -1 nxt-dex)]
-         (if leaf
-           (cons (element path depth leaf tenant)
-                 acc)
-           (let [sub-path (.substring path 0 nxt-dex)
-                 drop (and (>= store-to-depth depth)
-                           (@stored-paths sub-path))]
-             (recur
-              (if drop
-                acc
-                (cons
-                 (element sub-path depth leaf tenant)
-                 acc))
-              (inc depth)
-              (inc nxt-dex))))))))
+     (let [cache @sub-path-cache]
+       (loop [acc []
+              depth 1
+              from-dex 0]
+         (let [nxt-dex (.indexOf path period from-dex)
+               leaf (= -1 nxt-dex)]
+           (if leaf
+             (cons (element path depth leaf tenant)
+                   acc)
+             (let [sub-path (.substring path 0 nxt-dex)
+                   drop (and (>= store-to-depth depth)
+                             (cache sub-path))]
+               (recur
+                (if drop
+                  acc
+                  (cons
+                   (element sub-path depth leaf tenant)
+                   acc))
+                (inc depth)
+                (inc nxt-dex)))))))))
 
 (defn build-es-filter
   "generate the filter portion of an es query"
@@ -97,14 +98,14 @@
 (defn dont-exist
   [conn index type]
   (fn [paths dos-and-donts-processor]
-    (let [ids (map #(hash-map :_id (if (map? %) (:path %) %)) paths)]
+    (when-let [ids (seq (map #(hash-map :_id (or (:path %) %)) paths))]
       (internal-client/multi-get
        conn index type ids
        (fn [resp]
          (let [found (set (map :_id (remove nil? resp)))]
            (dos-and-donts-processor
             (reduce (fn [[exist dont] p]
-                      (if (found (if (map? p) (:path p) p))
+                      (if (found (or (:path p) p))
                         [(cons p exist) dont]
                         [exist (cons p dont)]))
                     [[] []]
@@ -120,7 +121,7 @@
 (defn es-rest
   [{:keys [index url]
     :or {index "cyanite_paths" url "http://localhost:9200"}}]
-  (let [store (atom #{})
+  (let [full-path-cache (atom #{})
         conn (esr/connect url)
         dontexistsfn (dont-exist conn index ES_DEF_TYPE)
         bulkupdatefn (bulk-update conn index ES_DEF_TYPE)
@@ -144,14 +145,18 @@
               create-path-p (partition-or-time 100 create-path 1000 5)]
           (go-forever
            (let [ps (<! es-chan-p)
-                 cache @store]
+                 cache @full-path-cache]
              (dontexistsfn
               (remove cache ps)
               (fn [[exist dont]]
                 (go-catch
                   (debug "Full Paths Fnd " (count exist) ", creating " (count dont))
                   (doseq [p dont]
-                    (>! checked-paths p)))))))
+                    (>! checked-paths p))
+                  (when (seq exist)
+                    (swap! full-path-cache
+                           clojure.set/union
+                           (set exist))))))))
           (go-forever
            (let [ps (<! checked-paths-p)]
              (go-catch
@@ -163,19 +168,20 @@
              (dontexistsfn
               ps
               (fn [[exist dont]]
-                (let [stored @stored-paths]
-                  (go-catch
-                    (debug "Fnd " (count exist) ", creating " (count dont))
-                    (doseq [p dont]
-                      (>! create-path p))
-                    (doseq [e exist]
-                      (if (and (>= store-to-depth (:depth e))
-                               (not (stored (:path e))))
-                        (swap! stored-paths conj (:path e))))))))))
+                (go-catch
+                 (debug "Fnd " (count exist) ", creating " (count dont))
+                 (doseq [p dont]
+                   (>! create-path p))
+                 (when (seq exist)
+                   (let [cached-sub-paths @sub-path-cache
+                         sub-paths-to-store ((comp set (partial map :path) filter)
+                                             #(and (>= store-to-depth (:depth %))
+                                                   (not (cached-sub-paths (:path %))))
+                                             exist)]
+                     (swap! sub-path-cache clojure.set/union sub-paths-to-store))))))))
           (go-forever
            (let [ps (<! create-path-p)]
-             (bulkupdatefn ps)
-             (swap! store clojure.set/union (set ps))
+             (bulkupdatefn ps)))
           es-chan))
       (prefixes [this tenant path]
                 (search queryfn scrollfn tenant path false))

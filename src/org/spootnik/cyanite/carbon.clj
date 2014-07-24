@@ -30,7 +30,7 @@
     (let [[path metric time] (s/split (.trim input) #" ")
           timel (parse-num #(Long/parseLong %) "nan" time)
           metricd (parse-num #(Double/parseDouble %) "nan" metric)]
-      (when (not= "nan" metricd timel)
+      (when (and (not= "nan" metricd) (not= "nan" timel))
           (for [{:keys [rollup period ttl rollup-to]} rollups]
             {:path   path
              :rollup rollup
