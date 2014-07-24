@@ -5,7 +5,7 @@
 
 (deftest formatter-test
   (testing "empty-transform"
-    (is (= '() (formatter [] "foo nan 501"))))
+    (is (= nil (formatter [] "foo nan 501"))))
 
   (testing "rollup-transform"
     (is (= (list {:path "foo.bar"
