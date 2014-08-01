@@ -68,9 +68,10 @@
   :action)
 
 (defmethod process :paths
-  [{{:keys [query]} :params :keys [index] :as request}]
+  [{{:keys [query tenant]} :params :keys [index] :as request}]
   (debug "query now: " query)
-  (path/prefixes index "" (if (str/blank? query) "*" query)))
+  (debug "tenant now: " tenant)
+  (path/prefixes index (or tenant "NONE") (if (str/blank? query) "*" query)))
 
 (defmethod process :metrics
   [{{:keys [from to path agg]} :params :keys [index store rollups]}]

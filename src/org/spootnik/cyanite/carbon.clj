@@ -27,12 +27,14 @@
    and format correct lines for each resolution"
   [rollups ^String input]
   (try
-    (let [[path metric time] (s/split (.trim input) #" ")
+    (let [[path metric time tenant] (s/split (.trim input) #" ")
           timel (parse-num #(Long/parseLong %) "nan" time)
-          metricd (parse-num #(Double/parseDouble %) "nan" metric)]
+          metricd (parse-num #(Double/parseDouble %) "nan" metric)
+          tenantstr (or tenant "NONE")]
       (when (and (not= "nan" metricd) (not= "nan" timel))
           (for [{:keys [rollup period ttl rollup-to]} rollups]
             {:path   path
+             :tenant tenantstr
              :rollup rollup
              :period period
              :ttl    (or ttl (* rollup period))
@@ -53,7 +55,9 @@
               (let [formed (remove nil? (formatter rollups metric))]
                 (doseq [f formed]
                   (>! insertch f))
-                (doseq [p (distinct (map :path formed))]
+                ;(doseq [p (distinct (map :path formed))]
+                (doseq [p (distinct (map (juxt :path :tenant) formed))]
+                  (debug "Indexch: " p)
                   (>! indexch p))))
             (catch Exception e
               (info "Exception for metric [" metrics "] : " e))))))))

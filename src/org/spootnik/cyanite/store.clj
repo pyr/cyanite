@@ -26,10 +26,11 @@
 ;; hayt
 
 (defn insertq
-  "Yields a cassandra prepared statement of 6 arguments:
+  "Yields a cassandra prepared statement of 7 arguments:
 
 * `ttl`: how long to keep the point around
 * `metric`: the data point
+* `tenant`: tenant identifier
 * `rollup`: interval between points at this resolution
 * `period`: rollup multiplier which determines the time to keep points for
 * `path`: name of the metric
@@ -39,12 +40,13 @@
    session
    (str
     "UPDATE metric USING TTL ? SET data = data + ? "
-    "WHERE tenant = '' AND rollup = ? AND period = ? AND path = ? AND time = ?;")))
+    "WHERE tenant = ? AND rollup = ? AND period = ? AND path = ? AND time = ?;")))
 
 (defn fetchq
-  "Yields a cassandra prepared statement of 6 arguments:
+  "Yields a cassandra prepared statement of 7 arguments:
 
 * `paths`: list of paths
+* `tenant`: tenant identifier
 * `rollup`: interval between points at this resolution
 * `period`: rollup multiplier which determines the time to keep points for
 * `min`: return points starting from this timestamp
@@ -55,7 +57,7 @@
    session
    (str
     "SELECT path,data,time FROM metric WHERE "
-    "path IN ? AND tenant = '' AND rollup = ? AND period = ? "
+    "path IN ? AND tenant = ? AND rollup = ? AND period = ? "
     "AND time >= ? AND time <= ? ORDER BY time ASC;")))
 
 
@@ -156,8 +158,8 @@
            (let [payload (<! ch-p)]
              (try
                (let [values (map
-                             #(let [{:keys [metric path time rollup period ttl]} %]
-                                [(int ttl) [metric] (int rollup) (int period) path time])
+                             #(let [{:keys [metric tenant path time rollup period ttl]} %]
+                                [(int ttl) [metric] tenant (int rollup) (int period) path time])
                              payload)]
                  (alia/execute-async
                   session

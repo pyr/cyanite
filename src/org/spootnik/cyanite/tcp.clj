@@ -1,5 +1,6 @@
 (ns org.spootnik.cyanite.tcp
   (:require
+   [clojure.tools.logging :refer [error info debug]]
    [clojure.core.async :as async :refer [put! >!!]])
   (:import
    [java.net InetSocketAddress]
@@ -32,6 +33,7 @@
   (proxy [ChannelInboundHandlerAdapter] []
     (channelRead [^ChannelHandlerContext ctx ^String metric]
       (when (not-empty metric)
+        (debug "M: " metric)
         (>!! response-channel metric)))
     (exceptionCaught [^ChannelHandlerContext ctx ^Throwable e]
       (if (instance? ReadTimeoutException e)
