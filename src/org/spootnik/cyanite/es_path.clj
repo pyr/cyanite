@@ -161,7 +161,7 @@
            (let [ps (<! checked-paths-p)]
              (go-catch
                (doseq [p ps]
-                 (doseq [ap (distinct-by :path (es-all-paths p ""))]
+                 (doseq [ap (distinct-by :path (es-all-paths (get p 0) (get p 1)))]
                    (>! all-paths ap))))))
           (go-forever
            (let [ps (<! all-paths-p)]
