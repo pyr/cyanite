@@ -176,11 +176,11 @@
          insert!
          {:values [ttl data tenant rollup period path time]}))
       (fetch [this agg paths tenant rollup period from to]
-        (debug "fetching paths from store: " paths rollup period from to)
+        (debug "fetching paths from store: " paths tenant rollup period from to)
         (if-let [data (and (seq paths)
                            (->> (alia/execute
                                  session fetch!
-                                 {:values [paths (int rollup) (int period)
+                                 {:values [paths tenant (int rollup) (int period)
                                            from to]
                                   :fetch-size Integer/MAX_VALUE})
                                 (map (partial aggregate-with (keyword agg)))
