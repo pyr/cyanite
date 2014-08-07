@@ -60,10 +60,8 @@
                 (register this (get p 0) (get p 1)))))
           c))
       (prefixes [this tenant path]
-        (debug "Prefixes: " tenant path)
         (let [pstar (str path "*")
               query (path-q pstar)]
-          (debug "Prefixes2: " (get @store tenant))
           (->> (get @store tenant)
                (filter (partial prefix? query))
                (map (partial truncate (count query)))

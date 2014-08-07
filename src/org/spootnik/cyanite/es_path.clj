@@ -208,7 +208,7 @@
               create-path (chan 1000)]
           (go-forever
             (let [p (<! es-chan)]
-              (doseq [ap (es-all-paths p "")]
+              (doseq [ap (es-all-paths (get p 0) (get p 1))]
                 (>! all-paths ap))))
           (go-forever
             (let [p (<! all-paths)]
