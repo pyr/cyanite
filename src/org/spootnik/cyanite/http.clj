@@ -69,13 +69,10 @@
 
 (defmethod process :paths
   [{{:keys [query tenant]} :params :keys [index] :as request}]
-  (debug "query now: " query)
-  (debug "tenant now: " tenant)
   (path/prefixes index (or tenant "NONE") (if (str/blank? query) "*" query)))
 
 (defmethod process :metrics
   [{{:keys [from to path agg tenant]} :params :keys [index store rollups]}]
-  (debug "fetching paths: " path)
   (if-let [{:keys [rollup period]} (find-best-rollup from rollups)]
     (let [to    (if to (Long/parseLong to) (now))
           from  (Long/parseLong from)
@@ -96,7 +93,6 @@
   "Process request, generating a JSON output for it, catch exception
    and yield a payload"
   [request rollups chan store index]
-  (debug "got request: " request)
   (enqueue
    chan
    (try

@@ -33,7 +33,6 @@
   (proxy [ChannelInboundHandlerAdapter] []
     (channelRead [^ChannelHandlerContext ctx ^String metric]
       (when (not-empty metric)
-        (debug "M: " metric)
         (>!! response-channel metric)))
     (exceptionCaught [^ChannelHandlerContext ctx ^Throwable e]
       (if (instance? ReadTimeoutException e)

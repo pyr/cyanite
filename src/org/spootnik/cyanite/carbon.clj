@@ -57,7 +57,6 @@
                   (>! insertch f))
                 ;(doseq [p (distinct (map :path formed))]
                 (doseq [p (distinct (map (juxt :path :tenant) formed))]
-                  (debug "Indexch: " p)
                   (>! indexch p))))
             (catch Exception e
               (info "Exception for metric [" metrics "] : " e))))))))
