@@ -88,6 +88,9 @@ carbon:
       rollup: 10
     - period: 105120
       rollup: 600
+stats:
+  tenant: "cyanite_cluster"
+  interval: 60
 http:
   host: "127.0.0.1"
   port: 8080

@@ -1,5 +1,6 @@
 (ns org.spootnik.cyanite.carbon
   "Dead simple carbon protocol handler"
+  (:import (java.net InetAddress))
   (:require [aleph.tcp                  :as tcp]
             [clojure.string             :as s]
             [org.spootnik.cyanite.store :as store]
@@ -9,9 +10,11 @@
             [clojure.tools.logging      :refer [info debug]]
             [gloss.core                 :refer [string]]
             [lamina.core                :refer :all]
-            [clojure.core.async :as async :refer [<! >! >!! go chan]]))
+            [clojure.core.async :as async :refer [<! >! >!! go chan timeout]]))
 
 (set! *warn-on-reflection* true)
+
+(def counter (atom 0))
 
 (defn parse-num
   "parse a number into the given value, return the
@@ -51,7 +54,9 @@
       (while true
         (let [metrics (<! input)]
           (try
+            (swap! counter + (count metrics))
             (doseq [metric metrics]
+              ;(debug "-----" metric)
               (let [formed (remove nil? (formatter rollups metric))]
                 (doseq [f formed]
                   (>! insertch f))
@@ -63,11 +68,21 @@
 
 (defn start
   "Start a tcp carbon listener"
-  [{:keys [store carbon index]}]
+  [{:keys [store carbon index stats]}]
   (let [indexch (path/channel-for index)
         insertch (store/channel-for store)
         chan (chan 100000)
         handler (format-processor chan indexch (:rollups carbon) insertch)]
     (info "starting carbon handler: " carbon)
+    (go
+      (while true
+        (let [{:keys [tenant interval]} stats]
+          (<! (timeout (* interval 1000)))
+          (>!! chan (clojure.string/join " " [(str (.. InetAddress getLocalHost getHostName) ".cyanite.carbon.metrics")
+                                              @counter
+                                              (quot (System/currentTimeMillis) 1000)
+                                              tenant]))
+          (reset! counter 0)))
+      )
     (tc/start-tcp-server
      (merge carbon {:response-channel chan}))))
