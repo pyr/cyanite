@@ -5,7 +5,8 @@
    swap implementations"
   (:require [clojure.string              :as str]
             [qbits.alia                  :as alia]
-            [org.spootnik.cyanite.util :refer [partition-or-time go-forever go-catch]]
+            [org.spootnik.cyanite.util :refer [partition-or-time go-forever go-catch counter-inc!]]
+            ;[org.spootnik.cyanite.carbon :refer [counter-inc]]
             [clojure.tools.logging       :refer [error info debug]]
             [lamina.core                 :refer [channel receive-all]]
             [clojure.core.async :as async :refer [<! >! go chan]])
@@ -165,8 +166,12 @@
                   session
                   (batch insert! values)
                   {:consistency :any
-                   :success (fn [_] (debug "written batch"))
-                   :error (fn [e] (info "Casandra error: " e))}))
+                   :success (fn [_]
+                              (debug "written batch:" (count values))
+                              (counter-inc! :store.success (count values)))
+                   :error (fn [e]
+                            (info "Casandra error: " e)
+                            (counter-inc! :store.error (count values)))}))
                (catch Exception e
                  (info e "Store processing exception")))))
           ch))

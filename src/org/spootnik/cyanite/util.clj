@@ -14,6 +14,20 @@
            (error e (or (.getMessage e)
                         "Exception while processing channel message")))))))
 
+(def counters (atom {}))
+
+(defn counter-get [key]
+  (or (get @counters key) 0))
+
+(defn counter-list []
+  @counters)
+
+(defn counter-inc! [key val]
+  (swap! counters update-in [key] (fn [n] (if n (+ n val) val))))
+
+(defn counters-reset! []
+  (reset! counters {}))
+
 (defmacro go-catch
   [& body]
   `(go

@@ -3,7 +3,7 @@
   (:require [clojure.tools.logging :refer [error info debug]]
             [clojure.string        :refer [split] :as str]
             [org.spootnik.cyanite.path :refer [Pathstore]]
-            [org.spootnik.cyanite.util :refer [partition-or-time distinct-by go-forever go-catch]]
+            [org.spootnik.cyanite.util :refer [partition-or-time distinct-by go-forever go-catch counter-inc!]]
             [org.spootnik.cyanite.es-client :as internal-client]
             [clojurewerkz.elastisch.native :as esn]
             [clojurewerkz.elastisch.native.index :as esni]
@@ -135,14 +135,14 @@
       (register [this tenant path]
                 (add-path updatefn existsfn tenant path))
       (channel-for [this]
-        (let [es-chan (chan 10000)
-              es-chan-p (partition-or-time 1000 es-chan 1000 10)
-              checked-paths (chan 10000)
-              checked-paths-p (partition-or-time 1000 checked-paths 1000 10)
-              all-paths (chan 10000)
-              all-paths-p (partition-or-time 1000 all-paths 1000 5)
-              create-path (chan 10000)
-              create-path-p (partition-or-time 100 create-path 1000 5)]
+        (let [es-chan (chan 100000)
+              es-chan-p (partition-or-time 10000 es-chan 1000 10)
+              checked-paths (chan 100000)
+              checked-paths-p (partition-or-time 10000 checked-paths 1000 10)
+              all-paths (chan 100000)
+              all-paths-p (partition-or-time 10000 all-paths 1000 5)
+              create-path (chan 100000)
+              create-path-p (partition-or-time 1000 create-path 1000 5)]
           (go-forever
            (let [ps (<! es-chan-p)
                  cache @full-path-cache]
@@ -170,6 +170,7 @@
               (fn [[exist dont]]
                 (go-catch
                  (debug "Fnd " (count exist) ", creating " (count dont))
+                 (counter-inc! :index.create (count dont))
                  (doseq [p dont]
                    (>! create-path p))
                  (when (seq exist)

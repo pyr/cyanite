@@ -1,5 +1,6 @@
 (ns org.spootnik.cyanite.config
   "Yaml config parser, with a poor man's dependency injector"
+  (:import (java.net InetAddress))
   (:require [clj-yaml.core         :refer [parse-string]]
             [clojure.string        :refer [split]]
             [clojure.tools.logging :refer [error info debug]]))
@@ -35,6 +36,7 @@
 (def ^{:doc "Send statistics every 60 seconds without tenant"}
   default-stats
   {:interval 60
+   :hostname (.. InetAddress getLocalHost getHostName)
    :tenant "NONE"})
 
 (def default-index

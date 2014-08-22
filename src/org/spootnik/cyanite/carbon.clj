@@ -1,20 +1,17 @@
 (ns org.spootnik.cyanite.carbon
   "Dead simple carbon protocol handler"
-  (:import (java.net InetAddress))
   (:require [aleph.tcp                  :as tcp]
             [clojure.string             :as s]
             [org.spootnik.cyanite.store :as store]
             [org.spootnik.cyanite.path  :as path]
             [org.spootnik.cyanite.tcp   :as tc]
-            [org.spootnik.cyanite.util  :refer [partition-or-time]]
+            [org.spootnik.cyanite.util  :refer [partition-or-time counter-get counters-reset! counter-inc! counter-list]]
             [clojure.tools.logging      :refer [info debug]]
             [gloss.core                 :refer [string]]
             [lamina.core                :refer :all]
             [clojure.core.async :as async :refer [<! >! >!! go chan timeout]]))
 
 (set! *warn-on-reflection* true)
-
-(def counter (atom 0))
 
 (defn parse-num
   "parse a number into the given value, return the
@@ -54,7 +51,7 @@
       (while true
         (let [metrics (<! input)]
           (try
-            (swap! counter + (count metrics))
+            (counter-inc! :metrics_recieved (count metrics))
             (doseq [metric metrics]
               ;(debug "-----" metric)
               (let [formed (remove nil? (formatter rollups metric))]
@@ -75,14 +72,14 @@
         handler (format-processor chan indexch (:rollups carbon) insertch)]
     (info "starting carbon handler: " carbon)
     (go
-      (while true
-        (let [{:keys [tenant interval]} stats]
+      (let [{:keys [hostname tenant interval]} stats]
+        (while true
           (<! (timeout (* interval 1000)))
-          (>!! chan (clojure.string/join " " [(str (.. InetAddress getLocalHost getHostName) ".cyanite.carbon.metrics")
-                                              @counter
-                                              (quot (System/currentTimeMillis) 1000)
-                                              tenant]))
-          (reset! counter 0)))
-      )
+          (doseq [[k _]  (counter-list)]
+            (>! chan (clojure.string/join " " [(str hostname ".cyanite." (name k))
+                                               (counter-get k)
+                                               (quot (System/currentTimeMillis) 1000)
+                                               tenant])))
+          (counters-reset!))))
     (tc/start-tcp-server
      (merge carbon {:response-channel chan}))))
