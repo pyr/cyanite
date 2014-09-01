@@ -18,7 +18,7 @@
    #(if (= 200 (:status %))
       (let [bod (json/decode (:body %) true)]
         (func (filter :found (:docs bod))))
-      (error "ES responded with non-200: " %))))
+      (error "ES responded with non-200: " ))))
 
 (comment "Note: i've ditched the optional args to ES, refer to orignal elastich code for how they should return")
 
@@ -45,7 +45,7 @@
   (bulk-with-url (rest/bulk-url conn index mapping-type)
                  (map
                   remove-ids-from-docs
-                  (esrb/bulk-index (map #(assoc % :_id (:path %)
+                  (esrb/bulk-index (map #(assoc % :_id (str (:tenant %) "_" (:path %))
                                                 :_index index
                                                 :_type mapping-type) docs)))
                  func))

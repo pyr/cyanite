@@ -15,8 +15,10 @@
             [clojure.core.async :as async :refer [<! >! go chan]]))
 
 (def ES_DEF_TYPE "path")
-(def ES_TYPE_MAP {ES_DEF_TYPE {:properties {:tenant {:type "string" :index "not_analyzed"}
-                                        :path {:type "string" :index "not_analyzed"}}}})
+(def ES_TYPE_MAP {ES_DEF_TYPE {:_id {:path "tid" :index "not_analyzed"}
+                               :properties {:tenant {:type "string" :index "not_analyzed"}
+                                            :tid {:type "string" :index "not_analyzed" :store false}
+                                            :path {:type "string" :index "not_analyzed"}}}})
 ;cache disabled, see impact of batching
 (def ^:const store-to-depth 2)
 (def sub-path-cache (atom #{}))
@@ -34,7 +36,7 @@
 
 (defn element
   [path depth leaf tenant]
-  {:path path :depth depth :tenant tenant :leaf leaf})
+  {:path path :depth depth :tenant tenant :leaf leaf :tid (str tenant "_" path)})
 
 (defn es-all-paths
   "Generate a collection of docs of {path: 'path', leaf: true} documents
