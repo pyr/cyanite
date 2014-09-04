@@ -14,7 +14,11 @@
            (error e (or (.getMessage e)
                         "Exception while processing channel message")))))))
 
-(def counters (atom {}))
+(def counters (atom { :index.create 0
+                      :index.get_error 0
+                      :store.success 0
+                      :store.error 0
+                      :metrics_recieved 0}))
 
 (defn counter-get [key]
   (or (get @counters key) 0))
@@ -26,7 +30,11 @@
   (swap! counters update-in [key] (fn [n] (if n (+ n val) val))))
 
 (defn counters-reset! []
-  (reset! counters {}))
+  (reset! counters { :index.create 0
+                     :index.get_error 0
+                     :store.success 0
+                     :store.error 0
+                     :metrics_recieved 0}))
 
 (defmacro go-catch
   [& body]

@@ -15,9 +15,7 @@
             [clojure.core.async :as async :refer [<! >! go chan]]))
 
 (def ES_DEF_TYPE "path")
-(def ES_TYPE_MAP {ES_DEF_TYPE {:_id {:path "tid" :index "not_analyzed"}
-                               :properties {:tenant {:type "string" :index "not_analyzed"}
-                                            :tid {:type "string" :index "not_analyzed" :store false}
+(def ES_TYPE_MAP {ES_DEF_TYPE {:properties {:tenant {:type "string" :index "not_analyzed"}
                                             :path {:type "string" :index "not_analyzed"}}}})
 ;cache disabled, see impact of batching
 (def ^:const store-to-depth 2)
@@ -36,7 +34,7 @@
 
 (defn element
   [path depth leaf tenant]
-  {:path path :depth depth :tenant tenant :leaf leaf :tid (str tenant "_" path)})
+  {:path path :depth depth :tenant tenant :leaf leaf})
 
 (defn es-all-paths
   "Generate a collection of docs of {path: 'path', leaf: true} documents
@@ -137,14 +135,14 @@
       (register [this tenant path]
                 (add-path updatefn existsfn tenant path))
       (channel-for [this]
-        (let [es-chan (chan 100000)
-              es-chan-p (partition-or-time 10000 es-chan 1000 10)
-              checked-paths (chan 100000)
-              checked-paths-p (partition-or-time 10000 checked-paths 1000 10)
-              all-paths (chan 100000)
-              all-paths-p (partition-or-time 10000 all-paths 1000 5)
-              create-path (chan 100000)
-              create-path-p (partition-or-time 1000 create-path 1000 5)]
+        (let [es-chan (chan 10000)
+              es-chan-p (partition-or-time 1000 es-chan 1000 10)
+              checked-paths (chan 10000)
+              checked-paths-p (partition-or-time 1000 checked-paths 1000 10)
+              all-paths (chan 10000)
+              all-paths-p (partition-or-time 1000 all-paths 1000 5)
+              create-path (chan 10000)
+              create-path-p (partition-or-time 100 create-path 1000 5)]
           (go-forever
            (let [ps (<! es-chan-p)
                  cache @full-path-cache]
@@ -215,11 +213,11 @@
                 (>! all-paths ap))))
           (go-forever
             (let [p (<! all-paths)]
-              (when-not (existsfn (:path p))
+              (when-not (existsfn (str (:tenant p) "_" (:path p)))
                 (>! create-path p))))
           (go-forever
             (let [p (<! create-path)]
-              (updatefn (:path p) p)))
+              (updatefn (str (:tenant p) "_" (:path p)) p)))
           es-chan))
       (prefixes [this tenant path]
                 (search queryfn scrollfn tenant path false))
