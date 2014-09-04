@@ -7,7 +7,8 @@
             [clojure.string :as str]
             [org.httpkit.client :as http]
             [cheshire.core :as json]
-            [clojure.tools.logging :refer [error info debug]])
+            [clojure.tools.logging :refer [error info debug]]
+            [org.spootnik.cyanite.util :refer [counter-inc!]])
   (:import clojurewerkz.elastisch.rest.Connection))
 
 (defn multi-get
@@ -18,7 +19,10 @@
    #(if (= 200 (:status %))
       (let [bod (json/decode (:body %) true)]
         (func (filter :found (:docs bod))))
-      (error "ES responded with non-200: " ))))
+      (do
+        (counter-inc! :index.get_error 1)
+        (error "ES responded with non-200: " ))
+      )))
 
 (comment "Note: i've ditched the optional args to ES, refer to orignal elastich code for how they should return")
 
