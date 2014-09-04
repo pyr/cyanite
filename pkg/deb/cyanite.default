@@ -1,5 +1,11 @@
 # Optionally add classes to the classpath for additional functionality
 # EXTRA_CLASSPATH=
 
+#Default values for HEAP
+
+#JAVA_XMS=512M
+#JAVA_XMX=1536M
+#JAVA_XMN=100M
+
 # Optional JAVA_OPTS
-# EXTRA_JAVA_OPTS=
+EXTRA_JAVA_OPTS="-Xms${JAVA_XMS:-512M} -Xmx${JAVA_XMX:-1536M} -Xmn${JAVA_XMN:-100M}"

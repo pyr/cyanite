@@ -49,6 +49,7 @@ do_start()
     log_daemon_msg "Cyanite is already running (PID `cat ${PIDFILE}`)"
     return 1
   fi
+  ulimit -n 10000
   start-stop-daemon --start --quiet --chuid $DAEMON_USER --chdir / --make-pidfile --background --pidfile $PIDFILE --exec $DAEMON -- \
     $DAEMON_ARGS \
     || return 2
