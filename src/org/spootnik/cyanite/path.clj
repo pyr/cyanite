@@ -1,10 +1,13 @@
 (ns org.spootnik.cyanite.path
   "Implements a path store which tracks metric names."
   (:require [clojure.tools.logging :refer [error info debug]]
-            [clojure.string        :refer [split join] :as str]))
+            [clojure.string        :refer [split join] :as str]
+            [lamina.core           :refer [channel receive-all]]
+            [clojure.core.async :as async :refer [<! >! go chan]]))
 
 (defprotocol Pathstore
   "The pathstore provides a way to insert paths and later look them up"
+  (channel-for [this])
   (register [this tenant path])
   (prefixes [this tenant path])
   (lookup   [this tenant path]))
@@ -49,6 +52,13 @@
     (reify Pathstore
       (register [this tenant path]
         (swap! store update-in [tenant] #(set (conj % (split path #"\.")))))
+      (channel-for [this]
+        (let [c (chan)]
+          (go
+            (while true
+              (let [p (<! c)]
+                (register this "" p))))
+          c))
       (prefixes [this tenant path]
         (let [pstar (str path "*")
               query (path-q pstar)]

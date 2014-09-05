@@ -23,7 +23,8 @@
   default-carbon
   {:enabled true
    :host    "127.0.0.1"
-   :port    2003})
+   :port    2003
+   :readtimeout 30})
 
 (def ^{:doc "let the http api listen on 8080 by default"}
   default-http
@@ -50,13 +51,15 @@
       (throw (ex-info (str "unknown rollup unit: " unit) {})))))
 
 (defn convert-shorthand-rollup
-  "Converts an individual rollup to a {:rollup :period} pair"
+  "Converts an individual rollup to a {:rollup :period :ttl} tri"
   [rollup]
   (if (string? rollup)
     (let [[rollup-string retention-string] (split rollup #":" 2)
           rollup-secs (to-seconds rollup-string)
           retention-secs (to-seconds retention-string)]
-      {:rollup rollup-secs :period (/ retention-secs rollup-secs)})
+      {:rollup rollup-secs
+       :period (/ retention-secs rollup-secs)
+       :ttl (* rollup-secs (/ retention-secs rollup-secs))})
     rollup))
 
 (defn convert-shorthand-rollups
@@ -80,8 +83,8 @@
     (let [n (namespace (symbol s))]
       (require (symbol n))
       (find-var (symbol s)))
-    (catch Exception _
-      nil)))
+    (catch Exception e
+      (prn "Exception: " e))))
 
 (defn instantiate
   "Find a symbol pointing to a function of a single argument and

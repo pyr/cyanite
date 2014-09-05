@@ -31,4 +31,5 @@
 
   (testing "15s:6h is converted correctly"
     (is (= {:rollup 15
-            :period 1440} (convert-shorthand-rollup "15s:6h")))))
+            :period 1440
+            :ttl 21600} (convert-shorthand-rollup "15s:6h")))))
