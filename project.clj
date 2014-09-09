@@ -1,4 +1,4 @@
-(defproject org.spootnik/cyanite "0.2.1"
+(defproject org.spootnik/cyanite "0.2.2"
   :description "Alternative storage backend for graphite, backed by cassandra"
   :url "https://github.com/pyr/cyanite"
   :license {:name "MIT License"
@@ -9,7 +9,7 @@
                  [org.clojure/tools.logging                 "0.3.0"]
                  [org.clojure/tools.cli                     "0.3.1"]
                  [org.spootnik/pickler                      "0.1.0"]
-                 [clojurewerkz/elastisch                    "2.1.0-beta4"]
+                 [clojurewerkz/elastisch                    "2.1.0-beta6"]
                  [commons-logging/commons-logging           "1.2"]
                  [ring/ring-codec                           "1.0.0"]
                  [aleph                                     "0.3.3"]
