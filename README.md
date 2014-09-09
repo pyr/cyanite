@@ -127,6 +127,19 @@ index:
   url: "http://myes.host.com:9200" #defaults to http://localhost:9200
 ```
 
+You can configure receiving channel size and REST Bulk operation batch size using chan_size and batch_size paramters:
+```yaml
+index:
+  use: "org.spootnik.cyanite.es_path/es-rest"
+  index: "my_paths" #defaults to "cyanite_paths"
+  url: "http://myes.host.com:9200" #defaults to http://localhost:9200
+  chan_size: 10000
+  batch_size: 100
+```
+
+They default to 1000 and 100 respectively.
+
+
 For Native Java:
 ```yaml
 index:
