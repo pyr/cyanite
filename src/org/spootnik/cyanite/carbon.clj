@@ -53,7 +53,6 @@
           (try
             (counter-inc! :metrics_recieved (count metrics))
             (doseq [metric metrics]
-              ;(debug "-----" metric)
               (let [formed (remove nil? (formatter rollups metric))]
                 (doseq [f formed]
                   (>! insertch f))

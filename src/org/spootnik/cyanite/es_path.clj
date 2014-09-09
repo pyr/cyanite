@@ -139,26 +139,10 @@
       (channel-for [this]
         (let [es-chan (chan chan_size)
               es-chan-p (partition-or-time batch_size es-chan batch_size 10)
-              checked-paths (chan chan_size)
-              checked-paths-p (partition-or-time batch_size checked-paths batch_size 10)
               all-paths (chan chan_size)
               all-paths-p (partition-or-time batch_size all-paths batch_size 5)
               create-path (chan chan_size)
               create-path-p (partition-or-time batch_size create-path batch_size 5)]
-          ;(go-forever
-          ; (let [ps (<! es-chan-p)
-          ;       cache @full-path-cache]
-          ;   (dontexistsfn
-          ;    (remove cache ps)
-          ;    (fn [[exist dont]]
-          ;      (go-catch
-          ;        (debug "Full Paths Fnd " (count exist) ", creating " (count dont))
-          ;        (doseq [p dont]
-          ;          (>! checked-paths p))
-          ;        (when (seq exist)
-          ;          (swap! full-path-cache
-          ;                 clojure.set/union
-          ;                 (set exist))))))))
           (go-forever
            (let [ps (<! es-chan-p)]
              (go-catch

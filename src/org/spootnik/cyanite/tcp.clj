@@ -1,6 +1,5 @@
 (ns org.spootnik.cyanite.tcp
   (:require
-   [clojure.tools.logging :refer [error info debug]]
    [clojure.core.async :as async :refer [put! >!!]])
   (:import
    [java.net InetSocketAddress]

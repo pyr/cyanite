@@ -6,7 +6,6 @@
   (:require [clojure.string              :as str]
             [qbits.alia                  :as alia]
             [org.spootnik.cyanite.util :refer [partition-or-time go-forever go-catch counter-inc!]]
-            ;[org.spootnik.cyanite.carbon :refer [counter-inc]]
             [clojure.tools.logging       :refer [error info debug]]
             [lamina.core                 :refer [channel receive-all]]
             [clojure.core.async :as async :refer [<! >! go chan]])
