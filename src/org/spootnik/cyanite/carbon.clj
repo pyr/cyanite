@@ -56,7 +56,6 @@
               (let [formed (remove nil? (formatter rollups metric))]
                 (doseq [f formed]
                   (>! insertch f))
-                ;(doseq [p (distinct (map :path formed))]
                 (doseq [p (distinct (map (juxt :path :tenant) formed))]
                   (>! indexch p))))
             (catch Exception e
