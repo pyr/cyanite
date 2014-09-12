@@ -88,6 +88,9 @@ carbon:
       rollup: 10
     - period: 105120
       rollup: 600
+stats:
+  tenant: "cyanite_cluster"
+  interval: 60
 http:
   host: "127.0.0.1"
   port: 8080
@@ -123,6 +126,19 @@ index:
   index: "my_paths" #defaults to "cyanite_paths"
   url: "http://myes.host.com:9200" #defaults to http://localhost:9200
 ```
+
+You can configure receiving channel size and REST Bulk operation batch size using chan_size and batch_size paramters:
+```yaml
+index:
+  use: "org.spootnik.cyanite.es_path/es-rest"
+  index: "my_paths" #defaults to "cyanite_paths"
+  url: "http://myes.host.com:9200" #defaults to http://localhost:9200
+  chan_size: 10000
+  batch_size: 100
+```
+
+They default to 1000 and 100 respectively.
+
 
 For Native Java:
 ```yaml

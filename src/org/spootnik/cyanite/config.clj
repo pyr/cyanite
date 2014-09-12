@@ -1,5 +1,6 @@
 (ns org.spootnik.cyanite.config
   "Yaml config parser, with a poor man's dependency injector"
+  (:import (java.net InetAddress))
   (:require [clj-yaml.core         :refer [parse-string]]
             [clojure.string        :refer [split]]
             [clojure.tools.logging :refer [error info debug]]))
@@ -31,6 +32,12 @@
   {:enabled true
    :host    "127.0.0.1"
    :port    8080})
+
+(def ^{:doc "Send statistics every 60 seconds without tenant"}
+  default-stats
+  {:interval 60
+   :hostname (.. InetAddress getLocalHost getHostName)
+   :tenant "NONE"})
 
 (def default-index
   {:use "org.spootnik.cyanite.path/memory-pathstore"})
@@ -121,6 +128,7 @@
     (-> (load-path path)
         (update-in [:logging] (partial merge default-logging))
         (update-in [:logging] get-instance :logging)
+        (update-in [:stats] (partial merge default-stats))
         (update-in [:store] (partial merge default-store))
         (update-in [:store] get-instance :store)
         (update-in [:carbon] (partial merge default-carbon))

@@ -52,7 +52,9 @@
 
       (.setLevel root-logger (get levels level Level/INFO))
 
-      (doseq [[logger level] overrides
-              :let [logger (Logger/getLogger (name logger))
-                    level  (get levels level Level/DEBUG)]]
-        (.setLevel logger level)))))
+      ;(doseq [[logger level] overrides
+      ;        :let [logger (Logger/getLogger (name logger))
+      ;              level  (get levels level Level/DEBUG)]]
+      ;  (.setLevel logger level))
+      ))
+)

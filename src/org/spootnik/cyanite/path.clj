@@ -57,7 +57,7 @@
           (go
             (while true
               (let [p (<! c)]
-                (register this "" p))))
+                (register this (get p 0) (get p 1)))))
           c))
       (prefixes [this tenant path]
         (let [pstar (str path "*")

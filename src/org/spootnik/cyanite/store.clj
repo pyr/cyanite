@@ -5,7 +5,7 @@
    swap implementations"
   (:require [clojure.string              :as str]
             [qbits.alia                  :as alia]
-            [org.spootnik.cyanite.util :refer [partition-or-time go-forever go-catch]]
+            [org.spootnik.cyanite.util :refer [partition-or-time go-forever go-catch counter-inc!]]
             [clojure.tools.logging       :refer [error info debug]]
             [lamina.core                 :refer [channel receive-all]]
             [clojure.core.async :as async :refer [<! >! go chan]])
@@ -26,10 +26,11 @@
 ;; hayt
 
 (defn insertq
-  "Yields a cassandra prepared statement of 6 arguments:
+  "Yields a cassandra prepared statement of 7 arguments:
 
 * `ttl`: how long to keep the point around
 * `metric`: the data point
+* `tenant`: tenant identifier
 * `rollup`: interval between points at this resolution
 * `period`: rollup multiplier which determines the time to keep points for
 * `path`: name of the metric
@@ -39,12 +40,13 @@
    session
    (str
     "UPDATE metric USING TTL ? SET data = data + ? "
-    "WHERE tenant = '' AND rollup = ? AND period = ? AND path = ? AND time = ?;")))
+    "WHERE tenant = ? AND rollup = ? AND period = ? AND path = ? AND time = ?;")))
 
 (defn fetchq
-  "Yields a cassandra prepared statement of 6 arguments:
+  "Yields a cassandra prepared statement of 7 arguments:
 
 * `paths`: list of paths
+* `tenant`: tenant identifier
 * `rollup`: interval between points at this resolution
 * `period`: rollup multiplier which determines the time to keep points for
 * `min`: return points starting from this timestamp
@@ -55,7 +57,7 @@
    session
    (str
     "SELECT path,data,time FROM metric WHERE "
-    "path IN ? AND tenant = '' AND rollup = ? AND period = ? "
+    "path IN ? AND tenant = ? AND rollup = ? AND period = ? "
     "AND time >= ? AND time <= ? ORDER BY time ASC;")))
 
 
@@ -139,9 +141,11 @@
 (defn cassandra-metric-store
   "Connect to cassandra and start a path fetching thread.
    The interval is fixed for now, at 1minute"
-  [{:keys [keyspace cluster hints]
+  [{:keys [keyspace cluster hints chan_size batch_size]
     :or   {hints {:replication {:class "SimpleStrategy"
-                                :replication_factor 1}}}}]
+                                :replication_factor 1}}
+           chan_size 10000
+           batch_size 100}}]
   (info "creating cassandra metric store")
   (let [session (-> (alia/cluster {:contact-points [cluster]})
                     (alia/connect keyspace))
@@ -150,21 +154,25 @@
     (reify
       Metricstore
       (channel-for [this]
-        (let [ch (chan 10000)
-              ch-p (partition-or-time 500 ch 500 5)]
+        (let [ch (chan chan_size)
+              ch-p (partition-or-time batch_size ch batch_size 5)]
           (go-forever
            (let [payload (<! ch-p)]
              (try
                (let [values (map
-                             #(let [{:keys [metric path time rollup period ttl]} %]
-                                [(int ttl) [metric] (int rollup) (int period) path time])
+                             #(let [{:keys [metric tenant path time rollup period ttl]} %]
+                                [(int ttl) [metric] tenant (int rollup) (int period) path time])
                              payload)]
                  (alia/execute-async
                   session
                   (batch insert! values)
                   {:consistency :any
-                   :success (fn [_] (debug "written batch"))
-                   :error (fn [e] (info "Casandra error: " e))}))
+                   :success (fn [_]
+                              (debug "written batch:" (count values))
+                              (counter-inc! :store.success (count values)))
+                   :error (fn [e]
+                            (info "Casandra error: " e)
+                            (counter-inc! :store.error (count values)))}))
                (catch Exception e
                  (info e "Store processing exception")))))
           ch))
@@ -174,11 +182,11 @@
          insert!
          {:values [ttl data tenant rollup period path time]}))
       (fetch [this agg paths tenant rollup period from to]
-        (debug "fetching paths from store: " paths rollup period from to)
+        (debug "fetching paths from store: " paths tenant rollup period from to)
         (if-let [data (and (seq paths)
                            (->> (alia/execute
                                  session fetch!
-                                 {:values [paths (int rollup) (int period)
+                                 {:values [paths tenant (int rollup) (int period)
                                            from to]
                                   :fetch-size Integer/MAX_VALUE})
                                 (map (partial aggregate-with (keyword agg)))

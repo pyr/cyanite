@@ -5,11 +5,11 @@
             [org.spootnik.cyanite.store :as store]
             [org.spootnik.cyanite.path  :as path]
             [org.spootnik.cyanite.tcp   :as tc]
-            [org.spootnik.cyanite.util  :refer [partition-or-time]]
+            [org.spootnik.cyanite.util  :refer [partition-or-time counter-get counters-reset! counter-inc! counter-list]]
             [clojure.tools.logging      :refer [info debug]]
             [gloss.core                 :refer [string]]
             [lamina.core                :refer :all]
-            [clojure.core.async :as async :refer [<! >! >!! go chan]]))
+            [clojure.core.async :as async :refer [<! >! >!! go chan timeout]]))
 
 (set! *warn-on-reflection* true)
 
@@ -27,12 +27,14 @@
    and format correct lines for each resolution"
   [rollups ^String input]
   (try
-    (let [[path metric time] (s/split (.trim input) #" ")
+    (let [[path metric time tenant] (s/split (.trim input) #" ")
           timel (parse-num #(Long/parseLong %) "nan" time)
-          metricd (parse-num #(Double/parseDouble %) "nan" metric)]
+          metricd (parse-num #(Double/parseDouble %) "nan" metric)
+          tenantstr (or tenant "NONE")]
       (when (and (not= "nan" metricd) (not= "nan" timel))
           (for [{:keys [rollup period ttl rollup-to]} rollups]
             {:path   path
+             :tenant tenantstr
              :rollup rollup
              :period period
              :ttl    (or ttl (* rollup period))
@@ -49,22 +51,33 @@
       (while true
         (let [metrics (<! input)]
           (try
+            (counter-inc! :metrics_recieved (count metrics))
             (doseq [metric metrics]
               (let [formed (remove nil? (formatter rollups metric))]
                 (doseq [f formed]
                   (>! insertch f))
-                (doseq [p (distinct (map :path formed))]
+                (doseq [p (distinct (map (juxt :path :tenant) formed))]
                   (>! indexch p))))
             (catch Exception e
               (info "Exception for metric [" metrics "] : " e))))))))
 
 (defn start
   "Start a tcp carbon listener"
-  [{:keys [store carbon index]}]
+  [{:keys [store carbon index stats]}]
   (let [indexch (path/channel-for index)
         insertch (store/channel-for store)
         chan (chan 100000)
         handler (format-processor chan indexch (:rollups carbon) insertch)]
     (info "starting carbon handler: " carbon)
+    (go
+      (let [{:keys [hostname tenant interval]} stats]
+        (while true
+          (<! (timeout (* interval 1000)))
+          (doseq [[k _]  (counter-list)]
+            (>! chan (clojure.string/join " " [(str hostname ".cyanite." (name k))
+                                               (counter-get k)
+                                               (quot (System/currentTimeMillis) 1000)
+                                               tenant])))
+          (counters-reset!))))
     (tc/start-tcp-server
      (merge carbon {:response-channel chan}))))
