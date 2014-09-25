@@ -161,8 +161,8 @@
                  (take!
                   (alia/execute-chan session (batch insert! values) {:consistency :any})
                   (fn [rows-or-e]
-                    (if ((ancestors (class rows-or-e)) Exception)
-                      (info "Cassandra error: " rows-or-e)
+                    (if (instance? Throwable rows-or-e)
+                      (info rows-or-e "Cassandra error")
                       (debug "Batch written")))))
                (catch Exception e
                  (info e "Store processing exception")))))
