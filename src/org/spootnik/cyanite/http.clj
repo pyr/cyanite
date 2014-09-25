@@ -2,13 +2,12 @@
   "Very simple asynchronous HTTP API, implements two
    routes: paths and metrics to query existing paths
    and retrieve metrics"
-  (:require [aleph.http                 :as http]
+  (:require [qbits.jet.server           :as http]
             [ring.util.codec            :as codec]
             [org.spootnik.cyanite.store :as store]
             [org.spootnik.cyanite.path  :as path]
             [cheshire.core              :as json]
             [clojure.string             :as str]
-            [lamina.core                :refer [enqueue]]
             [clojure.string             :refer [lower-case]]
             [clojure.tools.logging      :refer [info error debug]]))
 
@@ -94,35 +93,33 @@
 (defn wrap-process
   "Process request, generating a JSON output for it, catch exception
    and yield a payload"
-  [request rollups chan store index]
+  [request rollups store index]
   (debug "got request: " request)
-  (enqueue
-   chan
-   (try
-     {:status  200
-      :headers {"Content-Type" "application/json"}
-      :body    (json/generate-string
-                (process (assoc request
-                           :store store
-                           :rollups rollups
-                           :index index)))}
-     (catch Exception e
-       (let [{:keys [status body suppress?]} (ex-data e)]
-         (when-not suppress?
-           (error e "could not process request"))
-         {:status (or status 500)
-          :headers {"Content-Type" "application/json"}
-          :body    (json/generate-string
-                    (or body {:error (.getMessage e)}))})))))
+  (try
+    {:status  200
+     :headers {"Content-Type" "application/json"}
+     :body    (json/generate-string
+               (process (assoc request
+                          :store store
+                          :rollups rollups
+                          :index index)))}
+    (catch Exception e
+      (let [{:keys [status body suppress?]} (ex-data e)]
+        (when-not suppress?
+          (error e "could not process request"))
+        {:status (or status 500)
+         :headers {"Content-Type" "application/json"}
+         :body    (json/generate-string
+                   (or body {:error (.getMessage e)}))}))))
 
 (defn start
   "Start the API, handling each request by parsing parameters and
    routes then handing over to the request processor"
   [{:keys [http store carbon index] :as config}]
-  (let [handler (fn [chan request]
+  (let [handler (fn [request]
                   (-> request
                       (assoc-params)
                       (assoc-route)
-                      (wrap-process (:rollups carbon) chan store index)))]
-    (http/start-http-server handler http))
+                      (wrap-process (:rollups carbon) store index)))]
+    (http/run-jetty (merge http {:ring-handler handler})))
   nil)

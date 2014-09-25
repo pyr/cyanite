@@ -1,7 +1,6 @@
 (ns org.spootnik.cyanite.carbon
   "Dead simple carbon protocol handler"
-  (:require [aleph.tcp                  :as tcp]
-            [clojure.string             :as s]
+  (:require [clojure.string             :as s]
             [org.spootnik.cyanite.store :as store]
             [org.spootnik.cyanite.path  :as path]
             [org.spootnik.cyanite.tcp   :as tc]
