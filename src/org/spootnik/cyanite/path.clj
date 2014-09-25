@@ -2,7 +2,6 @@
   "Implements a path store which tracks metric names."
   (:require [clojure.tools.logging :refer [error info debug]]
             [clojure.string        :refer [split join] :as str]
-            [lamina.core           :refer [channel receive-all]]
             [clojure.core.async :as async :refer [<! >! go chan]]))
 
 (defprotocol Pathstore

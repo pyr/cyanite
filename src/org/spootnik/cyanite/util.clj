@@ -1,5 +1,5 @@
 (ns org.spootnik.cyanite.util
-  (:require [clojure.core.async :as async :refer [alt! chan >! close! go
+  (:require [clojure.core.async :as async :refer [alts! chan >! close! go
                                                   timeout >!! go-loop
                                                   dropping-buffer]]
             [clojure.tools.logging :refer [info warn error]]))
@@ -10,8 +10,8 @@
      (while true
        (try
          ~body
-         (catch Exception e
-           (error e (or (.getMessage e)
+         (catch Exception e#
+           (error e# (or (.getMessage e#)
                         "Exception while processing channel message")))))))
 
 (defmacro go-catch
@@ -19,8 +19,8 @@
   `(go
      (try
        ~@body
-       (catch Exception e
-         (error e (or (.getMessage e)
+       (catch Exception e#
+         (error e# (or (.getMessage e#)
                       "Exception while processing channel message"))))))
 
 (defn partition-or-time

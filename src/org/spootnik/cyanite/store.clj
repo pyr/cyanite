@@ -5,10 +5,9 @@
    swap implementations"
   (:require [clojure.string              :as str]
             [qbits.alia                  :as alia]
-            [org.spootnik.cyanite.util :refer [partition-or-time go-forever go-catch]]
+            [org.spootnik.cyanite.util   :refer [partition-or-time go-forever go-catch]]
             [clojure.tools.logging       :refer [error info debug]]
-            [lamina.core                 :refer [channel receive-all]]
-            [clojure.core.async :as async :refer [<! >! go chan]])
+            [clojure.core.async :as async :refer [take! <! >! go chan]])
   (:import [com.datastax.driver.core
             BatchStatement
             PreparedStatement]))
@@ -159,17 +158,17 @@
                              #(let [{:keys [metric path time rollup period ttl]} %]
                                 [(int ttl) [metric] (int rollup) (int period) path time])
                              payload)]
-                 (alia/execute-async
-                  session
-                  (batch insert! values)
-                  {:consistency :any
-                   :success (fn [_] (debug "written batch"))
-                   :error (fn [e] (info "Casandra error: " e))}))
+                 (take!
+                  (alia/execute-chan session (batch insert! values) {:consistency :any})
+                  (fn [rows-or-e]
+                    (if ((ancestors (class rows-or-e)) Exception)
+                      (info "Cassandra error: " rows-or-e)
+                      (debug "Batch written")))))
                (catch Exception e
                  (info e "Store processing exception")))))
           ch))
       (insert [this ttl data tenant rollup period path time]
-        (alia/execute-async
+        (alia/execute-chan
          session
          insert!
          {:values [ttl data tenant rollup period path time]}))

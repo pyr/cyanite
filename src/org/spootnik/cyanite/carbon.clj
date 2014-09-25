@@ -7,8 +7,6 @@
             [org.spootnik.cyanite.tcp   :as tc]
             [org.spootnik.cyanite.util  :refer [partition-or-time]]
             [clojure.tools.logging      :refer [info debug]]
-            [gloss.core                 :refer [string]]
-            [lamina.core                :refer :all]
             [clojure.core.async :as async :refer [<! >! >!! go chan]]))
 
 (set! *warn-on-reflection* true)
