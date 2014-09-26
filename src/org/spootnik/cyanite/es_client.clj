@@ -11,11 +11,15 @@
             [clojure.tools.logging :refer [error info debug]])
   (:import clojurewerkz.elastisch.rest.Connection))
 
+(def buf-size (* 4096 1024 1024))
+
 (defn multi-get
   [^Connection conn index mapping-type query func]
   (go
     (let [url  (rest/index-mget-url conn index mapping-type)
-          resp (<! (http/post url {:body (json/encode {:docs query})}))]
+          resp (<! (http/post url {:body (json/encode {:docs query})
+                                   :response-buffer-size buf-size
+                                   :request-buffer-size buf-size}))]
       (if (= 200 (:status resp))
         (let [body (json/decode (:body resp) true)]
           (func (filter :found (:docs body))))
@@ -29,7 +33,9 @@
                       (interleave (repeat "\n"))
                       (str/join))]
     (go
-      (let [resp   (<! (http/post url {:body bulk-json}))
+      (let [resp   (<! (http/post url {:body bulk-json
+                                       :response-buffer-size buf-size
+                                       :request-buffer-size buf-size}))
             status (:status resp)]
         (when-not (= 200 status)
           (func resp))))))
