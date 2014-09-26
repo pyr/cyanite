@@ -11,7 +11,7 @@
             [clojure.tools.logging :refer [error info debug]])
   (:import clojurewerkz.elastisch.rest.Connection))
 
-(def buf-size (* 4096 1024 1024))
+(def buf-size (* 4096 1024))
 
 (defn multi-get
   [^Connection conn index mapping-type query func]
