@@ -5,34 +5,34 @@
             [clojurewerkz.elastisch.rest :as rest]
             [clojurewerkz.elastisch.arguments :as ar]
             [clojure.string :as str]
-            [org.httpkit.client :as http]
+            [qbits.jet.client.http :as http]
             [cheshire.core :as json]
+            [clojure.core.async :refer [<! go]]
             [clojure.tools.logging :refer [error info debug]])
   (:import clojurewerkz.elastisch.rest.Connection))
 
 (defn multi-get
   [^Connection conn index mapping-type query func]
-  (http/post
-   (rest/index-mget-url conn index mapping-type)
-   {:body (json/encode {:docs query})}
-   #(if (= 200 (:status %))
-      (let [bod (json/decode (:body %) true)]
-        (func (filter :found (:docs bod))))
-      (error "ES responded with non-200: " %))))
+  (go
+    (let [url  (rest/index-mget-url conn index mapping-type)
+          resp (<! (http/post url {:body (json/encode {:docs query})}))]
+      (if (= 200 (:status resp))
+        (let [body (json/decode (:body resp) true)]
+          (func (filter :found (:docs body))))
+        (error "ES responded with non-200: " resp)))))
 
 (comment "Note: i've ditched the optional args to ES, refer to orignal elastich code for how they should return")
 
 (defn bulk-with-url
   [url operations func]
-  (let [bulk-json (map json/encode operations)
-        bulk-json (-> bulk-json
+  (let [bulk-json (-> (map json/encode operations)
                       (interleave (repeat "\n"))
                       (str/join))]
-    (http/post url
-               {:body bulk-json}
-               #(let [status (:status %)]
-                  (when (not= 200 status)
-                    (func %))))))
+    (go
+      (let [resp   (<! (http/post url {:body bulk-json}))
+            status (:status resp)]
+        (when-not (= 200 status)
+          (func resp))))))
 
 (defn remove-ids-from-docs
   [op-or-doc]
