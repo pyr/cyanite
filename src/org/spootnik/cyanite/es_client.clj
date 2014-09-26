@@ -18,12 +18,13 @@
   (go
     (let [url  (rest/index-mget-url conn index mapping-type)
           resp (<! (http/post url {:body (json/encode {:docs query})
+                                   :as :json
                                    :response-buffer-size buf-size
-                                   :request-buffer-size buf-size}))]
+                                   :request-buffer-size buf-size}))
+          body (<! (:body resp))]
       (if (= 200 (:status resp))
-        (let [body (json/decode (:body resp) true)]
-          (func (filter :found (:docs body))))
-        (error "ES responded with non-200: " resp)))))
+        (func (filter :found (:docs body)))
+        (error "ES responded with non-200: " body)))))
 
 (comment "Note: i've ditched the optional args to ES, refer to orignal elastich code for how they should return")
 
