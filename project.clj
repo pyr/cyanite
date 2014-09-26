@@ -13,7 +13,7 @@
                  [commons-logging/commons-logging           "1.1.3"]
                  [ring/ring-codec                           "1.0.0"]
                  [clj-yaml                                  "0.4.0"]
-                 [cc.qbits/jet                              "0.4.0"]
+                 [cc.qbits/jet                              "0.5.0-alpha2"]
                  [cc.qbits/alia                             "2.2.0"]
                  [net.jpountz.lz4/lz4                       "1.2.0"]
                  [org.xerial.snappy/snappy-java             "1.0.5"]

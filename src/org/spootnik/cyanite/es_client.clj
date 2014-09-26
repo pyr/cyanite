@@ -13,14 +13,18 @@
 
 (def buf-size (* 4096 1024))
 
+(def client (delay (http/client)))
+
 (defn multi-get
   [^Connection conn index mapping-type query func]
   (go
     (let [url  (rest/index-mget-url conn index mapping-type)
-          resp (<! (http/post url {:body (json/encode {:docs query})
-                                   :as :json
-                                   :response-buffer-size buf-size
-                                   :request-buffer-size buf-size}))
+          resp (<! (http/post @client
+                              url
+                              {:body (json/encode {:docs query})
+                               :as :json
+                               :response-buffer-size buf-size
+                               :request-buffer-size buf-size}))
           body (<! (:body resp))]
       (if (= 200 (:status resp))
         (func (filter :found (:docs body)))
@@ -34,9 +38,11 @@
                       (interleave (repeat "\n"))
                       (str/join))]
     (go
-      (let [resp   (<! (http/post url {:body bulk-json
-                                       :response-buffer-size buf-size
-                                       :request-buffer-size buf-size}))
+      (let [resp   (<! (http/post @client
+                                  url
+                                  {:body bulk-json
+                                   :response-buffer-size buf-size
+                                   :request-buffer-size buf-size}))
             status (:status resp)]
         (when-not (= 200 status)
           (func resp))))))
