@@ -3,7 +3,7 @@
   (:require [clojure.string        :as s]
             [io.cyanite.store      :as store]
             [io.cyanite.path       :as path]
-            [io.cyanite.tcp        :as tc]
+            [io.cyanite.tcp        :as tcp]
             [io.cyanite.util       :refer [partition-or-time]]
             [clojure.tools.logging :refer [info debug]]
             [clojure.core.async    :as async :refer [<! >! >!! go chan]]))
@@ -63,5 +63,5 @@
         chan (chan 100000)
         handler (format-processor chan indexch (:rollups carbon) insertch)]
     (info "starting carbon handler: " carbon)
-    (tc/start-tcp-server
+    (tcp/start-tcp-server
      (merge carbon {:response-channel chan}))))
