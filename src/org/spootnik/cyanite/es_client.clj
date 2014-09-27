@@ -13,24 +13,19 @@
 
 (def buf-size (* 4096 1024))
 
-(def client (delay (http/client)))
+(def client (delay (http/client {:response-buffer-size buf-size
+                                 :request-buffer-size buf-size})))
 
 (defn multi-get
   [^Connection conn index mapping-type query func]
   (go
     (let [url  (rest/index-mget-url conn index mapping-type)
-          resp (<! (http/post @client
-                              url
-                              {:body (json/encode {:docs query})
-                               :as :json
-                               :response-buffer-size buf-size
-                               :request-buffer-size buf-size}))
+          resp (<! (http/post @client url
+                              {:body (json/encode {:docs query}) :as :json}))
           body (<! (:body resp))]
       (if (= 200 (:status resp))
         (func (filter :found (:docs body)))
         (error "ES responded with non-200: " body)))))
-
-(comment "Note: i've ditched the optional args to ES, refer to orignal elastich code for how they should return")
 
 (defn bulk-with-url
   [url operations func]
@@ -38,11 +33,7 @@
                       (interleave (repeat "\n"))
                       (str/join))]
     (go
-      (let [resp   (<! (http/post @client
-                                  url
-                                  {:body bulk-json
-                                   :response-buffer-size buf-size
-                                   :request-buffer-size buf-size}))
+      (let [resp   (<! (http/post @client url {:body bulk-json}))
             status (:status resp)]
         (when-not (= 200 status)
           (func resp))))))
