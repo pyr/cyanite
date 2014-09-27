@@ -1,15 +1,15 @@
-(ns org.spootnik.cyanite.http
+(ns io.cyanite.http
   "Very simple asynchronous HTTP API, implements two
    routes: paths and metrics to query existing paths
    and retrieve metrics"
-  (:require [qbits.jet.server           :as http]
-            [ring.util.codec            :as codec]
-            [org.spootnik.cyanite.store :as store]
-            [org.spootnik.cyanite.path  :as path]
-            [cheshire.core              :as json]
-            [clojure.string             :as str]
-            [clojure.string             :refer [lower-case]]
-            [clojure.tools.logging      :refer [info error debug]]))
+  (:require [qbits.jet.server      :as http]
+            [ring.util.codec       :as codec]
+            [io.cyanite.store      :as store]
+            [io.cyanite.path       :as path]
+            [cheshire.core         :as json]
+            [clojure.string        :as str]
+            [clojure.string        :refer [lower-case]]
+            [clojure.tools.logging :refer [info error debug]]))
 
 (def
   ^{:doc "Our dead simple router"}

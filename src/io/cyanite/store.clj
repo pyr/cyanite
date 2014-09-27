@@ -1,13 +1,14 @@
-(ns org.spootnik.cyanite.store
+(ns io.cyanite.store
   "Implements a metric store on top of cassandra. This currently
    relies on a single schema. All cassandra interaction bits
    should quickly be abstracted with a protocol to more easily
    swap implementations"
-  (:require [clojure.string              :as str]
-            [qbits.alia                  :as alia]
-            [org.spootnik.cyanite.util   :refer [partition-or-time go-forever go-catch]]
-            [clojure.tools.logging       :refer [error info debug]]
-            [clojure.core.async :as async :refer [take! <! >! go chan]])
+  (:require [clojure.string        :as str]
+            [qbits.alia            :as alia]
+            [io.cyanite.util       :refer [partition-or-time
+                                           go-forever go-catch]]
+            [clojure.tools.logging :refer [error info debug]]
+            [clojure.core.async    :refer [take! <! >! go chan]])
   (:import [com.datastax.driver.core
             BatchStatement
             PreparedStatement]))

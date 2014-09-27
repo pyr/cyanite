@@ -1,4 +1,4 @@
-(ns org.spootnik.cyanite.config
+(ns io.cyanite.config
   "Yaml config parser, with a poor man's dependency injector"
   (:require [clj-yaml.core         :refer [parse-string]]
             [clojure.string        :refer [split]]
@@ -7,17 +7,17 @@
 (def
   ^{:doc "handle logging configuration from the yaml file"}
   default-logging
-  {:use "org.spootnik.cyanite.logging/start-logging"
+  {:use "io.cyanite.logging/start-logging"
    :pattern "%p [%d] %t - %c - %m%n"
    :external false
    :console true
    :files  []
    :level  "info"
-   :overrides {:org.spootnik "debug"}})
+   :overrides {:io.cyanite "debug"}})
 
 (def ^{:doc "handle storage with cassandra-metric-store by default"}
   default-store
-  {:use "org.spootnik.cyanite.store/cassandra-metric-store"})
+  {:use "io.cyanite.store/cassandra-metric-store"})
 
 (def ^{:doc "let carbon listen on 2003 by default"}
   default-carbon
@@ -33,7 +33,7 @@
    :port    8080})
 
 (def default-index
-  {:use "org.spootnik.cyanite.path/memory-pathstore"})
+  {:use "io.cyanite.path/memory-pathstore"})
 
 (defn to-seconds
   "Takes a string containing a duration like 13s, 4h etc. and

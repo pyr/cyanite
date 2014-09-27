@@ -7,4 +7,4 @@ fi
 JAR="$EXTRA_CLASSPATH:/usr/lib/cyanite/cyanite.jar"
 CONFIG="/etc/cyanite.yaml"
 
-exec java $EXTRA_JAVA_OPTS $OPTS -cp "$JAR" org.spootnik.cyanite "$CONFIG"
+exec java $EXTRA_JAVA_OPTS $OPTS -cp "$JAR" io.cyanite "$CONFIG"

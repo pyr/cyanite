@@ -1,10 +1,11 @@
-(ns org.spootnik.cyanite.es_path
+(ns io.cyanite.es_path
   "Implements a path store which tracks metric names backed by elasticsearch"
   (:require [clojure.tools.logging :refer [error info debug]]
             [clojure.string        :refer [split] :as str]
-            [org.spootnik.cyanite.path :refer [Pathstore]]
-            [org.spootnik.cyanite.util :refer [partition-or-time distinct-by go-forever go-catch]]
-            [org.spootnik.cyanite.es-client :as internal-client]
+            [io.cyanite.path :refer [Pathstore]]
+            [io.cyanite.util :refer [partition-or-time distinct-by
+                                     go-forever go-catch]]
+            [io.cyanite.es-client :as internal-client]
             [clojurewerkz.elastisch.native :as esn]
             [clojurewerkz.elastisch.native.index :as esni]
             [clojurewerkz.elastisch.native.document :as esnd]
@@ -15,8 +16,11 @@
             [clojure.core.async :as async :refer [<! >! go chan]]))
 
 (def ES_DEF_TYPE "path")
-(def ES_TYPE_MAP {ES_DEF_TYPE {:properties {:tenant {:type "string" :index "not_analyzed"}
-                                        :path {:type "string" :index "not_analyzed"}}}})
+(def ES_TYPE_MAP {ES_DEF_TYPE {:properties
+                               {:tenant {:type "string"
+                                         :index "not_analyzed"}
+                                :path   {:type "string"
+                                         :index "not_analyzed"}}}})
 ;cache disabled, see impact of batching
 (def ^:const store-to-depth 2)
 (def sub-path-cache (atom #{}))

@@ -1,10 +1,10 @@
-(ns org.spootnik.cyanite
+(ns io.cyanite
   "Main cyanite namespace"
   (:gen-class)
-  (:require [org.spootnik.cyanite.carbon :as carbon]
-            [org.spootnik.cyanite.http   :as http]
-            [org.spootnik.cyanite.config :as config]
-            [clojure.tools.cli           :refer [cli]]))
+  (:require [io.cyanite.carbon :as carbon]
+            [io.cyanite.http   :as http]
+            [io.cyanite.config :as config]
+            [clojure.tools.cli :refer [cli]]))
 
 (set! *warn-on-reflection* true)
 

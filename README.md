@@ -119,7 +119,7 @@ cyanite. This can be used both via the native Java elasticsearch interface, or t
 For REST API:
 ```yaml
 index:
-  use: "org.spootnik.cyanite.es_path/es-rest"
+  use: "io.cyanite.es_path/es-rest"
   index: "my_paths" #defaults to "cyanite_paths"
   url: "http://myes.host.com:9200" #defaults to http://localhost:9200
 ```
@@ -127,7 +127,7 @@ index:
 For Native Java:
 ```yaml
 index:
-  use: "org.spootnik.cyanite.es_path/es-native"
+  use: "io.cyanite.es_path/es-native"
   index: "my_paths" #defaults to "cyanite_paths"
   host: "192.168.1.1" # defaults to localhost
   port: 9300 # defaults to 9300

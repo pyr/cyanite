@@ -1,7 +1,7 @@
-(ns org.spootnik.cyanite.carbon-test
-  (:require [org.spootnik.cyanite.carbon :refer :all]
-            [org.spootnik.cyanite.config :refer [assoc-rollup-to]]
-            [clojure.test                :refer :all]))
+(ns io.cyanite.carbon-test
+  (:require [io.cyanite.carbon :refer :all]
+            [io.cyanite.config :refer [assoc-rollup-to]]
+            [clojure.test      :refer :all]))
 
 (deftest formatter-test
   (testing "empty-transform"

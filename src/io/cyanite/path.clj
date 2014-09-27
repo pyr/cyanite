@@ -1,4 +1,4 @@
-(ns org.spootnik.cyanite.path
+(ns io.cyanite.path
   "Implements a path store which tracks metric names."
   (:require [clojure.tools.logging :refer [error info debug]]
             [clojure.string        :refer [split join] :as str]

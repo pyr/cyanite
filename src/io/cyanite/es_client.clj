@@ -1,4 +1,4 @@
-(ns org.spootnik.cyanite.es-client
+(ns io.cyanite.es-client
   "Hacks of elastich to use async http-kit"
   (:require [clojurewerkz.elastisch.rest.document :as esrd]
             [clojurewerkz.elastisch.rest.bulk :as esrb]

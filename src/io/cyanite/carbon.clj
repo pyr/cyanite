@@ -1,12 +1,12 @@
-(ns org.spootnik.cyanite.carbon
+(ns io.cyanite.carbon
   "Dead simple carbon protocol handler"
-  (:require [clojure.string             :as s]
-            [org.spootnik.cyanite.store :as store]
-            [org.spootnik.cyanite.path  :as path]
-            [org.spootnik.cyanite.tcp   :as tc]
-            [org.spootnik.cyanite.util  :refer [partition-or-time]]
-            [clojure.tools.logging      :refer [info debug]]
-            [clojure.core.async :as async :refer [<! >! >!! go chan]]))
+  (:require [clojure.string        :as s]
+            [io.cyanite.store      :as store]
+            [io.cyanite.path       :as path]
+            [io.cyanite.tcp        :as tc]
+            [io.cyanite.util       :refer [partition-or-time]]
+            [clojure.tools.logging :refer [info debug]]
+            [clojure.core.async    :as async :refer [<! >! >!! go chan]]))
 
 (set! *warn-on-reflection* true)
 

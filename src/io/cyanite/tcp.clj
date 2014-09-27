@@ -1,28 +1,26 @@
-(ns org.spootnik.cyanite.tcp
-  (:require
-   [clojure.core.async :as async :refer [put! >!!]])
-  (:import
-   [java.net InetSocketAddress]
-   [java.util.concurrent Executors]
-   [io.netty.buffer ByteBuf]
-   [io.netty.bootstrap ServerBootstrap]
-   [io.netty.channel
-    ChannelFuture ChannelInitializer
-    ChannelOption EventLoopGroup
-    ChannelInboundHandlerAdapter ChannelHandlerContext
-    ChannelHandler]
-   [io.netty.handler.codec
-    ByteToMessageDecoder
-    LineBasedFrameDecoder]
-   [io.netty.handler.codec.string StringDecoder]
-   [io.netty.handler.timeout
-    ReadTimeoutHandler
-    ReadTimeoutException]
-   [io.netty.channel.nio NioEventLoopGroup]
-   [io.netty.channel.socket SocketChannel]
-   [io.netty.channel.socket.nio NioServerSocketChannel]
-   [io.netty.util CharsetUtil]
-   [java.util.concurrent Executors]))
+(ns io.cyanite.tcp
+  (:require [clojure.core.async :as async :refer [put! >!!]])
+  (:import [java.net InetSocketAddress]
+           [java.util.concurrent Executors]
+           [io.netty.buffer ByteBuf]
+           [io.netty.bootstrap ServerBootstrap]
+           [io.netty.channel
+            ChannelFuture ChannelInitializer
+            ChannelOption EventLoopGroup
+            ChannelInboundHandlerAdapter ChannelHandlerContext
+            ChannelHandler]
+           [io.netty.handler.codec
+            ByteToMessageDecoder
+            LineBasedFrameDecoder]
+           [io.netty.handler.codec.string StringDecoder]
+           [io.netty.handler.timeout
+            ReadTimeoutHandler
+            ReadTimeoutException]
+           [io.netty.channel.nio NioEventLoopGroup]
+           [io.netty.channel.socket SocketChannel]
+           [io.netty.channel.socket.nio NioServerSocketChannel]
+           [io.netty.util CharsetUtil]
+           [java.util.concurrent Executors]))
 
 (def ^:const new-line (byte 0x0A))
 

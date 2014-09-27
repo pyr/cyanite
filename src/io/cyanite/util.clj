@@ -1,7 +1,7 @@
-(ns org.spootnik.cyanite.util
-  (:require [clojure.core.async :as async :refer [alts! chan >! close! go
-                                                  timeout >!! go-loop
-                                                  dropping-buffer]]
+(ns io.cyanite.util
+  (:require [clojure.core.async    :refer [alts! chan >! close! go
+                                           timeout >!! go-loop
+                                           dropping-buffer]]
             [clojure.tools.logging :refer [info warn error]]))
 
 (defmacro go-forever

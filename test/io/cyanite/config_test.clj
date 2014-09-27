@@ -1,6 +1,6 @@
-(ns org.spootnik.cyanite.config-test
-  (:require [org.spootnik.cyanite.config :refer :all]
-            [clojure.test :refer :all])
+(ns io.cyanite.config-test
+  (:require [io.cyanite.config :refer :all]
+            [clojure.test      :refer :all])
   (:import clojure.lang.ExceptionInfo))
 
 (deftest is-seconds-test
