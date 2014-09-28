@@ -209,8 +209,6 @@
 (def query->ast
   (parse/parser init))
 
-(defmulti extract-paths (comp first first vector))
-
 (defn extract-paths
   [[opcode & args]]
   (if (= opcode :path)
