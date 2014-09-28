@@ -209,9 +209,14 @@
 (def query->ast
   (parse/parser init))
 
+(defmulti extract-paths (comp first first vector))
+
 (defn extract-paths
+  [[opcode & args]]
+  (if (= opcode :path)
+    args
+    (mapcat extract-paths args)))
+
+(defn ast->paths
   [ast]
-  (->> ast
-       (filter (comp (partial = :path) first))
-       (map last)
-       (set)))
+  (set (extract-paths (first ast))))
