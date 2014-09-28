@@ -210,10 +210,13 @@
   (parse/parser init))
 
 (defn extract-paths
-  [[opcode & args]]
-  (if (= opcode :path)
-    args
-    (mapcat extract-paths args)))
+  [ast]
+  (if (sequential? ast)
+    (let [[opcode & args] ast]
+      (if (= opcode :path)
+        args
+        (mapcat extract-paths args)))
+    []))
 
 (defn ast->paths
   [ast]
