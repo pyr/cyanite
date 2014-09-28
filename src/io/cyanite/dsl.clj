@@ -22,7 +22,20 @@
    <cactisystem1> = <'\"'> ( cactisi | cactibin) <'\"'>
    <cactisystem2> = <'\\''> ( cactisi | cactibin) <'\\''>
    <cactisystem>  = (cactisystem1 | cactisystem2)
-   <boolean>      = ( #'(?i)true' | #'(?i)false' )
+   <bool>         = ( #'(?i)true' | #'(?i)false' )
+   seconds        = <#'(?i)s(second(s)?)?'>
+   min            = <#'(?i)m(in(ute(s)?)?)?'>
+   hours          = <#'(?i)h(our(s)?)?'>
+   days           = <#'(?i)d(ay(s)?)?'>
+   weeks          = <#'(?i)w((eek)?s)?'>
+   months         = <#'(?i)mon(th(s)?)?'>
+   years          = <#'(?i)y(ear(s)?)?'>
+   <quantifier>   = seconds | min | hours | days | weeks | months | years
+   <timerange1>   = <'\\''> number quantifier <'\\''>
+   <timerange2>   = <'\"'> number quantifier <'\"'>
+   timerange      = timerange1 | timerange2
+   absolutepoints = number
+   <points>       = absolutepoints | timerange
 
    absolute       = <#'(?i)absolute'> op expr cp
    aggregateline  = <#'(?i)aggregateline'> op expr sep aggregator cp
@@ -37,7 +50,8 @@
    avgbelow       = <#'(?i)averagebelow'> op expr sep float cp
    avgpercentile  = <#'(?i)averageoutsidepercentile'> op expr sep float cp
    avgseries      = (<#'(?i)averageseries' | #'(?i)avg'>) op arglist cp
-   avgwildcards   = <#'(?i)averageserieswithwildcards'> op expr sep number (sep number)* cp
+   <avgwildkw>    = <#'(?i)averageserieswithwildcards'>
+   avgwildcards   = <avgwildkw> op expr sep float (sep float)* cp
    <afns1>        = absolute | aggregateline | alias | aliasmetric | aliasnode
    <afns2>        = aliassub | alpha | areabetween | aspercent | avgabove
    <afns3>        = avgbelow | avgpercentile | avgseries | avgwildcards
@@ -62,7 +76,9 @@
    diffconstant   = <#'(?i)diffseries'> op expr sep float cp
    divideseries   = <#'(?i)divideseries'> op expr sep expr cp
    drawinfinite   = <#'(?i)drawasinfinite'> op expr cp
-   <d>            = dashed | derivative | diffseries | diffconstant | divideseries | drawinfinite
+   <dfns1>        = dashed | derivative | diffseries | diffconstant
+   <dfns2>        = divideseries | drawinfinite
+   <d>            = dfns1 | dfns2
 
    exclude        = <#'(?i)exclude'> op expr sep qstr cp
    <e>            = exclude
@@ -75,7 +91,7 @@
    highestavg     = <#'(?i)highestaverage'> op expr sep number cp
    highestcurrent = <#'(?i)highestcurrent'> op expr sep number cp
    highestmax     = <#'(?i)highestmax'> op expr sep number cp
-   hitcount       = <#'(?i)hitcount'> op expr sep qstr (sep boolean) cp
+   hitcount       = <#'(?i)hitcount'> op expr sep qstr (sep bool) cp
    hwaberration   = <#'(?i)holtwintersaberration'> op expr sep number cp
    hwconfband     = <#'(?i)holtwintersconfidencebands'> op expr sep number cp
    hwconfarea     = <#'(?i)holtwintersconfidencearea'> op expr sep number cp
@@ -109,14 +125,85 @@
    minabove       = <#'(?i)minimumabove'> op expr sep float cp
    minbelow       = <#'(?i)minimumbelow'> op expr sep float cp
    mostdeviant    = <#'(?i)mostdeviant'> op expr sep float cp
+   movingavg      = <#'(?i)movingaverage'> op expr sep points cp
+   movingmedian   = <#'(?i)movingmedian'> op expr sep points cp
+   multiplyseries = <#'(?i)multiplyseries'> op arglist cp
    <mfns1>        = mapseries | maxseries | maxabove | maxbelow | minseries
-   <mfns2>        = minabove | minbelow | mostdeviant
-   <m>            = mfns1 | mfns2
+   <mfns2>        = minabove | minbelow | mostdeviant | movingavg
+   <mfns3>        = movingmedian | multiplyseries
+   <m>            = mfns1 | mfns2 | mfns3
+
+   npercentile    = <#'(?i)npercentile'> op expr sep float cp
+   nonnegderive   = <#'(?i)nonnegativederivative'> op expr (sep float)? cp
+   <n>            = npercentile | nonnegderive
+
+   offset         = <#'(?i)offset'> op expr sep float cp
+   offsettozero   = <#'(?i)offsettozero'> op expr cp
+   <o>            = offset | offsettozero
+
+   persecond      = <#'(?i)persecond'> op expr (sep float)? cp
+   pctileseries   = <#'(?i)percentileseries'> op expr sep float (sep bool)? cp
+   pow            = <#'(?i)pow'> op expr sep number cp
+   <p>            = persecond | pctileseries | pow
+
+   randomwalk     = <#'(?i)randomwalkfunction'> op path (sep number)? cp
+   rangeseries    = <#'(?i)rangeofseries'> op arglist cp
+   <redkw>        = <#'(?i)reduceseries'>
+   reduceseries   = redkw op expr sep qstr sep number (sep qstr)* cp
+   removeabovepct = <#'(?i)removeabovepercentile'> op expr sep float cp
+   removeaboveval = <#'(?i)removeabovevalue'> op expr sep float cp
+   removebelowpct = <#'(?i)removebelowpercentile'> op expr sep float cp
+   removebelowval = <#'(?i)removebelowvalue'> op expr sep float cp
+   removebtwpct   = <#'(?i)removebetweenpercentile'> op expr sep float cp
+   <rfns1>        = randomwalk | rangeseries | reduceseries | removeabovepct
+   <rfns2>        = removeaboveval | removebelowpct | removebelowval
+   <rfns3>        = removebtwpct
+   <r>            = rfns1 | rfns2 | rfns3
+
+   scale          = <#'(?i)scale'> op expr sep float cp
+   scalesecs      = <#'(?i)scaletoseconds'> op expr sep float cp
+   secondyaxis    = <#'(?i)secondyaxis'> op expr cp
+   <sinkw>        = <#'(?i)sin(function)?'>
+   sinfn          = sinkw op expr (sep float (sep float)?)? cp
+   <smartsumkw>   = <#'(?i)smartsummarize'>
+   smartsum       = smartsumkw op expr sep qstr (sep qstr (sep bool)?)? cp
+   sortmaxima     = <#'(?i)sortbymaxima'> op expr cp
+   sortminima     = <#'(?i)sortbyminima'> op expr cp
+   sortname       = <#'(?i)sortbyname'> op expr cp
+   sqrt           = <#'(?i)squareroot'> op expr cp
+   stacked        = <#'(?i)stacked'> op expr (sep qstr)? cp
+   stddevseries   = <#'(?i)stddevseries'> op arglist cp
+   stdev          = <#'(?i)stdev'> op expr sep number (sep float)? cp
+   substr         = <#'(?i)substr'> op expr (sep number (sep number)?)? cp
+   sumseries      = <#'(?i)sum(series)?'> op arglist cp
+   sumserieswild  = <#'(?i)sumserieswithwildcards'> op expr (sep number)* cp
+   <sumkw>        = <#'(?i)summarize'>
+   summarize      = sumkw op expr sep points (sep qstr (sep bool)?)? cp
+   <sfns1>        = scale | scalesecs | secondyaxis | sinfn | smartsum
+   <sfns2>        = sortmaxima | sortminima | sortname | sqrt | stacked
+   <sfns3>        = stddevseries | stdev | substr | sumseries | sumserieswild
+   <sfns4>        = summarize
+   <s>            = sfns1 | sfns2 | sfns3 | sfns4
+
+   threshold      = <#'(?i)threshold'> op float (sep qstr (sep qstr))? cp
+   timefn         = <#'(?i)time(function)?'> op path (sep number)? cp
+   timeshift      = <#'(?i)timeshift'> op expr sep points (sep bool)? cp
+   <tmstackkw>    = <#'(?i)timestack'>
+   timestack      = tmstackkw op expr sep points sep number sep number cp
+   transformnull  = <#'(?i)transformnull'> op expr (sep number)? cp
+   <t>            = threshold | timefn | timeshift | timestack | transformnull
+
+   useabove       = <#'(?i)useabove'> op expr float sep qstr sep qstr cp
+   <u>            = useabove
+
+   weightedavg    = <#'(?i)weightedaverage'> op expr sep expr sep number cp
+   <w>            = weightedavg
+
 
    <uqpath>       = #'(?i)[a-z0-9.*]+'
    <qpath>        = <'\"'> uqpath <'\"'>
    path           = uqpath | qpath
-   <func>         = a|c|d|e|g|h|i|k|l|m
+   <func>         = a|c|d|e|g|h|i|k|l|m|n|o|p|r|s|t|u|w
    <arglist>      = (expr <','>)* (Epsilon | expr)")
 
 (def query->ast
