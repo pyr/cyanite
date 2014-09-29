@@ -1,5 +1,5 @@
 (ns leiningen.fatdeb
-  "Build a .deb package from leininen, stolen from riemann"
+  "Build a .deb package from leiningen, stolen from riemann"
   (:refer-clojure :exclude [replace])
   (:require [clojure.java.shell :refer [sh]]
             [clojure.java.io    :refer [file delete-file writer copy]]
