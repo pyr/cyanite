@@ -143,7 +143,8 @@
     :or   {hints {:replication {:class "SimpleStrategy"
                                 :replication_factor 1}}}}]
   (info "creating cassandra metric store")
-  (let [session (-> (alia/cluster {:contact-points [cluster]})
+  (let [cluster (if (sequential? cluster) cluster [cluster])
+        session (-> (alia/cluster {:contact-points cluster})
                     (alia/connect keyspace))
         insert! (insertq session)
         fetch!  (fetchq session)]
