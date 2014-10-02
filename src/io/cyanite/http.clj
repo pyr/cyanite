@@ -6,6 +6,8 @@
             [ring.util.codec       :as codec]
             [io.cyanite.store      :as store]
             [io.cyanite.path       :as path]
+            [io.cyanite.dsl        :as dsl]
+            [io.cyanite.functions  :as functions]
             [cheshire.core         :as json]
             [clojure.string        :as str]
             [clojure.string        :refer [lower-case]]
@@ -15,6 +17,7 @@
   ^{:doc "Our dead simple router"}
   routes [[:paths   #"^/paths.*"]
           [:metrics #"^/metrics.*"]
+          [:render  #"^/render.*"]
           [:ping #"^/ping/?"]])
 
 (defn now
@@ -85,6 +88,19 @@
 (defmethod process :ping
   [_]
   {})
+
+(defmethod process :render
+  [{{:keys [from to target]} :params :keys [index store rollups]}]
+  (debug "rendering target: " target)
+  (let [ast        (dsl/query->ast target)
+        paths      (dsl/ast->paths ast)
+        get-paths  (partial path/lookup index "")]
+    (if-let [{:keys [rollup period]} (find-best-rollup from rollups)]
+      (let [get-series #(store/fetch store "mean" % "" rollup period from to)
+            series     (into {} (map (juxt identity (comp get-series get-paths))))]
+        (debug "series: " series)
+        (functions/apply-ast ast series from to))
+      {:step nil :from nil :to nil :series {}})))
 
 (defmethod process :default
   [_]
