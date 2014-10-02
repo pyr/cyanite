@@ -45,6 +45,25 @@
   [query path]
   (every? seq (map re-matches query (take (count query) path))))
 
+(defn static-pathstore
+  [{:keys [tenants]}]
+  (reify Pathstore
+    (register [this tenant path])
+    (channel-for [this]
+      (chan (async/dropping-buffer 0)))
+    (prefixes [this tenant path]
+      (let [pstar (str path "*")
+            query (path-q pstar)]
+        (->> (get tenants tenant)
+             (filter (partial prefix? query))
+             (map (partial truncate (count query)))
+             (set)
+             (sort-by :path))))
+    (lookup [this tenant path]
+      (->> (get tenants tenant)
+           (filter (partial matches? (path-q path)))
+           (map (partial join "."))))))
+
 (defn memory-pathstore
   [_]
   (let [store (atom {})]
