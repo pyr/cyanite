@@ -4,6 +4,7 @@
   :license {:name "MIT License"
             :url "https://github.com/pyr/cyanite/tree/master/LICENSE"}
   :maintainer {:email "pyr@spootnik.org"}
+  :aot :all
   :main io.cyanite
   :dependencies [[org.clojure/clojure                       "1.7.0-alpha2"]
                  [org.clojure/tools.logging                 "0.3.1"]
