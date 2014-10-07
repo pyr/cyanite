@@ -10,7 +10,7 @@ chown root:root /etc/init.d/cyanite
 
 if command -v cqlsh > /dev/null 2>&1
 then
-	echo "SELECT path from metric LIMIT 1 ;" | cqlsh -k metric > /dev/null 2>&1 || (echo "Creating cassandra schema..." && cat /var/lib/cyanite/schema.cql | cqlsh)
+	cqlsh -k metric -e "SELECT path from metric LIMIT 1" > /dev/null 2>&1 || (echo "Creating cassandra schema..." && cqlsh -f /var/lib/cyanite/schema.cql)
 fi
 
 if [ -x "/etc/init.d/cyanite" ]; then
