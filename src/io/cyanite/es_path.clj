@@ -123,8 +123,9 @@
      #(debug "Failed bulk update, full response: " %))))
 
 (defn es-rest
-  [{:keys [index url]
-    :or {index "cyanite_paths" url "http://localhost:9200"}}]
+  [{:keys [index url chan_size batch_size]
+    :or {index "cyanite_paths" url "http://localhost:9200"
+         chan_size 10000 batch_size 1000}}]
   (let [full-path-cache (atom #{})
         conn (esr/connect url)
         dontexistsfn (dont-exist conn index ES_DEF_TYPE)
@@ -139,14 +140,14 @@
       (register [this tenant path]
                 (add-path updatefn existsfn tenant path))
       (channel-for [this]
-        (let [es-chan (chan 10000)
-              es-chan-p (partition-or-time 1000 es-chan 1000 10)
-              checked-paths (chan 10000)
-              checked-paths-p (partition-or-time 1000 checked-paths 1000 10)
-              all-paths (chan 10000)
-              all-paths-p (partition-or-time 1000 all-paths 1000 5)
-              create-path (chan 10000)
-              create-path-p (partition-or-time 100 create-path 1000 5)]
+        (let [es-chan (chan chan_size)
+              es-chan-p (partition-or-time batch_size es-chan batch_size 10)
+              checked-paths (chan chan_size)
+              checked-paths-p (partition-or-time batch_size checked-paths batch_size 10)
+              all-paths (chan chan_size)
+              all-paths-p (partition-or-time batch_size all-paths batch_size 5)
+              create-path (chan chan_size)
+              create-path-p (partition-or-time batch_size create-path batch_size 5)]
           (go-forever
            (let [ps (<! es-chan-p)
                  cache @full-path-cache]
@@ -193,8 +194,9 @@
               (map :path (search queryfn scrollfn tenant path true))))))
 
 (defn es-native
-  [{:keys [index host port cluster_name]
-    :or {index "cyanite" host "localhost" port 9300 cluster_name "elasticsearch"}}]
+  [{:keys [index host port cluster_name chan_size]
+    :or {index "cyanite" host "localhost" port 9300 cluster_name "elasticsearch"
+         chan_size 1000}}]
   (let [conn (esn/connect [[host port]]
                          {"cluster.name" cluster_name})
         existsfn (partial esnd/present? conn index ES_DEF_TYPE)
@@ -207,9 +209,9 @@
       (register [this tenant path]
         (add-path updatefn existsfn tenant path))
       (channel-for [this]
-        (let [es-chan (chan 1000)
-              all-paths (chan 1000)
-              create-path (chan 1000)]
+        (let [es-chan (chan chan_size)
+              all-paths (chan chan_size)
+              create-path (chan chan_size)]
           (go-forever
             (let [p (<! es-chan)]
               (doseq [ap (es-all-paths p "")]

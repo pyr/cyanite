@@ -139,9 +139,11 @@
 (defn cassandra-metric-store
   "Connect to cassandra and start a path fetching thread.
    The interval is fixed for now, at 1minute"
-  [{:keys [keyspace cluster hints]
+  [{:keys [keyspace cluster hints chan_size batch_size]
     :or   {hints {:replication {:class "SimpleStrategy"
-                                :replication_factor 1}}}}]
+                                :replication_factor 1}}
+           chan_size 10000
+           batch_size 500}}]
   (info "creating cassandra metric store")
   (let [cluster (if (sequential? cluster) cluster [cluster])
         session (-> (alia/cluster {:contact-points cluster})
@@ -151,8 +153,8 @@
     (reify
       Metricstore
       (channel-for [this]
-        (let [ch (chan 10000)
-              ch-p (partition-or-time 500 ch 500 5)]
+        (let [ch (chan chan_size)
+              ch-p (partition-or-time batch_size ch batch_size 5)]
           (go-forever
            (let [payload (<! ch-p)]
              (try
