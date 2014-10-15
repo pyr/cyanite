@@ -7,7 +7,7 @@
 (def
   ^{:doc "handle logging configuration from the yaml file"}
   default-logging
-  {:use "io.cyanite.logging/start-logging"
+  {:use "io.spootnik.logconfig/start-logging!"
    :pattern "%p [%d] %t - %c - %m%n"
    :external false
    :console true
