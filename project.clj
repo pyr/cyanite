@@ -10,7 +10,7 @@
                  [org.clojure/tools.logging     "0.3.1"]
                  [org.clojure/tools.cli         "0.3.1"]
                  [org.spootnik/pickler          "0.1.0"]
-                 [org.spootnik/logconfig        "0.7.1"]
+                 [org.spootnik/logconfig        "0.7.2"]
                  [ring/ring-codec               "1.0.0"]
                  [clj-yaml                      "0.4.0"]
                  [cc.qbits/jet                  "0.5.0-alpha3"]
