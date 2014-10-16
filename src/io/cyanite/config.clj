@@ -7,7 +7,7 @@
 (def
   ^{:doc "handle logging configuration from the yaml file"}
   default-logging
-  {:use "io.spootnik.logconfig/start-logging!"
+  {:use "org.spootnik.logconfig/start-logging!"
    :pattern "%p [%d] %t - %c - %m%n"
    :external false
    :console true
@@ -100,7 +100,6 @@
   [{:keys [use] :as config} target]
   (debug "building " target " with " use)
   (instantiate (-> use name symbol) config))
-
 (defn load-path
   "Try to find a pathname, on the command line, in
    system properties or the environment and load it."
