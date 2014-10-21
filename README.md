@@ -12,6 +12,8 @@ Graphite is a powerful graphing solution. It sports a somewhat aged but
 very powerful web interface. Carbon is graphite's storage daemon,
 written in python which writes out whisper or ceres file.
 
+[![Build Status](https://travis-ci.org/pyr/cyanite.svg?branch=master)](https://travis-ci.org/pyr/cyanite)
+
 ## Compiling
 
 Cyanite is a clojure application and thus can be built as a standalone JAR file.
