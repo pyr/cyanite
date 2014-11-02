@@ -13,6 +13,8 @@
                  [org.spootnik/logconfig        "0.7.2"]
                  [ring/ring-codec               "1.0.0"]
                  [clj-yaml                      "0.4.0"]
+                 [clj-http                      "1.0.1"
+                  :exclusions [commons-codec]]
                  [cc.qbits/jet                  "0.5.0-alpha3"]
                  [cc.qbits/alia                 "2.2.2"]
                  [net.jpountz.lz4/lz4           "1.2.0"]
