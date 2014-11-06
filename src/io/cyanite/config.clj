@@ -1,14 +1,14 @@
 (ns io.cyanite.config
   "Yaml config parser, with a poor man's dependency injector"
-  (:require [clj-yaml.core         :refer [parse-string]]
-            [clojure.string        :refer [split]]
-            [clojure.tools.logging :refer [error info debug]]))
+  (:require [clj-yaml.core          :refer [parse-string]]
+            [clojure.string         :refer [split]]
+            [org.spootnik.logconfig :refer [start-logging!]]
+            [clojure.tools.logging  :refer [error info debug]]))
 
 (def
   ^{:doc "handle logging configuration from the yaml file"}
   default-logging
-  {:use "io.cyanite.logging/start-logging"
-   :pattern "%p [%d] %t - %c - %m%n"
+  {:pattern "%p [%d] %t - %c - %m%n"
    :external false
    :console true
    :files  []
@@ -100,7 +100,6 @@
   [{:keys [use] :as config} target]
   (debug "building " target " with " use)
   (instantiate (-> use name symbol) config))
-
 (defn load-path
   "Try to find a pathname, on the command line, in
    system properties or the environment and load it."
@@ -118,14 +117,16 @@
   (try
     (when-not quiet?
       (println "starting with configuration: " path))
-    (-> (load-path path)
-        (update-in [:logging] (partial merge default-logging))
-        (update-in [:logging] get-instance :logging)
-        (update-in [:store] (partial merge default-store))
-        (update-in [:store] get-instance :store)
-        (update-in [:carbon] (partial merge default-carbon))
-        (update-in [:carbon :rollups] convert-shorthand-rollups)
-        (update-in [:carbon :rollups] assoc-rollup-to)
-        (update-in [:index] (partial merge default-index))
-        (update-in [:index] get-instance :index)
-        (update-in [:http] (partial merge default-http)))))
+    (let [config (load-path path)]
+      (start-logging! (merge default-logging (:logging config)))
+      (-> (load-path path)
+
+          (update-in [:store] (partial merge default-store))
+          (update-in [:store] get-instance :store)
+
+          (update-in [:carbon] (partial merge default-carbon))
+          (update-in [:carbon :rollups] convert-shorthand-rollups)
+          (update-in [:carbon :rollups] assoc-rollup-to)
+          (update-in [:index] (partial merge default-index))
+          (update-in [:index] get-instance :index)
+          (update-in [:http] (partial merge default-http))))))

@@ -139,9 +139,9 @@
 (defn cassandra-metric-store
   "Connect to cassandra and start a path fetching thread.
    The interval is fixed for now, at 1minute"
-  [{:keys [keyspace cluster hints chan_size batch_size]
+  [{:keys [keyspace cluster hints repfactor]
     :or   {hints {:replication {:class "SimpleStrategy"
-                                :replication_factor 1}}
+                                :replication_factor (or repfactor 3)}}
            chan_size 10000
            batch_size 500}}]
   (info "creating cassandra metric store")
@@ -153,7 +153,7 @@
     (reify
       Metricstore
       (channel-for [this]
-        (let [ch (chan chan_size)
+        (let [ch   (chan chan_size)
               ch-p (partition-or-time batch_size ch batch_size 5)]
           (go-forever
            (let [payload (<! ch-p)]
