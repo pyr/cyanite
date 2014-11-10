@@ -61,5 +61,5 @@
   [{:keys [port host readtimeout response-channel] :as options}]
   (let [putter (channel-putter response-channel)
         server (boot-strap-server putter readtimeout)
-        f (-> server (.bind port))]
+        f (-> server (.bind host port))]
     (-> f .channel .closeFuture)))
