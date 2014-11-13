@@ -197,12 +197,14 @@
   [{:keys [index host port cluster_name chan_size]
     :or {index "cyanite" host "localhost" port 9300 cluster_name "elasticsearch"
          chan_size 1000}}]
-  (let [conn (esn/connect [[host port]]
-                         {"cluster.name" cluster_name})
+  (let [hosts (map #(vector % port) (if (sequential? host) host [host]))
+        conn (esn/connect hosts {"cluster.name" cluster_name})
         existsfn (partial esnd/present? conn index ES_DEF_TYPE)
         updatefn (partial esnd/async-put conn index ES_DEF_TYPE)
         scrollfn (partial esnd/scroll-seq conn)
         queryfn (partial esnd/search conn index ES_DEF_TYPE)]
+    (info (format "Creating ElasticSearch native path store: %s"
+                  (str/join ", " (map #(str/join ":" %) hosts))))
     (if (not (esni/exists? conn index))
       (esni/create conn index :mappings ES_TYPE_MAP))
     (reify Pathstore
