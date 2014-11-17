@@ -1,12 +1,7 @@
-carbon:
-  host: "127.0.0.1"
-  port: 2003
-  readtimeout: 30
-  rollups:
-    - period: 60480
-      rollup: 10
-    - period: 105120
-      rollup: 600
+transports:
+  - host: "127.0.0.1"
+    port: 2003
+    readtimeout: 30
 http:
   host: "0.0.0.0"
   port: 8080
@@ -15,6 +10,18 @@ logging:
   console: true
   files:
     - "/var/log/cyanite/cyanite.log"
+index:
+  use: "io.cyanite.index.static/static-index"
+  tenants:
+    "":
+      - "foo.bar"
+      - "foo.baz"
 store:
-  cluster: 'localhost'
-  keyspace: 'metric'
+  use: "io.cyanite.store.cassandra/cassandra-store"
+  cluster: "localhost"
+  keyspace: "metric"
+precisions:
+  - period: 60480
+    rollup: 10
+  - period: 105120
+    rollup: 600

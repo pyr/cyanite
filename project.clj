@@ -20,6 +20,4 @@
                  [net.jpountz.lz4/lz4           "1.2.0"]
                  [org.xerial.snappy/snappy-java "1.1.1.3"]
                  [io.netty/netty-all            "4.0.19.Final"]
-                 [org.clojure/core.async        "0.1.346.0-17112a-alpha"]
-                 [clojurewerkz/elastisch        "2.0.0"
-                  :exclusions [com.google.guava/guava commons-codec]]])
+                 [org.clojure/core.async        "0.1.346.0-17112a-alpha"]])
