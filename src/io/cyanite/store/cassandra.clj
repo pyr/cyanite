@@ -70,13 +70,6 @@
                    (:path metric)
                    (:time metric)]}))
       (fetch [this tenant precision spec]
-        (debug "will fetch values: " (pr-str           {:values [(:paths spec)
-                   (int (:rollup precision))
-                   (int (:period precision))
-                   (:from spec)
-                   (:to spec)]
-          :fetch-size Integer/MAX_VALUE}
-                                      ))
         (alia/execute
          session fetch!
          {:values [(:paths spec)
@@ -85,16 +78,3 @@
                    (:from spec)
                    (:to spec)]
           :fetch-size Integer/MAX_VALUE})))))
-
-
-(comment
-  (def s (store/wrapped-store (cassandra-store {:cluster "localhost"
-                                                :keyspace "metric"})
-                              [(p/->Precision 10 60480)]
-                              ))
-
-  (store/fetch s "" (p/->Precision 10 60480) (p/->FetchSpec :mean
-                                                            ["foo.bar"]
-                                                            1416213125
-                                                            1416214690))
-  )
