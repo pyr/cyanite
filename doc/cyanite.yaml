@@ -11,11 +11,7 @@ logging:
   files:
     - "/var/log/cyanite/cyanite.log"
 index:
-  use: "io.cyanite.index.static/static-index"
-  tenants:
-    "":
-      - "foo.bar"
-      - "foo.baz"
+  use: "io.cyanite.index.atom/atom-index"
 store:
   use: "io.cyanite.store.cassandra/cassandra-store"
   cluster: "localhost"
