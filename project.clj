@@ -6,7 +6,7 @@
   :maintainer {:email "pyr@spootnik.org"}
   :aot :all
   :main io.cyanite
-  :dependencies [[org.clojure/clojure           "1.7.0-alpha2"]
+  :dependencies [[org.clojure/clojure           "1.7.0-alpha4"]
                  [org.clojure/tools.logging     "0.3.1"]
                  [org.clojure/tools.cli         "0.3.1"]
                  [org.spootnik/pickler          "0.1.0"]
