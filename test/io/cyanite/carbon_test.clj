@@ -1,39 +1,16 @@
 (ns io.cyanite.carbon-test
-  (:require [io.cyanite.carbon :refer :all]
-            [io.cyanite.config :refer [assoc-rollup-to]]
+  (:require [io.cyanite.transport.carbon :refer :all]
             [clojure.test      :refer :all]))
 
-(deftest formatter-test
+(deftest input-test
   (testing "empty-transform"
-    (is (= nil (formatter [] "foo nan 501"))))
+    (is (= {:path "foo"
+            :metric nil
+            :time 501}
+           (text->input "foo nan 501"))))
 
-  (testing "rollup-transform"
-    (is (= (list {:path "foo.bar"
-                  :rollup 10
-                  :period 3600
-                  :ttl    36000
-                  :time   500
-                  :metric 2.0})
-           (formatter
-                      (assoc-rollup-to  [{:rollup 10 :period 3600}])
-                      "foo.bar 2.0 501")))
-
-    (is (= (list {:path "foo.bar"
-                  :rollup 10
-                  :period 3600
-                  :ttl    36000
-                  :time   600
-                  :metric 2.0}
-                 {:path "foo.bar"
-                  :rollup 60
-                  :period 7200
-                  :ttl    432000
-                  :time   600
-                  :metric 2.0})
-           (formatter
-                      (assoc-rollup-to  [{:rollup 10 :period 3600}
-                                         {:rollup 60 :period 7200}])
-                      "foo.bar 2.0 601")))
-
-
-    ))
+  (testing "normal-transform"
+    (is (= {:path "foo.bar"
+            :metric 2.0
+            :time 501}
+           (text->input "foo.bar 2.0 501")))))
