@@ -24,11 +24,10 @@
 
 (defn text->input
   [^String input]
-  (let [[^String path ^String metric ^String time] (split (.trim input) #" ")
-        out {:path path
-             :metric (metric->double metric)
-             :time   (time->long time)}]
-    out))
+  (let [[^String path ^String metric ^String time] (split (.trim input) #" ")]
+    {:path path
+     :metric (metric->double metric)
+     :time   (time->long time)}))
 
 (defn start
   "Start a tcp carbon listener"
