@@ -1,21 +1,20 @@
-(ns io.cyanite.path
-  "Implements a path store which tracks metric names."
-  (:require [clojure.tools.logging :refer [error info debug]]
-            [clojure.string        :refer [split join] :as str]
-            [clojure.core.async :as async :refer [<! >! go chan]]))
+(ns io.cyanite.index
+  "Implements a path index which tracks metric names."
+  (:refer-clojure :exclude [replace])
+  (:require [clojure.string  :refer [split join replace]]))
 
-(defprotocol Pathstore
-  "The pathstore provides a way to insert paths and later look them up"
-  (channel-for [this])
-  (register [this tenant path])
-  (prefixes [this tenant path])
-  (lookup   [this tenant path]))
+(defprotocol Index
+  "The index provides a way to insert paths and later look them up"
+  (register! [this tenant path])
+  (query     [this tenant query recurse?])
+  (prefixes  [this tenant path])
+  (lookup    [this tenant path]))
 
 (defn path-elem-re
   "Each graphite path elem may contain '*' wildcards, this
    functions yields a regexp pattern fro this format"
   [e]
-  (re-pattern (format "^%s$" (str/replace e "*" ".*"))))
+  (re-pattern (format "^%s$" (replace e "*" ".*"))))
 
 (defn path-q
   "For a complete path query, yield a list of regexp pattern
@@ -45,47 +44,20 @@
   [query path]
   (every? seq (map re-matches query (take (count query) path))))
 
-(defn static-pathstore
-  [{:keys [tenants]}]
-  (reify Pathstore
-    (register [this tenant path])
-    (channel-for [this]
-      (chan (async/dropping-buffer 0)))
+(defn wrapped-index
+  [index]
+  (reify
+    Index
+    (register! [this tenant path]
+      (register! index tenant path))
     (prefixes [this tenant path]
-      (let [pstar (str path "*")
-            query (path-q pstar)]
-        (->> (get tenants tenant)
-             (filter (partial prefix? query))
-             (map (partial truncate (count query)))
+      (let [q (path-q (str path "*"))]
+        (->> (query index tenant path false)
+             (filter (partial prefix? q))
+             (map (partial truncate (count q)))
              (set)
              (sort-by :path))))
     (lookup [this tenant path]
-      (->> (get tenants tenant)
+      (->> (query index tenant path true)
            (filter (partial matches? (path-q path)))
            (map (partial join "."))))))
-
-(defn memory-pathstore
-  [_]
-  (let [store (atom {})]
-    (reify Pathstore
-      (register [this tenant path]
-        (swap! store update-in [tenant] #(set (conj % (split path #"\.")))))
-      (channel-for [this]
-        (let [c (chan)]
-          (go
-            (while true
-              (let [p (<! c)]
-                (register this "" p))))
-          c))
-      (prefixes [this tenant path]
-        (let [pstar (str path "*")
-              query (path-q pstar)]
-          (->> (get @store tenant)
-               (filter (partial prefix? query))
-               (map (partial truncate (count query)))
-               (set)
-               (sort-by :path))))
-      (lookup [this tenant path]
-        (->> (get @store tenant)
-             (filter (partial matches? (path-q path)))
-             (map (partial join ".")))))))
