@@ -1,4 +1,4 @@
-(ns io.cyanite.tcp
+(ns io.cyanite.transport.tcp
   (:require [clojure.core.async :as async :refer [put! >!!]])
   (:import [java.net InetSocketAddress]
            [java.util.concurrent Executors]
