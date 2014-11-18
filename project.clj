@@ -9,7 +9,7 @@
   :dependencies [[org.clojure/clojure           "1.7.0-alpha4"]
                  [org.clojure/tools.logging     "0.3.1"]
                  [org.clojure/tools.cli         "0.3.1"]
-                 [org.spootnik/pickler          "0.1.0"]
+                 [org.spootnik/pickler          "0.1.4"]
                  [org.spootnik/logconfig        "0.7.2"]
                  [ring/ring-codec               "1.0.0"]
                  [clj-yaml                      "0.4.0"]
