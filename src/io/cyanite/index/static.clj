@@ -1,6 +1,5 @@
 (ns io.cyanite.index.static
-  (:require [io.cyanite.index :as index]
-            [clojure.string   :refer [split]]))
+  (:require [io.cyanite.index :as index]))
 
 (defn static-index
   [{:keys [tenants]}]
@@ -8,8 +7,7 @@
     index/Index
     (register! [this tenant path])
     (query [this tenant path recurse?]
-      (map #(split % #"\.")
-           (get tenants (keyword tenant))))))
+      (get tenants (keyword tenant)))))
 
 (comment
   (def i (index/wrapped-index
