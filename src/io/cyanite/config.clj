@@ -23,10 +23,9 @@
 (def ^{:doc "let carbon listen on 2003 by default"}
   default-transport
   {:enabled true
-   :use     "io.cyanite.transport.carbon/start"
+   :use     "io.cyanite.transport.carbon/carbon-transport"
    :host    "127.0.0.1"
-   :port    2003
-   :readtimeout 30})
+   :port    2003})
 
 (def ^{:doc "let the http api listen on 8080 by default"}
   default-http
