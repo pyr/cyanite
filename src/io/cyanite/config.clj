@@ -3,7 +3,7 @@
   (:require [clj-yaml.core          :refer [parse-string]]
             [clojure.string         :refer [split]]
             [org.spootnik.logconfig :refer [start-logging!]]
-            [io.cyanite.precision   :refer [map->Precision]]
+            [io.cyanite.resolution  :refer [map->Resolution]]
             [clojure.tools.logging  :refer [error info debug]]))
 
 (def
@@ -129,7 +129,7 @@
 
           (update-in [:store] (partial merge default-store))
           (update-in [:store] get-instance :store)
-          (update-in [:precisions] (partial mapv map->Precision))
+          (update-in [:resolutions] (partial mapv map->Resolution))
           (update-in [:transports] (partial mapv update-transport))
 
           (update-in [:index] (partial merge default-index))

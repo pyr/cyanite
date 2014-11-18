@@ -1,24 +1,24 @@
-(ns io.cyanite.precision)
+(ns io.cyanite.resolution)
 
-(defprotocol PrecisionCaps
+(defprotocol ResolutionCaps
   (ttl [this])
   (rollup [this time]))
 
 (defprotocol FetchSpecCaps
-  (precision [this precisions])
+  (resolution [this resolutions])
   (aggregate [this data]))
 
-(defrecord Precision [rollup period]
-  PrecisionCaps
+(defrecord Resolution [rollup period]
+  ResolutionCaps
   (ttl [this] (* rollup period))
   (rollup [this time] (-> time (quot rollup) (* rollup))))
 
 (defrecord FetchSpec [agg paths from to]
   FetchSpecCaps
-  (precision [this precisions]
+  (resolution [this resolutions]
     (let [now    (quot (System/currentTimeMillis) 1000) ;; epoch
-          within (fn [precision] (>= from (- now (ttl precision))))]
-      (->> precisions
+          within (fn [res] (>= from (- now (ttl res))))]
+      (->> resolutions
            (sort-by :rollup)
            (drop-while (complement within))
            (first))))
@@ -36,8 +36,8 @@
           (assoc :metric agged)))))
 
 (comment
-  (precision (FetchSpec. :mean [] 1416173290 1416173290)
-             [(Precision. 10 60480) (Precision. 600 105120)]
-             )
+  (resolution (FetchSpec. :mean [] 1416173290 1416173290)
+              [(Resolution. 10 60480) (Resolution. 600 105120)]
+              )
 
   )

@@ -2,7 +2,7 @@
   (:require [qbits.alia            :as alia]
             [clojure.core.async    :as a]
             [io.cyanite.store      :as store]
-            [io.cyanite.precision  :as p]
+            [io.cyanite.resolution :as r]
             [clojure.tools.logging :refer [error info debug]])
   (:import [com.datastax.driver.core
             BatchStatement
@@ -59,23 +59,23 @@
         fetch!  (fetchq session)]
     (reify
       store/Metricstore
-      (insert! [this tenant precision metric]
+      (insert! [this tenant resolution metric]
         (alia/execute-chan
          session
          insert!
-         {:values [(int (p/ttl precision))
+         {:values [(int (r/ttl resolution))
                    [(:point metric)]
                    tenant
-                   (:rollup precision)
-                   (:period precision)
+                   (:rollup resolution)
+                   (:period resolution)
                    (:path metric)
                    (:time metric)]}))
-      (fetch [this tenant precision spec]
+      (fetch [this tenant resolution spec]
         (alia/execute
          session fetch!
          {:values [(:paths spec)
-                   (int (:rollup precision))
-                   (int (:period precision))
+                   (int (:rollup resolution))
+                   (int (:period resolution))
                    (:from spec)
                    (:to spec)]
           :fetch-size Integer/MAX_VALUE})))))

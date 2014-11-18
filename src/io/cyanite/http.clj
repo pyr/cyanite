@@ -6,7 +6,7 @@
             [ring.util.codec       :as codec]
             [io.cyanite.store      :as store]
             [io.cyanite.index      :as index]
-            [io.cyanite.precision  :as p]
+            [io.cyanite.resolution :as r]
             [cheshire.core         :as json]
             [clojure.string        :as str]
             [clojure.string        :refer [lower-case]]
@@ -64,14 +64,14 @@
   (index/prefixes index "" (if (str/blank? query) "*" query)))
 
 (defmethod process :metrics
-  [{{:keys [from to path agg]} :params :keys [index store precisions]}]
+  [{{:keys [from to path agg]} :params :keys [index store resolutions]}]
   (debug "fetching paths: " path)
   (let [to    (if to (Long/parseLong to) (now))
         from  (Long/parseLong from)
         paths (mapcat (partial index/lookup index "")
                       (if (sequential? path) path [path]))
         agg   (keyword (or agg "mean"))
-        spec  (p/->FetchSpec agg paths from to)]
+        spec  (r/->FetchSpec agg paths from to)]
     (debug "spec: " (pr-str spec))
     (store/fetch store "" spec)))
 

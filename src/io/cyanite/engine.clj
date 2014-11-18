@@ -1,6 +1,6 @@
 (ns io.cyanite.engine
   (:require [clojure.core.async    :as a]
-            [io.cyanite.precision  :as p]
+            [io.cyanite.resolution :as r]
             [io.cyanite.store      :refer [insert!]]
             [io.cyanite.index      :refer [register!]]
             [clojure.tools.logging :refer [debug info warn error]]))
@@ -13,28 +13,28 @@
 (def default-tenant "no tenants yet" "")
 
 (defn formatter
-  [precisions {:keys [path metric time] :as input}]
-  (for [precision precisions]
+  [resolutions {:keys [path metric time] :as input}]
+  (for [resolution resolutions]
     (try
       {:path   path
-       :key    precision
-       :time   (p/rollup precision time)
+       :key    resolution
+       :time   (r/rollup resolution time)
        :point  metric}
       (catch Exception e
         (info e "failed metric input" (pr-str input))))))
 
 (defn denormalizer
-  [precisions]
+  [resolutions]
   (fn [metric]
     (try
-      (formatter precisions metric)
+      (formatter resolutions metric)
       (catch Exception e
         (warn e "failed denormalization" (pr-str metric))))))
 
 (defn engine
-  [{:keys [precisions] :as config}]
+  [{:keys [resolutions] :as config}]
   (let [transports (atom nil)
-        denorm     (partial a/mapcat< (denormalizer precisions))]
+        denorm     (partial a/mapcat< (denormalizer resolutions))]
     (reify
       clojure.lang.ITransientCollection
       (conj [this transport]

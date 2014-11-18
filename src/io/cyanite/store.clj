@@ -3,7 +3,7 @@
    relies on a single schema. All cassandra interaction bits
    should quickly be abstracted with a protocol to more easily
    swap implementations"
-  (:require [io.cyanite.precision :as p]
+  (:require [io.cyanite.resolution :as r]
             [clojure.tools.logging :refer [debug]]))
 
 (set! *warn-on-reflection* true)
@@ -11,8 +11,8 @@
 (defrecord Metric [path time point data])
 
 (defprotocol Metricstore
-  (insert! [this tenant metric] [this tenant precision metric])
-  (fetch [this tenant spec] [this tenant precision spec]))
+  (insert! [this tenant metric] [this tenant resolution metric])
+  (fetch [this tenant spec] [this tenant resolution spec]))
 
 ;;
 ;; The next section contains a series of path matching functions
@@ -38,9 +38,9 @@
        (map :metric)))
 
 (defn data->series
-  [data spec precision]
-  (when-let [points (seq (map (partial p/aggregate spec) data))]
-    (let [rollup     (:rollup precision)
+  [data spec resolution]
+  (when-let [points (seq (map (partial r/aggregate spec) data))]
+    (let [rollup     (:rollup resolution)
           min-point  (-> points first :time)
           max-point  (-> (:to spec) (quot rollup) (* rollup))
           nil-points (->> (range min-point (inc max-point) rollup)
@@ -62,15 +62,15 @@
    :series {}})
 
 (defn wrapped-store
-  [store precisions]
+  [store resolutions]
   (reify
     Metricstore
     (insert! [this tenant metric]
-      (doseq [precision precisions
-              :let [time (p/rollup precision (:time metric))]]
-        (insert! store tenant precision
+      (doseq [resolution resolutions
+              :let [time (r/rollup resolution (:time metric))]]
+        (insert! store tenant resolution
                  (map->Metric (assoc metric :time time)))))
     (fetch [this tenant spec]
-      (let [precision (p/precision spec precisions)]
-        (or (data->series (fetch store tenant precision spec) spec precision)
+      (let [resolution (r/resolution spec resolutions)]
+        (or (data->series (fetch store tenant resolution spec) spec resolution)
             (empty-series spec))))))

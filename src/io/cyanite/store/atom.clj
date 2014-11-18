@@ -1,19 +1,18 @@
 (ns io.cyanite.store.atom
-  (:require [io.cyanite.store     :as store]
-            [io.cyanite.precision :as p]))
+  (:require [io.cyanite.store :as store]))
 
 (defn atom-store
   [_]
   (let [store (atom {})]
     (reify
       store/Metricstore
-      (insert! [this tenant precision metric]
+      (insert! [this tenant resolution metric]
         (swap! store update-in
-               [tenant (:path metric) precision (:time metric)]
+               [tenant (:path metric) resolution (:time metric)]
                conj (:point metric)))
-      (fetch [this tenant precision spec]
+      (fetch [this tenant resolution spec]
         (->> (for [path (:paths spec)
-                   :let [points (get-in @store [tenant path precision])
+                   :let [points (get-in @store [tenant path resolution])
                          sorted (sort-by key points)]]
                (->> sorted
                     (drop-while #(< (key %) (:from spec)))
