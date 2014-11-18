@@ -38,10 +38,6 @@
   (def j (es-index {}))
   (def i (index/wrapped-index j))
 
-  (println
-   (json/generate-string {:query {:bool {:must [{:term {:tenant "meh"}}
-                                                {:wildcard {:path "web*.cpu.idle"}}]}}}))
-
   (do
     (index/register! j "" "web01.cpu.idle")
     (index/register! j "" "web01.cpu.system")

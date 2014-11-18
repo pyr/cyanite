@@ -68,7 +68,8 @@
     (insert! [this tenant metric]
       (doseq [precision precisions
               :let [time (p/rollup precision (:time metric))]]
-        (insert! store tenant precision (map->Metric (assoc metric :time time)))))
+        (insert! store tenant precision
+                 (map->Metric (assoc metric :time time)))))
     (fetch [this tenant spec]
       (let [precision (p/precision spec precisions)]
         (or (data->series (fetch store tenant precision spec) spec precision)

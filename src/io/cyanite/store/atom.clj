@@ -19,5 +19,8 @@
                     (drop-while #(< (key %) (:from spec)))
                     (take-while #(< (key %) (:to spec)))
                     (map (comp (partial apply store/->Metric)
-                               (juxt (constantly path) key (constantly nil) val)))))
+                               (juxt (constantly path)
+                                     key
+                                     (constantly nil)
+                                     val)))))
              (reduce concat []))))))
