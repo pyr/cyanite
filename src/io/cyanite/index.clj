@@ -53,11 +53,15 @@
     (prefixes [this tenant path]
       (let [q (path-q (str path "*"))]
         (->> (query index tenant path false)
+             (set)
+             (map #(split % #"\."))
              (filter (partial prefix? q))
              (map (partial truncate (count q)))
              (set)
              (sort-by :path))))
     (lookup [this tenant path]
       (->> (query index tenant path true)
+           (set)
+           (map #(split % #"\."))
            (filter (partial matches? (path-q path)))
            (map (partial join "."))))))
