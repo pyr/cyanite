@@ -28,7 +28,7 @@
   [^String input]
   (let [[^String path ^String metric ^String time] (split (.trim input) #" ")]
     [{:path path
-      :metric (metric->double metric)
+      :point (metric->double metric)
       :time   (time->long time)}]))
 
 (defn pickle->input
@@ -38,9 +38,9 @@
           bb  (.nioBuffer input 0 sz)
           ast (pickler/raw->ast bb)]
       (for [[val time path] (pickler/ast->metrics ast)]
-        {:path path
-         :metric (if (string? val) (Double/parseDouble val) val)
-         :time   time}))
+        {:path  path
+         :point (if (string? val) (Double/parseDouble val) val)
+         :time  time}))
     (catch Exception e
       (debug e "cannot deserialize pickle")
       nil)))
