@@ -17,7 +17,7 @@
            io.netty.channel.socket.nio.NioServerSocketChannel
            io.netty.util.CharsetUtil))
 
-(defmacro with-input
+(defmacro ^ChannelHandler with-input
   [input & body]
   `(proxy [ChannelInboundHandlerAdapter] []
      (channelRead [^ChannelHandlerContext ctx# input#]
@@ -69,11 +69,9 @@
         pipeline (if (= (keyword type) :pickle)
                   (pickle-pipeline ch timeout)
                   (line-pipeline ch timeout))
-        server   (server-bootstrap pipeline)]
+        server   ^ServerBootstrap (server-bootstrap pipeline)]
     (debug "tcp server ready, will bind to " host port)
     (try
-      (-> server (.bind host port) .channel .closeFuture)
+      (-> server (.bind ^String host (int port)) .channel .closeFuture)
       (catch Exception e
-        (debug e "server did not bootstrap")))
-    (debug "tcp server finished")
-    ))
+        (debug e "server did not bootstrap")))))

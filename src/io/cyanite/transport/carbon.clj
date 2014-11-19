@@ -32,7 +32,7 @@
       :time   (time->long time)}]))
 
 (defn pickle->input
-  [input]
+  [^io.netty.buffer.ByteBuf input]
   (try
     (let [sz  (.capacity input)
           bb  (.nioBuffer input 0 sz)
