@@ -13,13 +13,13 @@
 (def default-tenant "no tenants yet" "")
 
 (defn formatter
-  [resolutions {:keys [path metric time] :as input}]
+  [resolutions {:keys [path point time] :as input}]
   (for [resolution resolutions]
     (try
       {:path   path
        :key    resolution
        :time   (r/rollup resolution time)
-       :point  metric}
+       :point  point}
       (catch Exception e
         (info e "failed metric input" (pr-str input))))))
 
@@ -50,6 +50,12 @@
             (let [[{:keys [path point time] :as metric} _] (a/alts! chans)]
               (debug "new metric: " (pr-str metric))
               (when (and path point time)
-                (insert! (:store config) default-tenant metric)
-                (register! (:index config) default-tenant path)))
+                (try
+                  (insert! (:store config) default-tenant metric)
+                  (catch Exception e
+                    (debug e "could not insert metric")))
+                (try
+                  (register! (:index config) default-tenant path)
+                  (catch Exception e
+                    (debug e "could not index metric name")))))
             (recur)))))))
