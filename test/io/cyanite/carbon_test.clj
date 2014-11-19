@@ -5,12 +5,12 @@
 (deftest input-test
   (testing "empty-transform"
     (is (= [{:path "foo"
-              :metric nil
-              :time 501}]
+             :point nil
+             :time 501}]
            (text->input "foo nan 501"))))
 
   (testing "normal-transform"
     (is (= [{:path "foo.bar"
-              :metric 2.0
-              :time 501}]
+             :point 2.0
+             :time 501}]
            (text->input "foo.bar 2.0 501")))))
