@@ -12,15 +12,3 @@
         (swap! store update-in [tenant] #(set (conj % path))))
       (query [this tenant path recurse?]
         (get @store tenant)))))
-
-(comment
-  (def i (index/wrapped-index (atom-index nil)))
-
-  (index/register! i "" "foo.baz")
-
-  (index/query i "" "foo.*" true)
-  (index/lookup i "" "foo.baz")
-  (index/prefixes i "" "foo.*")
-
-  (sequential? "foo")
-  )

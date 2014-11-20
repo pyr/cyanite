@@ -8,11 +8,3 @@
     (register! [this tenant path])
     (query [this tenant path recurse?]
       (get tenants (keyword tenant)))))
-
-(comment
-  (def i (index/wrapped-index
-          (static-index {:tenants {(keyword "")
-                                   ["foo.bar" "foo.baz"]}})))
-
-  (index/lookup i "" "foo.*")
-  )

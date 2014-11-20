@@ -33,34 +33,3 @@
                  :hits
                  :hits
                  (mapv #(get-in % [:_source :path])))))))))
-
-(comment
-  (def j (es-index {}))
-  (def i (index/wrapped-index j))
-
-  (do
-    (index/register! j "" "web01.cpu.idle")
-    (index/register! j "" "web01.cpu.system")
-    (index/register! j "" "web01.cpu.user")
-    (index/register! j "" "web01.cpu.irq")
-    (index/register! j "" "web02.cpu.idle")
-    (index/register! j "" "web02.cpu.system")
-    (index/register! j "" "web02.cpu.user")
-    (index/register! j "" "web02.cpu.irq")
-    (index/register! j "meh" "web01.cpu.idle")
-    (index/register! j "meh" "web01.cpu.system")
-    (index/register! j "meh" "web01.cpu.user")
-    (index/register! j "meh" "web01.cpu.irq")
-    (index/register! j "meh" "web02.cpu.idle")
-    (index/register! j "meh" "web02.cpu.system")
-    (index/register! j "meh" "web02.cpu.user")
-    (index/register! j "meh" "web02.cpu.irq")
-    (index/register! j "meh" "foo")
-    (index/register! j "meh" "foo"))
-
-  (index/query j "meh" "foo*" true)
-  (index/prefixes i "" "web*.cpu.*")
-
-  (index/query j "" "web0*.cpu.idle" true)
-  (index/lookup i "" "web0*.cpu.idle")
-  (index/query i "meh" "*.cpu.idle"))
