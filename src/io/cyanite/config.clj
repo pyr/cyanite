@@ -3,7 +3,7 @@
   (:require [clj-yaml.core          :refer [parse-string]]
             [clojure.string         :refer [split]]
             [org.spootnik.logconfig :refer [start-logging!]]
-            [io.cyanite.resolution  :refer [map->Resolution]]
+            [io.cyanite.resolution  :refer [any->Resolution]]
             [clojure.tools.logging  :refer [error info debug]]))
 
 (def
@@ -36,38 +36,7 @@
 (def default-index
   {:use "io.cyanite.index.atom/atom-index"})
 
-(defn to-seconds
-  "Takes a string containing a duration like 13s, 4h etc. and
-   converts it to seconds"
-  [s]
-  (let [[_ value unit] (re-matches #"^([0-9]+)([a-z])$" s)
-        quantity (Integer/valueOf value)]
-    (case unit
-      "s" quantity
-      "m" (* 60 quantity)
-      "h" (* 60 60 quantity)
-      "d" (* 24 60 60 quantity)
-      "w" (* 7 24 60 60 quantity)
-      "y" (* 365 24 60 60 quantity)
-      (throw (ex-info (str "unknown rollup unit: " unit) {})))))
 
-(defn convert-shorthand-rollup
-  "Converts an individual rollup to a {:rollup :period :ttl} tri"
-  [rollup]
-  (if (string? rollup)
-    (let [[rollup-string retention-string] (split rollup #":" 2)
-          rollup-secs (to-seconds rollup-string)
-          retention-secs (to-seconds retention-string)]
-      {:rollup rollup-secs
-       :period (/ retention-secs rollup-secs)
-       :ttl (* rollup-secs (/ retention-secs rollup-secs))})
-    rollup))
-
-(defn convert-shorthand-rollups
-  "Where a rollup has been given in Carbon's shorthand form
-   convert it to a {:rollup :period} pair"
-  [rollups]
-  (map convert-shorthand-rollup rollups))
 
 (defn find-ns-var
   "Find a symbol in a namespace"
@@ -129,7 +98,7 @@
 
           (update-in [:store] (partial merge default-store))
           (update-in [:store] get-instance :store)
-          (update-in [:resolutions] (partial mapv map->Resolution))
+          (update-in [:resolutions] (partial mapv any->Resolution))
           (update-in [:transports] (partial mapv update-transport))
 
           (update-in [:index] (partial merge default-index))
