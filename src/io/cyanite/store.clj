@@ -139,14 +139,15 @@
 (defn cassandra-metric-store
   "Connect to cassandra and start a path fetching thread.
    The interval is fixed for now, at 1minute"
-  [{:keys [keyspace cluster hints repfactor chan_size batch_size]
+  [{:keys [keyspace cluster hints repfactor chan_size batch_size username password]
     :or   {hints {:replication {:class "SimpleStrategy"
                                 :replication_factor (or repfactor 3)}}
            chan_size 10000
            batch_size 500}}]
   (info "creating cassandra metric store")
-  (let [cluster (if (sequential? cluster) cluster [cluster])
-        session (-> (alia/cluster {:contact-points cluster})
+(let [cluster (if (sequential? cluster) cluster [cluster])
+        session (-> (alia/cluster {:contact-points cluster
+                                   :credentials {:user username, :password password} })
                     (alia/connect keyspace))
         insert! (insertq session)
         fetch!  (fetchq session)]
