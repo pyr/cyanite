@@ -20,7 +20,6 @@
   (channel-for [this])
   (fetch [this agg paths tenant rollup period from to]))
 
-(def not-nil? (complement nil?))
 ;;
 ;; The following contains necessary cassandra queries. Since
 ;; cyanite relies on very few queries, I decided against using
