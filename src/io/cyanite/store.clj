@@ -146,13 +146,12 @@
            chan_size 10000
            batch_size 500}}]
   (info "creating cassandra metric store")
-  (if (not-any? nil? [username password]) (info "username or password is missing"))
 (let [cluster (if (sequential? cluster) cluster [cluster])
-      session (-> (if (not-any? nil? [username password])
-                    (alia/cluster {:contact-points cluster :credentials {:user username, :password password}})
-                    (alia/cluster {:contact-points cluster})
-                    )
-                   (alia/connect keyspace))
+      session (-> {:contact-points cluster}
+          (cond-> (and username password)
+                   (assoc :credentials {:user username :password password}))
+          (alia/cluster)
+          (alia/connect keyspace))
         insert! (insertq session)
         fetch!  (fetchq session)]
     (reify
