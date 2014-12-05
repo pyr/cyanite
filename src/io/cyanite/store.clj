@@ -20,6 +20,7 @@
   (channel-for [this])
   (fetch [this agg paths tenant rollup period from to]))
 
+(def not-nil? (complement nil?))
 ;;
 ;; The following contains necessary cassandra queries. Since
 ;; cyanite relies on very few queries, I decided against using
@@ -145,10 +146,13 @@
            chan_size 10000
            batch_size 500}}]
   (info "creating cassandra metric store")
+  (if (not-any? nil? [username password]) (info "username or password is missing"))
 (let [cluster (if (sequential? cluster) cluster [cluster])
-        session (-> (alia/cluster {:contact-points cluster
-                                   :credentials {:user username, :password password} })
-                    (alia/connect keyspace))
+      session (-> (if (not-any? nil? [username password])
+                    (alia/cluster {:contact-points cluster :credentials {:user username, :password password}})
+                    (alia/cluster {:contact-points cluster})
+                    )
+                   (alia/connect keyspace))
         insert! (insertq session)
         fetch!  (fetchq session)]
     (reify
