@@ -1,5 +1,6 @@
 (ns io.cyanite.store.cassandra
   (:require [qbits.alia            :as alia]
+            [qbits.alia.policy.reconnection :as reconnection]
             [clojure.core.async    :as a]
             [io.cyanite.store      :as store]
             [io.cyanite.resolution :as r]
@@ -53,7 +54,8 @@
   [{:keys [keyspace cluster chan_size]}]
   (info "creating cassandra metric store")
   (let [cluster (if (sequential? cluster) cluster [cluster])
-        session (-> (alia/cluster {:contact-points cluster})
+        session (-> (alia/cluster {:contact-points cluster
+                                   :reconnection-policy (reconnection/constant-reconnection-policy 1000)})
                     (alia/connect keyspace))
         insert! (insertq session)
         fetch!  (fetchq session)]
