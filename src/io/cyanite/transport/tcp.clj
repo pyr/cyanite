@@ -51,13 +51,15 @@
                    (put! ch input))))
 
 (defn server-bootstrap
-  [pipeline]
+  [ch type timeout]
   (doto (ServerBootstrap.)
     (.group        (NioEventLoopGroup.))
     (.channel      NioServerSocketChannel)
     (.childHandler (proxy [ChannelInitializer] []
                      (initChannel [^SocketChannel s-chan]
-                       (.addLast (.pipeline s-chan) pipeline))))
+                       (.addLast (.pipeline s-chan) (if (= (keyword type) :pickle) 
+                                                        (pickle-pipeline ch timeout)
+                                                        (line-pipeline ch timeout))))))
     (.option       ChannelOption/SO_BACKLOG (int 128))
     (.option       ChannelOption/CONNECT_TIMEOUT_MILLIS (int 1000))
     (.childOption  ChannelOption/SO_KEEPALIVE true)))
@@ -66,10 +68,7 @@
   [{:keys [port host timeout type]} ch]
 
   (let [timeout  (or timeout 30)
-        pipeline (if (= (keyword type) :pickle)
-                  (pickle-pipeline ch timeout)
-                  (line-pipeline ch timeout))
-        server   ^ServerBootstrap (server-bootstrap pipeline)]
+        server   ^ServerBootstrap (server-bootstrap ch type timeout)]
     (debug "tcp server ready, will bind to " host port)
     (try
       (-> server (.bind ^String host (int port)) .channel .closeFuture)
