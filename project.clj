@@ -17,5 +17,5 @@
                  [cc.qbits/alia                 "2.3.1"]
                  [net.jpountz.lz4/lz4           "1.2.0"]
                  [org.xerial.snappy/snappy-java "1.1.1.6"]
-                 [io.netty/netty-all            "4.0.19.Final"]
+                 [io.netty/netty-all            "4.0.25.Final"]
                  [org.clojure/core.async        "0.1.346.0-17112a-alpha"]])
