@@ -153,7 +153,7 @@ index:
 
 ## Wiring up graphite-web to cyanite
 
-To display cyanite graphs from grahite, you need to install graphite-web
+To display cyanite graphs from graphite, you need to install graphite-web
 from source using the master branch at https://github.com/graphite-project/graphite-web. You will also need the following module installed: https://github.com/brutasse/graphite-cyanite.
 Stay tuned for a seamless installation procedure.
 
