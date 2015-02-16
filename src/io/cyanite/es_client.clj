@@ -21,7 +21,9 @@
   (go
     (let [url  (rest/index-mget-url conn index mapping-type)
           resp (<! (http/post @client url
-                              {:body (json/encode {:docs query}) :as :json}))
+                              {:body (json/encode {:docs query})
+                               :fold-chunked-response? true
+                               :as :json}))
           body (<! (:body resp))]
       (if (= 200 (:status resp))
         (func (filter :found (:docs body)))
