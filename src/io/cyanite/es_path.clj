@@ -69,7 +69,17 @@
   "generate the filter portion of an es query"
   [path tenant leafs-only]
   (let [depth (path-depth path)
-        p (str/replace (str/replace path "." "\\.") "*" ".*")
+        ; graphite-api: "Comma-separated values within curly braces
+        ;                ({foo,bar,...}) are treated as value list."
+        ; Replace "{a,b}" as "(a|b)" for ElasticSearch query
+        p (-> path
+          (str/replace "," "|")
+          (str/replace "}" ")")
+          (str/replace "{" "(")
+          (str/replace "." "\\.")
+          (str/replace "*" ".*")
+        )
+
         f (vector
            {:range {:depth {:from depth :to depth}}}
            {:term {:tenant tenant}}
