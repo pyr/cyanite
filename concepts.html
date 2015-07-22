@@ -1,0 +1,381 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Design and Concepts &mdash; Cyanite Hidden Coffin documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="Cyanite Hidden Coffin documentation" href="index.html"/>
+        <link rel="next" title="Administrator Guide" href="administrator.html"/>
+        <link rel="prev" title="Quickstart Guide" href="quickstart.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        
+
+        
+          <a href="index.html" class="icon icon-home"> Cyanite
+        
+
+        
+        </a>
+
+        
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+        
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+          
+          
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#obtaining-cyanite">Obtaining Cyanite</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="quickstart.html#binary-releases">Binary releases</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#requirements">Requirements</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="quickstart.html#runtime-requirements">Runtime requirements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quickstart.html#build-requirements">Build requirements</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#minimal-configuration">Minimal configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#running-cyanite">Running Cyanite</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="quickstart.html#command-line-arguments">Command-line arguments</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Design and Concepts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#internal-architecture">Internal Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#input-components">Input Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#engine-component">Engine Component</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#aggregation-mechanism">Aggregation Mechanism</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#store-component">Store component</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#storage-schema">Storage Schema</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#index-component">Index Component</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#api-component">API Component</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="administrator.html">Administrator Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Cyanite HTTP Service</a></li>
+</ul>
+
+          
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">Cyanite</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Design and Concepts</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/concepts.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document">
+            
+  <div class="section" id="design-and-concepts">
+<h1>Design and Concepts<a class="headerlink" href="#design-and-concepts" title="Permalink to this headline">¶</a></h1>
+<p>This section describes the internal design of Cyanite
+and the different components which it builds upon.</p>
+<div class="section" id="internal-architecture">
+<span id="architecture"></span><h2>Internal Architecture<a class="headerlink" href="#internal-architecture" title="Permalink to this headline">¶</a></h2>
+<p>Cyanite&#8217;s internal architecture is that of the typical
+stream processing project, it connect inputs to outputs
+while doing normalization and mangling.</p>
+<p>The internal architecture can be represented with this
+simple diagram:</p>
+<img alt="_images/Architecture.png" src="_images/Architecture.png" />
+<p>As is described on the diagram the workflow is:</p>
+<ul class="simple">
+<li>Each input produces new normalized payloads (<em>metrics</em>),
+and enqueues them.</li>
+<li>The engine core pops items off the queue and processes them</li>
+<li>When applicable items are handed off to a <em>store</em> and <em>index</em>.
+components respectively responsible for persisting time-series
+and indexing metric names.</li>
+<li>An API component which is able to interact with the engine
+and other components to query and present data.</li>
+</ul>
+</div>
+<div class="section" id="input-components">
+<h2>Input Components<a class="headerlink" href="#input-components" title="Permalink to this headline">¶</a></h2>
+<p>Input components are arbitrary means of inputting metrics.
+Out of the box there are three available types of input
+components:</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">carbon</span></code>: a TCP listener for the text protocol known as <em>Carbon</em>,
+which is part of the <em>Graphite</em> tool-suite.</li>
+<li><code class="docutils literal"><span class="pre">pickle</span></code>: a <a href="#id1"><span class="problematic" id="id2">pickle_</span></a> serialized version of the above protocol, as
+produced by the other daemons in the <em>Graphite</em> tool-suite.</li>
+<li><code class="docutils literal"><span class="pre">fake</span></code>: a fake input which produces a new value every 500
+milisecond for test purposes.</li>
+</ul>
+<p>Input components are responsible for producing metrics in a normalized
+way:</p>
+<div class="highlight-json"><div class="highlight"><pre><span class="p">{</span>
+  <span class="nt">&quot;path&quot;</span><span class="p">:</span>   <span class="s2">&quot;web01.cpu&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;metric&quot;</span><span class="p">:</span> <span class="mf">40.0</span><span class="p">,</span>
+  <span class="nt">&quot;time&quot;</span><span class="p">:</span>   <span class="mi">1437572671</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Once a metric has been normalized, it is handed over to the engine
+component through its <code class="docutils literal"><span class="pre">accept!</span></code> function:</p>
+<div class="highlight-clojure"><div class="highlight"><pre><span class="p">(</span><span class="nf">accept!</span> <span class="nv">engine</span> <span class="p">{</span><span class="ss">:path</span> <span class="s">&quot;web01.cpu&quot;</span> <span class="ss">:metric</span> <span class="mf">40.0</span> <span class="ss">:time</span> <span class="mi">1437572671</span><span class="p">})</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="engine-component">
+<h2>Engine Component<a class="headerlink" href="#engine-component" title="Permalink to this headline">¶</a></h2>
+<p>The engine component is responsible for popping metrics off of its
+input queue, aggregating data over a time-window and producing write
+operations on the index and store components when necessary.</p>
+<p>To do this it holds on available points for a while and flushing them
+out when necessary.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The fact that Cyanite holds on to metrics in memory makes it a
+stateful server. As such if you wish to use Cyanite in a redundant
+fashion, you will need to account for it. See the <a class="reference internal" href="administrator.html#administrator-guide"><span>Administrator Guide</span></a>
+for details on how to deal with this.</p>
+</div>
+<div class="section" id="aggregation-mechanism">
+<h3>Aggregation Mechanism<a class="headerlink" href="#aggregation-mechanism" title="Permalink to this headline">¶</a></h3>
+<p>The aggregation mechanism for metrics relies on a fast in-memory
+hash-table. Each metric is kept on a bucket corresponding to the
+metric path and its resolution. When a time-window has passed for a metric
+sums, means, minimas and maximas are computed and emitted as a /snapshot/.</p>
+<p>Cyanite supports several resolutions based on a first-match set of rules
+as provided in the configuration file. Rules are a list of patterns
+to match a metric name on corresponding to a list of resolutions
+(in the form <code class="docutils literal"><span class="pre">&lt;precision&gt;:&lt;period&gt;</span></code>).</p>
+<p>Snapshots are then handed over to the store and index components.
+The process can be represented visually like this:</p>
+<img alt="_images/Rules.png" src="_images/Rules.png" />
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Cyanite accounts for drift by comparing its wall clock to the values provided in metrics.
+Once a resolution&#8217;s time-slot passes over including when accounting for drift, values are
+flushed and a snapshot is created. This means that out-of-order values may be supplied but
+not once a time-slot has already been flushed.</p>
+</div>
+</div>
+</div>
+<div class="section" id="store-component">
+<h2>Store component<a class="headerlink" href="#store-component" title="Permalink to this headline">¶</a></h2>
+<p>The store component is called for each snapshot created by the engine component.
+The only working component stores data to <a class="reference external" href="http://cassandra.apache.org">Apache Cassandra</a>.</p>
+<div class="section" id="storage-schema">
+<h3>Storage Schema<a class="headerlink" href="#storage-schema" title="Permalink to this headline">¶</a></h3>
+<p>The following schema is used to store data:</p>
+<div class="highlight-python"><div class="highlight"><pre>CREATE KEYSPACE metric
+       WITH replication = {&#39;class&#39;: &#39;SimpleStrategy&#39;,
+                           &#39;replication_factor&#39;: &#39;1&#39;}
+       AND durable_writes = true;
+
+USE metric;
+
+CREATE TYPE metric_point (
+  max double,
+  mean double,
+  min double,
+  sum double
+);
+
+CREATE TYPE metric_id (
+  path text,
+  resolution text
+);
+
+CREATE TABLE metric.metric (
+  id frozen&lt;metric_id&gt;,
+  time bigint,
+  point frozen&lt;metric_point&gt;,
+  PRIMARY KEY (id, time)
+) WITH COMPACT STORAGE
+  AND CLUSTERING ORDER BY (time ASC)
+  AND compaction = {&#39;min_threshold&#39;: &#39;4&#39;,
+                   &#39;class&#39;: &#39;org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy&#39;,
+                   &#39;max_threshold&#39;: &#39;32&#39;}
+  AND compression = {&#39;sstable_compression&#39;: &#39;org.apache.cassandra.io.compress.LZ4Compressor&#39;}
+  AND dclocal_read_repair_chance = 0.1
+  AND default_time_to_live = 0
+  AND gc_grace_seconds = 864000
+  AND max_index_interval = 2048
+  AND memtable_flush_period_in_ms = 0
+  AND min_index_interval = 128
+  AND read_repair_chance = 0.0
+  AND speculative_retry = &#39;99.0PERCENTILE&#39;;
+</pre></div>
+</div>
+<p>This schema leverages Cassandra&#8217;s <code class="docutils literal"><span class="pre">Compact</span> <span class="pre">Storage</span></code> option to ensure a minimal overhead.
+Please be sure to choose the optimal compaction strategy for your use case. If available
+the <code class="docutils literal"><span class="pre">DateTieredCompactionStrategy</span></code> is likely your best bet.</p>
+</div>
+</div>
+<div class="section" id="index-component">
+<h2>Index Component<a class="headerlink" href="#index-component" title="Permalink to this headline">¶</a></h2>
+<p>The index component is responsible for building an index of path names and providing
+a way of querying them back. There are two implementations of this component available:</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">memory</span></code> stores an in-memory inverted index.</li>
+<li><code class="docutils literal"><span class="pre">elasticsearch</span></code> stores path-names in elasticsearch.</li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The <code class="docutils literal"><span class="pre">memory</span></code> index is a poor choice for redundant setups since it will only know of
+metrics passing through it. Additionally, it is only valid to use it when metric name
+cardinality is limited and metrics are recurrent since it will lose all its index upon
+restarts.</p>
+</div>
+</div>
+<div class="section" id="api-component">
+<h2>API Component<a class="headerlink" href="#api-component" title="Permalink to this headline">¶</a></h2>
+<p>The API component is responsible for exposing an HTTP service to service queries.
+The API component exposes the following HTTP routes:</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">/ping</span></code>: report online status</li>
+<li><code class="docutils literal"><span class="pre">/metrics</span></code>: query metrics.  Takes <code class="docutils literal"><span class="pre">from</span></code>, <code class="docutils literal"><span class="pre">to</span></code> (optional), and any number of <code class="docutils literal"><span class="pre">path</span></code> arguments.</li>
+<li><code class="docutils literal"><span class="pre">/paths</span></code>: query paths.  Takes a <code class="docutils literal"><span class="pre">query</span></code> argument.</li>
+</ul>
+<p>Any other request will yield a 404 response.</p>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="administrator.html" class="btn btn-neutral float-right" title="Administrator Guide" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="quickstart.html" class="btn btn-neutral" title="Quickstart Guide" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Pierre-Yves Ritschard.
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'Hidden Coffin',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

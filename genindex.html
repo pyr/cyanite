@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
@@ -8,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>The Cyanite Guide &mdash; Cyanite Hidden Coffin documentation</title>
+  <title>Index &mdash; Cyanite Hidden Coffin documentation</title>
   
 
   
@@ -30,8 +31,7 @@
   
 
   
-    <link rel="top" title="Cyanite Hidden Coffin documentation" href="#"/>
-        <link rel="next" title="Quickstart Guide" href="quickstart.html"/> 
+    <link rel="top" title="Cyanite Hidden Coffin documentation" href="index.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -48,7 +48,7 @@
         
 
         
-          <a href="#" class="icon icon-home"> Cyanite
+          <a href="index.html" class="icon icon-home"> Cyanite
         
 
         
@@ -137,7 +137,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="#">Cyanite</a>
+        <a href="index.html">Cyanite</a>
       </nav>
 
 
@@ -146,13 +146,11 @@
         <div class="rst-content">
           <div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
-    <li><a href="#">Docs</a> &raquo;</li>
+    <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>The Cyanite Guide</li>
+    <li></li>
       <li class="wy-breadcrumbs-aside">
         
-          
-            <a href="_sources/index.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -161,74 +159,16 @@
 </div>
           <div role="main" class="document">
             
-  <div class="section" id="the-cyanite-guide">
-<h1>The Cyanite Guide<a class="headerlink" href="#the-cyanite-guide" title="Permalink to this headline">¶</a></h1>
-<a class="reference internal image-reference" href="_images/cyanite.png"><img alt="cyanite logo" class="align-left" src="_images/cyanite.png" style="width: 100px;" /></a>
-<p>Cyanite is a daemon which provides services to store and retrieve timeseries data.
-It aims to be compatible with the <a class="reference external" href="http://graphite.readthedocs.org">Graphite</a> eco-system.</p>
-<p>Cyanite stores timeseries data in <a class="reference external" href="http://cassandra.apache.org">Apache Cassandra</a> by default and focuses on
-the following aspects:</p>
-<dl class="docutils">
-<dt>Scalability</dt>
-<dd>By relying on <a class="reference external" href="http://cassandra.apache.org">Apache Cassandra</a>, Cyanite is able to provide highly available,
-elastic, and low-latency time-series storage.</dd>
-<dt>Compatibility</dt>
-<dd>The <a class="reference external" href="http://graphite.readthedocs.org">Graphite</a> eco-system has become the de-facto standard for interacting
-with time-series data, either with <code class="docutils literal"><span class="pre">graphite-web</span></code> or with <a class="reference external" href="http://grafana.org">Grafana</a>.
-Cyanite will strive to remain as integrated as possible with this
-eco-system and to provide simple interaction modes.</dd>
-</dl>
-<p>Cyanite is Open-Source software, released under an MIT license and is
-available on github: <a class="reference external" href="https://github.com/pyr/cyanite">https://github.com/pyr/cyanite</a>. The latest
-release is available at <a class="reference external" href="https://github.com/pyr/cyanite/releases/latest">https://github.com/pyr/cyanite/releases/latest</a></p>
-<div class="admonition warning">
-<p class="first admonition-title">Warning</p>
-<p class="last">The updated Cyanite is a work in progress. Please stay tuned for the
-first release.</p>
-</div>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart Guide</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html#obtaining-cyanite">Obtaining Cyanite</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html#requirements">Requirements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html#minimal-configuration">Minimal configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html#running-cyanite">Running Cyanite</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="concepts.html">Design and Concepts</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="concepts.html#internal-architecture">Internal Architecture</a></li>
-<li class="toctree-l2"><a class="reference internal" href="concepts.html#input-components">Input Components</a></li>
-<li class="toctree-l2"><a class="reference internal" href="concepts.html#engine-component">Engine Component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="concepts.html#store-component">Store component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="concepts.html#index-component">Index Component</a></li>
-<li class="toctree-l2"><a class="reference internal" href="concepts.html#api-component">API Component</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="administrator.html">Administrator Guide</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="administrator.html#administering-cassandra-for-cyanite">Administering Cassandra for Cyanite</a></li>
-<li class="toctree-l2"><a class="reference internal" href="administrator.html#cyanite-out-of-band-operations">Cyanite out of band operations</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">Cyanite HTTP Service</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api.html#authentication">Authentication</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#authorization">Authorization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#routes">Routes</a></li>
-</ul>
-</li>
-</ul>
-</div>
+
+<h1 id="index">Index</h1>
+
+<div class="genindex-jumpbox">
+ 
 </div>
 
 
           </div>
           <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="quickstart.html" class="btn btn-neutral float-right" title="Quickstart Guide" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-    </div>
   
 
   <hr/>

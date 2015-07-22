@@ -1,0 +1,284 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Quickstart Guide &mdash; Cyanite Hidden Coffin documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="Cyanite Hidden Coffin documentation" href="index.html"/>
+        <link rel="next" title="Design and Concepts" href="concepts.html"/>
+        <link rel="prev" title="The Cyanite Guide" href="index.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        
+
+        
+          <a href="index.html" class="icon icon-home"> Cyanite
+        
+
+        
+        </a>
+
+        
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+        
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+          
+          
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="">Quickstart Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#obtaining-cyanite">Obtaining Cyanite</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#binary-releases">Binary releases</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#runtime-requirements">Runtime requirements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#build-requirements">Build requirements</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#minimal-configuration">Minimal configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-cyanite">Running Cyanite</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#command-line-arguments">Command-line arguments</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="concepts.html">Design and Concepts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="concepts.html#internal-architecture">Internal Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="concepts.html#engine-component">Engine Component</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="administrator.html">Administrator Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Cyanite HTTP Service</a></li>
+</ul>
+
+          
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">Cyanite</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Quickstart Guide</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/quickstart.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document">
+            
+  <div class="section" id="quickstart-guide">
+<h1>Quickstart Guide<a class="headerlink" href="#quickstart-guide" title="Permalink to this headline">¶</a></h1>
+<p>Getting up and running with Cyanite involves two things which
+we&#8217;ll cover in this quick walk-through:</p>
+<ul class="simple">
+<li>Installing, configuring, and running <a class="reference external" href="http://cassandra.apache.org">Apache Cassandra</a>.</li>
+<li>Installing, configuring, and running Cyanite itself.</li>
+</ul>
+<div class="section" id="obtaining-cyanite">
+<h2>Obtaining Cyanite<a class="headerlink" href="#obtaining-cyanite" title="Permalink to this headline">¶</a></h2>
+<p>Cyanite is released in both source and binary.</p>
+<div class="section" id="binary-releases">
+<h3>Binary releases<a class="headerlink" href="#binary-releases" title="Permalink to this headline">¶</a></h3>
+<p>Binary release are the simplest way to get started and are hosted on github:
+<a class="reference external" href="https://github.com/exoscale/cyanite/releases/latest">https://github.com/exoscale/cyanite/releases/latest</a>.</p>
+<p>Each release contains:</p>
+<ul class="simple">
+<li>A source code archive</li>
+<li>A standard build (<em>cyanite-VERSION-standalone.jar</em>)</li>
+<li>A debian package</li>
+</ul>
+</div>
+</div>
+<div class="section" id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="runtime-requirements">
+<h3>Runtime requirements<a class="headerlink" href="#runtime-requirements" title="Permalink to this headline">¶</a></h3>
+<p>Runtime requirements for Cyanite are kept to a minimum</p>
+<ul class="simple">
+<li>Java 8 Runtime (Sun JDK recommended)</li>
+<li>Apache Cassandra 2.1 or later</li>
+</ul>
+</div>
+<div class="section" id="build-requirements">
+<h3>Build requirements<a class="headerlink" href="#build-requirements" title="Permalink to this headline">¶</a></h3>
+<p>If you wish to build Cyanite you will additionally need the
+<a class="reference external" href="https://leiningen.org">leiningen</a> build tool to produce working artifacts. Once
+<a class="reference external" href="https://leiningen.org">leiningen</a> is installed, you can just run <code class="docutils literal"><span class="pre">lein</span> <span class="pre">uberjar</span></code> to
+produce a working Java archive.</p>
+</div>
+</div>
+<div class="section" id="minimal-configuration">
+<h2>Minimal configuration<a class="headerlink" href="#minimal-configuration" title="Permalink to this headline">¶</a></h2>
+<p>Cyanite is configured with a single configuration file, formatted in <a href="#id1"><span class="problematic" id="id2">YAML_</span></a>.</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">logging</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">level</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">info</span>
+  <span class="l-Scalar-Plain">console</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">true</span>
+  <span class="l-Scalar-Plain">files</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="s">&quot;/var/log/cyanite/cyanite.log&quot;</span>
+<span class="l-Scalar-Plain">inputs</span><span class="p-Indicator">:</span>
+  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="s">&quot;carbon&quot;</span>
+  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="s">&quot;pickle&quot;</span>
+<span class="l-Scalar-Plain">store</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="s">&quot;cassandra-v2&quot;</span>
+  <span class="l-Scalar-Plain">cluster</span><span class="p-Indicator">:</span> <span class="s">&quot;127.0.0.1&quot;</span>
+<span class="l-Scalar-Plain">index</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="s">&quot;memory&quot;</span>
+<span class="l-Scalar-Plain">api</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">port</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">8080</span>
+<span class="l-Scalar-Plain">engine</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">rules</span><span class="p-Indicator">:</span>
+    <span class="l-Scalar-Plain">default</span><span class="p-Indicator">:</span>
+      <span class="p-Indicator">-</span> <span class="s">&quot;5s:1h&quot;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="running-cyanite">
+<h2>Running Cyanite<a class="headerlink" href="#running-cyanite" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="command-line-arguments">
+<h3>Command-line arguments<a class="headerlink" href="#command-line-arguments" title="Permalink to this headline">¶</a></h3>
+<p>Cyanite accepts the following arguments:</p>
+<div class="highlight-python"><div class="highlight"><pre>Switches                 Default  Desc
+--------                 -------  ----
+-h, --no-help, --help    false    Show help
+-f, --path                        Configuration file path
+-q, --no-quiet, --quiet  false    Suppress output
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="concepts.html" class="btn btn-neutral float-right" title="Design and Concepts" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral" title="The Cyanite Guide" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Pierre-Yves Ritschard.
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'Hidden Coffin',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
