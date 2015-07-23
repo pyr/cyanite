@@ -17,14 +17,12 @@
 
 (defn ingest-at-resolution
   [buckets queues resolution metric]
-  (let [k          (b/tuple (:id resolution) (:path metric))
-        metric-key (or (get buckets k) (b/metric-key k resolution))
+  (let [k          (b/tuple resolution (:path metric))
+        metric-key (or (get buckets k) (b/metric-key k))
         snaps      (b/add! metric-key metric)]
     (assoc-if-absent! buckets k metric-key)
     (doseq [snapshot snaps]
-      (q/add! queues :writeq (assoc snapshot
-                                    :resolution (:id resolution)
-                                    :ttl        (:period resolution))))))
+      (q/add! queues :writeq (assoc snapshot :resolution resolution)))))
 
 (defrecord Engine [rules planner index store queues]
   component/Lifecycle
