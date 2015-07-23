@@ -17,17 +17,16 @@
       "y" (* 365 24 60 60 quantity)
       (throw (ex-info (str "unknown unit: " unit) {})))))
 
-(defrecord Resolution [precision points period id])
+(defrecord Resolution [precision period])
 
 (defn fit?
   [resolution oldest ts]
-  (and (<= (- ts (:period resolution))
-           oldest)
-       (:id resolution)))
+  (when (<= (- ts (:period resolution)) oldest)
+    resolution))
 
 (def default-resolution
   "By default, keep a 1 minute resolution for a day"
-  (Resolution. 60 1440 86400 "60:86400"))
+  (Resolution. 60 86400))
 
 (defn ->resolution
   "Converts an individual resolution to a description map"
@@ -36,20 +35,13 @@
     (string? res-def)
     (let [[precision-string period-string] (split res-def #":" 2)
           precision-secs (->seconds precision-string)
-          period-secs    (->seconds period-string)
-          points-secs    (/ period-secs precision-secs)]
-      (Resolution. precision-secs
-                   points-secs
-                   period-secs
-                   (format "%s:%s" precision-secs period-secs)))
+          period-secs    (->seconds period-string)]
+      (Resolution. precision-secs period-secs))
 
     (map? res-def)
     (-> res-def
         (update :precision ->seconds)
         (update :period    ->seconds)
-        (as-> x (assoc x
-                       :points (/ (:period x) (:precision x))
-                       :id     (format "%s:%s" (:precision x) (:period x))))
         (map->Resolution))
 
     :else
