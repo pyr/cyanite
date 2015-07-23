@@ -46,7 +46,7 @@
   MetricStore
   (fetch! [this from to paths]
     (c/runq! session fetchq
-             [(mapv (partial c/->id id-type) paths)
+             [(mapv (partial c/->id id-type res-type) paths)
               (long from)
               (long to)]
              {:consistency rdcty
