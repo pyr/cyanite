@@ -24,7 +24,7 @@
      (= (.path this) (.path other))
      (= (.slot this) (.slot other)))))
 
-(defrecord MetricSnapshot [path time mean max min sum resolution ttl])
+(defrecord MetricSnapshot [path time mean max min sum resolution])
 
 (defprotocol Mutable
   (add! [this metric]))
@@ -82,7 +82,6 @@
                                         maxval
                                         minval
                                         sum
-                                        nil
                                         nil)))))))
 
 (defn time-slot
