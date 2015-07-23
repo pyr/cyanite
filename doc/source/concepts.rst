@@ -158,6 +158,7 @@ the ``DateTieredCompactionStrategy`` is likely your best bet.
 
 
 .. _Apache Cassandra: http://cassandra.apache.org
+.. _pickle: https://docs.python.org/2/library/pickle.html
 
 Index Component
 ---------------
