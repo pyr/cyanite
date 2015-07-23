@@ -1,5 +1,6 @@
 (ns io.cyanite.store.cassandra
-  (:require [qbits.alia       :as alia]))
+  (:require [qbits.alia            :as alia]
+            [clojure.tools.logging :refer [error]]))
 
 (defn insertq-v2
   [session table]
@@ -16,31 +17,35 @@
 
 (defn session!
   [{:keys [cluster username password] :as opts}]
-  (let [hints   (or (:hints opts)
-                    {:replication
-                     {:class              "SimpleStrategy"
-                      :replication_factor (or (:replication_factor opts)
-                                              (:replication-factor opts)
-                                              (:repfactor opts)
-                                              1)}})
-        cluster (if (sequential? cluster) cluster [cluster])
-        session (-> {:contact-points cluster}
-                    (cond-> (and username password)
-                      (assoc :credentials {:username username
-                                           :password password}))
-                    (alia/cluster)
-                    (alia/connect (or (:keyspace opts) "metric")))
-        rdcty   (keyword
-                 (or (:read-consistency opts)
-                     (:read_consistency opts)
-                     (:rdcty opts)
-                     :one))
-        wrcty   (keyword
-                 (or (:write-consistency opts)
-                     (:write_consistency opts)
-                     (:wrcty opts)
-                     :any))]
-    [session rdcty wrcty]))
+  (try
+    (let [hints   (or (:hints opts)
+                      {:replication
+                       {:class              "SimpleStrategy"
+                        :replication_factor (or (:replication_factor opts)
+                                                (:replication-factor opts)
+                                                (:repfactor opts)
+                                                1)}})
+          cluster (if (sequential? cluster) cluster [cluster])
+          session (-> {:contact-points cluster}
+                      (cond-> (and username password)
+                        (assoc :credentials {:username username
+                                             :password password}))
+                      (alia/cluster)
+                      (alia/connect (or (:keyspace opts) "metric")))
+          rdcty   (keyword
+                   (or (:read-consistency opts)
+                       (:read_consistency opts)
+                       (:rdcty opts)
+                       :one))
+          wrcty   (keyword
+                   (or (:write-consistency opts)
+                       (:write_consistency opts)
+                       (:wrcty opts)
+                       :any))]
+      [session rdcty wrcty])
+    (catch com.datastax.driver.core.exceptions.InvalidQueryException e
+      (error e "Could not connect to cassandra. Exiting")
+      (System/exit 1))))
 
 (defn ->id
   [id-type res-type {:keys [path resolution]}]
