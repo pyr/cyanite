@@ -43,10 +43,14 @@
     [session rdcty wrcty]))
 
 (defn ->id
-  [id-type {:keys [path resolution]}]
+  [id-type res-type {:keys [path resolution]}]
   (doto (.newValue id-type)
     (.setString "path" path)
-    (.setString "resolution" resolution)))
+    (.setUDTValue
+     "resolution"
+     (doto (.newValue res-type)
+       (.setInt "precision" (:precision resolution))
+       (.setInt "period" (:period resolution))))))
 
 (defn ->point
   [point-type {:keys [mean min max sum]}]
