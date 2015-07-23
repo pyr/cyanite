@@ -1,14 +1,15 @@
 (ns io.cyanite.engine.buckets
-  (:require [io.cyanite.utils :refer [nbhm keyset remove!]]
+  (:require [io.cyanite.utils      :refer [nbhm keyset remove!]]
             [clojure.tools.logging :refer [debug]])
   (:import java.util.concurrent.atomic.AtomicLong
            java.util.concurrent.atomic.AtomicLongArray
-           java.util.concurrent.atomic.AtomicReferenceArray))
+           java.util.concurrent.atomic.AtomicReferenceArray
+           io.cyanite.engine.rule.Resolution))
 
-(deftype MetricTuple [^String id ^String path]
+(deftype MetricTuple [^Resolution id ^String path]
   java.lang.Object
   (hashCode [this]
-    (.hashCode (str id ":" path)))
+    (.hashCode [id path]))
   (equals [this other]
     (and
      (= (.id this) (.id other))
@@ -27,7 +28,6 @@
 
 (defprotocol Mutable
   (add! [this metric]))
-
 
 (defprotocol Snapshotable
   (snapshot! [this]))
@@ -91,7 +91,7 @@
     (* p (quot now p))))
 
 (defn insert-slot!
-  [time-slots k resolution]
+  [time-slots k]
   (let [slot (MetricTimeSlot.
               k
               (AtomicLong. 0)
@@ -99,21 +99,21 @@
     (assoc! time-slots k slot)
     slot))
 
-(defrecord MetricKey [k resolution time-slots drift]
+(defrecord MetricKey [k time-slots drift]
   Mutable
   (add! [this metric]
     (add! drift (:time metric))
-    (let [slot (time-slot resolution (:time metric))
+    (let [slot (time-slot (.id k) (:time metric))
           k    (TimeSlotTuple. (:path metric) slot)
           mts  (or (get time-slots k)
-                   (insert-slot! time-slots k resolution))]
+                   (insert-slot! time-slots k))]
       (add! mts metric)
       (snapshot! this)))
   Snapshotable
   (snapshot! [this]
     (let [now       (quot (System/currentTimeMillis) 1000)
           drift-ts  (- now @drift)
-          low-slot  (time-slot resolution drift-ts)
+          low-slot  (time-slot (.id k) drift-ts)
           slots     (keyset time-slots)
           old-slots (filter #(< (.slot %) low-slot) slots)]
       (try
@@ -126,16 +126,16 @@
           (debug e "exception while snapshotting"))))))
 
 (defn metric-key
-  [^MetricTuple k resolution]
-  (MetricKey. k resolution (nbhm) (drift-slot)))
+  [^MetricTuple k]
+  (MetricKey. k (nbhm) (drift-slot)))
 
 (defn tuple
-  [^String id ^String path]
+  [^Resolution id ^String path]
   (MetricTuple. id path))
 
 (comment
-  (let [k   (tuple "foo" "bar")
-        mk  (metric-key k {:precision 5 :id "foo"})
+  (let [k   (tuple (Resolution. 5 3600) "foo")
+        mk  (metric-key k)
         now (quot (System/currentTimeMillis) 1000)]
     (add! mk {:time (- now 5) :metric 1.0 :path "bar"})
     (add! mk {:time (- now 5) :metric 1.0 :path "bar"})
