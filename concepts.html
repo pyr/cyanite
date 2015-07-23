@@ -104,8 +104,27 @@
 <li class="toctree-l2"><a class="reference internal" href="#api-component">API Component</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="administrator.html">Administrator Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">Cyanite HTTP Service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="administrator.html">Administrator Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="administrator.html#administering-cassandra-for-cyanite">Administering Cassandra for Cyanite</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="administrator.html#choosing-a-cassandra-version">Choosing a Cassandra version</a></li>
+<li class="toctree-l3"><a class="reference internal" href="administrator.html#choosing-a-compaction-strategy">Choosing a compaction strategy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="administrator.html#choosing-a-read-and-write-consistency-level">Choosing a read and write consistency level</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="administrator.html#cyanite-out-of-band-operations">Cyanite out of band operations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Cyanite HTTP Service</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#authentication">Authentication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#authorization">Authorization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#routes">Routes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#ping"><code class="docutils literal"><span class="pre">/ping</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#paths"><code class="docutils literal"><span class="pre">/paths</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#metrics"><code class="docutils literal"><span class="pre">/metrics</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 
           
@@ -175,7 +194,7 @@ components:</p>
 <ul class="simple">
 <li><code class="docutils literal"><span class="pre">carbon</span></code>: a TCP listener for the text protocol known as <em>Carbon</em>,
 which is part of the <em>Graphite</em> tool-suite.</li>
-<li><code class="docutils literal"><span class="pre">pickle</span></code>: a <a href="#id1"><span class="problematic" id="id2">pickle_</span></a> serialized version of the above protocol, as
+<li><code class="docutils literal"><span class="pre">pickle</span></code>: a <a class="reference external" href="https://docs.python.org/2/library/pickle.html">pickle</a> serialized version of the above protocol, as
 produced by the other daemons in the <em>Graphite</em> tool-suite.</li>
 <li><code class="docutils literal"><span class="pre">fake</span></code>: a fake input which produces a new value every 500
 milisecond for test purposes.</li>
