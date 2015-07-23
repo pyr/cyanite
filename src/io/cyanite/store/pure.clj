@@ -21,8 +21,7 @@
 
 (defn normalize
   [data]
-  (let [keyset (keys (group-by :id data))]
-    ))
+  data)
 
 (defn empty-series
   [min-point max-point precision]
