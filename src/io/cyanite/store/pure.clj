@@ -37,7 +37,7 @@
 
 (defn data->series
   [data to precision]
-  (when-let [points (sort-by :time data)]
+  (if-let [points (seq (sort-by :time data))]
     (let [min-point  (-> points first :time)
           max-point  (-> to (quot precision) (* precision))
           nil-points (empty-series min-point max-point precision)
@@ -48,4 +48,5 @@
       {:from   min-point
        :to     max-point
        :step   precision
-       :series by-path})))
+       :series by-path})
+    {:from 0 :to 0 :step 0 :series {}}))
