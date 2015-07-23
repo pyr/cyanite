@@ -21,7 +21,13 @@
 
 (defn normalize
   [data]
-  data)
+  (vector
+   (some-> data
+           first
+           :id
+           (get "resolution")
+           (get "precision"))
+   data))
 
 (defn empty-series
   [min-point max-point precision]
