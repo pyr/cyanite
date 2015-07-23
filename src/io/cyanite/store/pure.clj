@@ -41,7 +41,8 @@
     (let [min-point  (-> points first :time)
           max-point  (-> to (quot precision) (* precision))
           nil-points (empty-series min-point max-point precision)
-          by-path    (->> (group-by :path points)
+          get-path   (fn [{:keys [id]}] (get id "path"))
+          by-path    (->> (group-by get-path points)
                           (map (fn [[k v]] [k (fill-in nil-points v)]))
                           (reduce merge {}))]
       {:from   min-point
