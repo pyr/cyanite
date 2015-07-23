@@ -91,7 +91,7 @@
                            (if (sequential? path) path [path]))
                    (map (partial engine/resolution engine from))
                    (remove nil?))]
-    (store/fetch! store from to paths)))
+    (store/query! store from to paths)))
 
 (defmethod dispatch :default
   [_]
