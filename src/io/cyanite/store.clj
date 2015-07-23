@@ -52,7 +52,7 @@
 
   (insert! [this metric]
     (c/runq! session insertq
-             [(-> metric :ttl int)
+             [(-> metric :resolution :period int)
               (c/->point point-type metric)
               (c/->id id-type metric)
               (-> metric :time long)]
