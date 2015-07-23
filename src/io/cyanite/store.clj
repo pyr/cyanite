@@ -69,3 +69,8 @@
 (defmethod build-store :cassandra-v2
   [options]
   (map->CassandraV2Store {:options (dissoc options :type)}))
+
+(defn query! [store from to paths]
+  (let [raw-series         (fetch! store from to paths)
+        [precision series] (p/normalize raw-series)]
+    (p/data->series series to precision)))
