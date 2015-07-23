@@ -11,13 +11,13 @@
       (int)))
 
 (defn fill-in
-  [nils [path data]]
-  (hash-map path
-            (->> (group-by :time data)
-                 (merge nils)
-                 (map (comp first val))
-                 (sort-by :time)
-                 (map :metric))))
+  [nils data]
+  (->> (group-by :time data)
+       (map (fn [[k v]] [k (-> v first :point (get "mean"))]))
+       (reduce merge {})
+       (merge nils)
+       (sort-by key)
+       (mapv val)))
 
 (defn normalize
   [data]
@@ -26,7 +26,7 @@
 (defn empty-series
   [min-point max-point precision]
   (->> (range min-point (inc max-point) precision)
-       (map #(vector % [{:time %}]))
+       (map #(vector % nil))
        (reduce merge {})))
 
 (defn data->series
