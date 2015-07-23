@@ -9,9 +9,14 @@ CREATE TYPE metric_point (
   sum double
 );
 
+CREATE TYPE metric_resolution (
+  precision int,
+  period int
+);
+
 CREATE TYPE metric_id (
   path text,
-  resolution text
+  resolution frozen<metric_resolution>
 );
 
 CREATE TABLE metric.metric (
