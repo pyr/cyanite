@@ -13,6 +13,7 @@
                  [spootnik/pickler              "0.1.6"]
                  [spootnik/unilog               "0.7.5"]
                  [spootnik/uncaught             "0.5.2"]
+                 [instaparse                    "1.4.1"]
                  [ring/ring-codec               "1.0.0"]
                  [clj-yaml                      "0.4.0"]
                  [cc.qbits/jet                  "0.6.5"]
