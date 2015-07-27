@@ -69,3 +69,20 @@
   [session prepared-statement values opts]
   (let [bound (alia/bind prepared-statement values)]
     (alia/execute session bound opts)))
+
+(defn get-types
+  [session]
+  (let [->point (alia/udt-encoder session "metric_point")
+        ->id    (alia/udt-encoder session "metric_id")
+        ->res   (alia/udt-encoder session "metric_resolution")]
+    [(fn [{:keys [path resolution]}]
+       (let [precision (-> resolution :precision int)
+             period    (-> resolution :period int)]
+         (->id {:path path
+                :resolution (->res {:precision precision
+                                    :period    period})})))
+     (fn [{:keys [mean min max sum]}]
+       (->point {:mean (double mean)
+                 :min  (double min)
+                 :max  (double max)
+                 :sum  (double sum)}))]))

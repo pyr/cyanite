@@ -19,34 +19,29 @@
     (swap! db update (:path metric) conj metric)))
 
 (defrecord CassandraV2Store [options session insertq fetchq
-                             wrcty rdcty id-type res-type point-type]
+                             wrcty rdcty mkid mkpoint]
   component/Lifecycle
   (start [this]
     (let [[session rdcty wrcty] (c/session! options)
           table                 (or (:table options) "metric")
-          ks                    (-> session
-                                    .getCluster
-                                    .getMetadata
-                                    (.getKeyspace "metric"))]
+          [mkid mkpoint]        (c/get-types session)]
       (-> this
           (assoc :session session)
           (assoc :insertq (c/insertq-v2 session table))
           (assoc :fetchq  (c/fetchq-v2 session table))
-          (assoc :id-type (.getUserType ks "metric_id"))
-          (assoc :point-type (.getUserType ks "metric_point"))
-          (assoc :res-type (.getUserType ks "metric_resolution")))))
+          (assoc :mkid mkid)
+          (assoc :mkpoint mkpoint))))
   (stop [this]
     (-> this
         (dissoc :session)
         (dissoc :inserq!)
         (dissoc :fetchq)
-        (dissoc :id-type)
-        (dissoc :point-type)
-        (dissoc :res-type)))
+        (dissoc :mkid)
+        (dissoc :mkpoint)))
   MetricStore
   (fetch! [this from to paths]
     (c/runq! session fetchq
-             [(mapv (partial c/->id id-type res-type) paths)
+             [(mapv mkid paths)
               (long from)
               (long to)]
              {:consistency rdcty
@@ -55,8 +50,8 @@
   (insert! [this metric]
     (c/runq! session insertq
              [(-> metric :resolution :period int)
-              (c/->point point-type metric)
-              (c/->id id-type res-type metric)
+              (mkpoint metric)
+              (mkid metric)
               (-> metric :time long)]
              {:consistency wrcty})))
 

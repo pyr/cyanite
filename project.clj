@@ -17,7 +17,7 @@
                  [ring/ring-codec               "1.0.0"]
                  [clj-yaml                      "0.4.0"]
                  [cc.qbits/jet                  "0.6.5"]
-                 [cc.qbits/alia                 "2.5.2"]
+                 [cc.qbits/alia                 "2.7.1"]
                  [com.climate/claypoole         "1.0.0"]
                  [com.boundary/high-scale-lib   "1.0.6"]
                  [net.jpountz.lz4/lz4           "1.3"]

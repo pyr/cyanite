@@ -1,6 +1,5 @@
 (ns io.cyanite.store.pure)
 
-
 (defn max-points
   [paths resolution from to]
   (-> (- to from)
@@ -13,21 +12,25 @@
 (defn fill-in
   [nils data]
   (->> (group-by :time data)
-       (map (fn [[k v]] [k (-> v first :point (get "mean"))]))
+       (map (fn [[k v]] [k (-> v first :point :mean)]))
        (reduce merge {})
        (merge nils)
        (sort-by key)
        (mapv val)))
 
+(defn resolution-gcd
+  [data]
+  (some-> data first :id :resolution :precision))
+
+(defn normalize-to
+  [gcd]
+  (fn [data]
+    data))
+
 (defn normalize
   [data]
-  (vector
-   (some-> data
-           first
-           :id
-           (get "resolution")
-           (get "precision"))
-   data))
+  (let [gcd (resolution-gcd data)]
+    (vector gcd (map (normalize-to gcd) data))))
 
 (defn empty-series
   [min-point max-point precision]
@@ -41,8 +44,7 @@
     (let [min-point  (-> points first :time)
           max-point  (-> to (quot precision) (* precision))
           nil-points (empty-series min-point max-point precision)
-          get-path   (fn [{:keys [id]}] (get id "path"))
-          by-path    (->> (group-by get-path points)
+          by-path    (->> (group-by (comp :path :id) points)
                           (map (fn [[k v]] [k (fill-in nil-points v)]))
                           (reduce merge {}))]
       {:from   min-point
