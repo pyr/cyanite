@@ -1,20 +1,15 @@
-carbon:
-  host: "127.0.0.1"
-  port: 2003
-  readtimeout: 30
-  rollups:
-    - period: 60480
-      rollup: 10
-    - period: 105120
-      rollup: 600
-http:
-  host: "0.0.0.0"
-  port: 8080
 logging:
   level: info
   console: true
   files:
     - "/var/log/cyanite/cyanite.log"
+engine:
+  rules:
+    default: [ "5s:1h" ]
+input:
+  - type: carbon
+api:
+  port: 8080
 store:
   cluster: 'localhost'
   keyspace: 'metric'
