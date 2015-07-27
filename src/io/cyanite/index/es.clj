@@ -34,8 +34,8 @@
   [path]
   (count (split path #"\.")))
 
-(defn hash
-  [path]
+(defn murmur3
+  [^String path]
   (clojure.lang.Murmur3/hashUnencodedChars path))
 
 (defn try-mapping
@@ -74,7 +74,7 @@
     (reify SearchClient
       (register! [this path ttl]
         (debug "INSERTING PATH " path ttl)
-        (request! client :put (format "%s/%s?ttl=%d" type (hash path) ttl)
+        (request! client :put (format "%s/%s?ttl=%d" type (murmur3 path) ttl)
                   {:path path :length (path-length path)}))
       (query [this pattern bound?]
         (let [url (format "%s/_search" type)
