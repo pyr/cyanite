@@ -18,19 +18,41 @@
        (sort-by key)
        (mapv val)))
 
-(defn resolution-gcd
+(defn greatest-precision
   [data]
-  (some-> data first :id :resolution :precision))
+  (->> (map (comp :precision :resolution :id) data)
+       (sort)
+       (last)))
+
+(defn normalize-time
+  [greatest metric]
+  (update metric :time #(-> (quot % greatest) (* greatest))))
+
+(defn reduce-to-mean
+  [points]
+  (let [n    (count points)
+        time (-> points first :time)
+        mean (/ (reduce + 0.0 (map (comp :mean :point) points)) n)
+        min  (reduce min (map (comp :min :point)points))
+        max  (reduce max (map (comp :max :point) points))
+        sum  (reduce + 0.0 (map (comp :sum :point) points))]
+    (update (first points)
+            :point
+            assoc :min min :max max :sum sum :mean mean)))
 
 (defn normalize-to
-  [gcd]
-  (fn [data]
-    data))
+  [greatest]
+  (fn [[_ raw]]
+    (->> (sort-by :time raw)
+         (map (partial normalize-time greatest))
+         (partition-by :time)
+         (map reduce-to-mean))))
 
 (defn normalize
   [data]
-  (let [gcd (resolution-gcd data)]
-    (vector gcd (map (normalize-to gcd) data))))
+  (let [greatest (greatest-precision data)]
+    (vector greatest
+            (mapcat (normalize-to greatest) (group-by :id data)))))
 
 (defn empty-series
   [min-point max-point precision]
