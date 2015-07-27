@@ -1,6 +1,7 @@
 (ns io.cyanite.index
   (:require [com.stuartsierra.component :as component]
             [clojure.string             :as s]
+            [io.cyanite.index.es        :as es]
             [io.cyanite.utils           :refer [nbhm keyset assoc-if-absent!]]
             [clojure.string             :refer [split]]
             [clojure.set                :refer [union intersection]]))
@@ -45,12 +46,29 @@
          (map (partial query-segment db))
          (apply intersection))))
 
+(defrecord ElasticSearchIndex [options client]
+  component/Lifecycle
+  (start [this]
+    (assoc this :client (es/client options)))
+  (stop [this]
+    (dissoc this :client))
+  MetricIndex
+  (register! [this metric]
+    (es/register! client (:path metric) (-> metric :resolution :period)))
+  (leaves [this query]
+    (es/query client query true))
+  (prefixes [this query]
+    (es/query client query false)))
 
 (defmulti build-index (comp (fnil keyword "memory") :type))
 
 (defmethod build-index :memory
   [options]
   (MemoryIndex. nil))
+
+(defmethod build-index :elasticsearch
+  [options]
+  (ElasticSearchIndex. options nil))
 
 ;; Implementation
 ;; ==============
