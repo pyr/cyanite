@@ -64,7 +64,9 @@
 
 (defn ->rule
   [[pattern resolutions]]
-  (MetricRule. (re-pattern (if (= (name pattern) "default") ".*" pattern))
+  (MetricRule. (re-pattern (if (= (name pattern) "default")
+                             ".*"
+                               (name pattern)))
                (if (seq resolutions)
                  (mapv ->resolution resolutions)
                  [default-resolution])))
