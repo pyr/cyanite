@@ -11,6 +11,7 @@
 (declare query-plan)
 (declare query-segment)
 (declare prefix-list)
+(declare explode-fnmatch-query)
 
 (defrecord Prefix [pos prefix])
 
@@ -56,9 +57,13 @@
   (register! [this metric]
     (es/register! client (:path metric) (-> metric :resolution :period)))
   (leaves [this query]
-    (es/query client query true))
+    (let [queries (explode-fnmatch-query query)]
+      (set
+       (mapcat #(es/query client % true) queries))))
   (prefixes [this query]
-    (es/query client query false)))
+    (let [queries (explode-fnmatch-query query)]
+      (set
+       (mapcat #(es/query client % false) queries)))))
 
 (defmulti build-index (comp (fnil keyword "memory") :type))
 
@@ -189,6 +194,13 @@
                         (some (partial matcher-applies? input index) matchers)))
                  (fn [input]
                    (some (partial matcher-applies? input index) matchers))))})
+
+(defn explode-fnmatch-query
+  [q]
+  (->> (parse-curlies q)
+       (map (partial apply str))
+       (mapcat parse-charclasses)
+       (map (partial apply str))))
 
 (defn parse-segment
   [length [index query]]

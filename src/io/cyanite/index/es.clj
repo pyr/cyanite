@@ -2,8 +2,8 @@
   (:require [qbits.jet.client.http :as http]
             [clojure.core.async    :as async]
             [cheshire.core         :as json]
-            [clojure.string        :refer [split]]
-            [clojure.tools.logging :refer [info debug]]))
+            [clojure.string        :as s]
+            [clojure.string        :refer [split]]))
 
 (defprotocol JSONClient
   (request! [this method path] [this method path body]))
@@ -52,28 +52,36 @@
                                 :index "not_analyzed"
                                 :store false}}}})
 
+(defn ->query-filter
+  [q]
+  (if (neg? (.indexOf q "*"))
+    {:term {:path q}}
+    {:regexp {:path (s/replace q "*" ".*")}}))
+
 (defn bound-query
   [q]
   (let [l (count (split q #"\."))]
     {:query
      {:filtered
-      {:query {:wildcard {:path q}}
-       :filter {:term {:length l}}}}}))
+      {:query  {:term {:length l}}
+       :filter (->query-filter q)}}}))
 
 (defn unbound-query
   [q]
-  {:query {:wildcard {:path q}}})
+  {:query
+   {:filtered
+    {:query  {:match_all {}}
+     :filter (->query-filter q)}}})
 
 (defn client
   [options]
   (let [url     (or (:url options) "http://localhost:9200/cyanite")
-        type    (or (:type options) "path")
+        type    (or (:es-type options) "path")
         client  (json-client url)
         mapping (or (:mapping options) default-mapping)]
     (try-mapping client type mapping)
     (reify SearchClient
       (register! [this path ttl]
-        (debug "INSERTING PATH " path ttl)
         (request! client :put (format "%s/%s?ttl=%d" type (murmur3 path) ttl)
                   {:path path :length (path-length path)}))
       (query [this pattern bound?]
