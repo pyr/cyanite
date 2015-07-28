@@ -20,6 +20,8 @@
 (defrecord Resolution [precision period])
 
 (defn fit?
+  "Does a point fit in a resolution, given
+   a reference to now ?"
   [resolution oldest ts]
   (when (<= (- ts (:period resolution)) oldest)
     resolution))
