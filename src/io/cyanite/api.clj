@@ -1,4 +1,5 @@
 (ns io.cyanite.api
+  "Cyanite's 'HTTP interface"
   (:require [com.stuartsierra.component :as component]
             [com.climate.claypoole      :as cp]
             [cheshire.core              :as json]
@@ -15,6 +16,7 @@
             [clojure.string             :refer [lower-case blank?]]))
 
 (defn parse-time
+  "Parse an epoch into a long"
   [time-string]
   (try (Long/parseLong time-string)
        (catch NumberFormatException _
@@ -22,7 +24,7 @@
          nil)))
 
 (def routes
-  "dead simple router"
+  "Dead simple router"
   [[:paths #"^/paths.*"]
    [:metrics #"^/metrics.*"]
    [:ping  #"^/ping/?"]])
@@ -42,17 +44,23 @@
       (assoc request :params {}))))
 
 (defn match-route
+  "Predicate which returns the matched elements"
   [{:keys [uri path-info] :as request} [action re]]
   (when (re-matches re (or path-info uri))
     action))
 
 (defn assoc-route
+  "Find which route matches if any and store the appropriate action
+   in the :action field of the request"
   [request]
   (assoc request :action (some (partial match-route request) routes)))
 
-(defmulti dispatch :action)
+(defmulti dispatch
+  "Dispatch on action, as found by assoc-route"
+  :action)
 
 (defn process
+  "Process a request. Handle errors and report them"
   [request store index engine]
   (try
     {:status 200
@@ -98,6 +106,7 @@
   (throw (ex-info "unknown action" {:status 404 :suppress? true})))
 
 (defn make-handler
+  "Yield a ring-handler for a request"
   [store index engine]
   (fn [request]
     (-> request

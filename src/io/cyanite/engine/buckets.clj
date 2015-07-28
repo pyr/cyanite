@@ -131,13 +131,3 @@
 (defn tuple
   [^Resolution id ^String path]
   (MetricTuple. id path))
-
-(comment
-  (let [k   (tuple (Resolution. 5 3600) "foo")
-        mk  (metric-key k)
-        now (quot (System/currentTimeMillis) 1000)]
-    (add! mk {:time (- now 5) :metric 1.0 :path "bar"})
-    (add! mk {:time (- now 5) :metric 1.0 :path "bar"})
-    (Thread/sleep 5000)
-    (add! mk {:time now :metric 1.0 :path "bar"}))
-  )

@@ -1,4 +1,5 @@
 (ns io.cyanite.engine
+  "The core of cyanite"
   (:require [com.stuartsierra.component :as component]
             [com.climate.claypoole      :as cp]
             [io.cyanite.engine.rule     :as rule]

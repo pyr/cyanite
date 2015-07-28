@@ -4,9 +4,9 @@
             [clj-yaml.core              :refer [parse-string]]
             [clojure.tools.logging      :refer [error info debug]]))
 
-(def
-  ^{:doc "handle logging configuration from the yaml file"}
-  default-logging
+(def default-logging
+  "Default logging configuration. Refer to https://github.com/pyr/unilog
+   for details."
   {:pattern "%p [%d] %t - %c - %m%n"
    :external false
    :console true

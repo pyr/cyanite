@@ -1,7 +1,9 @@
 (ns io.cyanite.dsl
+  "Graphite DSL to AST translation"
   (:require [instaparse.core :as parse]))
 
 (def init
+  "Instaparse grammar for the Graphite DSL"
   "<expr>         = path | func
    <op>           = <'('>
    <cp>           = <')'>
@@ -207,9 +209,11 @@
    <arglist>      = (expr <','>)* (Epsilon | expr)")
 
 (def query->ast
+  "The parser for the grammar, yields an AST"
   (parse/parser init))
 
 (defn extract-paths
+  "Extract paths from an AST"
   [ast]
   (if (sequential? ast)
     (let [[opcode & args] ast]
@@ -219,5 +223,6 @@
     []))
 
 (defn ast->paths
+  "Unique list of paths to get for an AST"
   [ast]
   (set (extract-paths (first ast))))

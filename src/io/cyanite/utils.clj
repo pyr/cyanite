@@ -1,12 +1,15 @@
 (ns io.cyanite.utils
+  "These didn't fit anywhere else"
   (:import org.cliffc.high_scale_lib.NonBlockingHashMap))
 
 (defprotocol MutableMap
-  (keyset [this])
-  (remove! [this k])
-  (assoc-if-absent! [this k v]))
+  "Mutable map functionality"
+  (keyset [this] "Return the keyset")
+  (remove! [this k] "Atomically remove and return an element")
+  (assoc-if-absent! [this k v] "CAS type put"))
 
 (defn nbhm
+  "Yield a NonBlockingHashMap"
   []
   (let [db (NonBlockingHashMap.)]
     (reify
@@ -32,5 +35,6 @@
         (or (.get db k) def)))))
 
 (defn now!
+  "Yield a UNIX epoch"
   []
   (quot (System/currentTimeMillis) 1000))
