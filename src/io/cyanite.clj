@@ -31,6 +31,11 @@
       (System/exit 1))))
 
 (defn build-components
+  "Build a list of components from data.
+   Extracts key k from system and yield
+   an updated system with top-level keys.
+   components are created by call f on them
+   options."
   [system k f]
   (if (seq (get system k))
     (merge (dissoc system k)
