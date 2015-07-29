@@ -56,11 +56,10 @@ See :ref:`Configuration Syntax` for more details
       console: true
       files:
         - "/var/log/cyanite/cyanite.log"
-    inputs:
+    input:
       - type: "carbon"
       - type: "pickle"
     store:
-      type: "cassandra-v2"
       cluster: "127.0.0.1"
     index:
       type: "memory"
