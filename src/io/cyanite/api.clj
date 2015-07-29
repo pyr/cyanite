@@ -117,10 +117,11 @@
 (defrecord Api [options pool service store index engine]
   component/Lifecycle
   (start [this]
-    (let [pool    (cp/threadpool 1)
+    (let [tp      (cp/threadpool 1)
           handler (make-handler store index engine)]
-      (cp/future pool (run-jetty (assoc options :ring-handler handler)))
-      (assoc this :pool pool)))
+      (cp/future tp (run-jetty (assoc options :ring-handler handler)))
+      (assoc this :pool tp)))
   (stop [this]
-    (cp/shutdown pool)
+    (when pool
+      (cp/shutdown pool))
     (dissoc this :pool)))

@@ -38,4 +38,6 @@
       (add! [this k e]
         (if-let [q (get-in @state [k :queue])]
           (.add q e)
-          (throw (ex-info "cannot find queue" {:queue-name k})))))))
+          (throw (ex-info "cannot find queue" {:queue-name k}))))
+      (stop! [this k]
+        :noop))))
