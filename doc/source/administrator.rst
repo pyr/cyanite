@@ -5,6 +5,189 @@ Administrator Guide
 
 This aims to be a simple guide for working with cyanite.
 
+.. _Configuration Syntax:
+
+Configuration Syntax
+--------------------
+
+Cyanite's configuration is broken up in different sections:
+
+- engine
+- api
+- input
+- index
+- store
+- logging
+
+Most sections are optional but provide defaults
+for a single host testing system.
+
+Engine
+~~~~~~
+
+The engine specifies the behavior of Cyanite's core
+which accepts metrics from inputs, aggregates in-memory
+and defers to an index and a store when a time-window
+elapses
+
+The engine accepts the following options:
+
+*rules*:
+   Rules specifies which resolutions to apply to an incoming metric.
+   Rules consist of a pattern or the string "default" and an associated
+   list of resolutions.
+   Rules are evaluated in a first-match order. Resolutions are stored as a
+   string of the form: <precision>:<period>, you may use unit specifiers
+   for seconds, minutes, hours, days, weeks and months and years.
+
+.. sourcecode:: yaml
+                
+   engine:
+     rules:
+       "web.*\.cpu": [ "5s:1h", "30s:1d" ]
+        default: [ "5s:1h" ]
+
+API
+~~~
+
+The API specifies the behavior of the HTTP interface which is exposed.
+The API accepts the following options:
+
+*host*:
+   Address to listen on, defaults to 127.0.0.1
+*port*:
+   Port to bind to, defaults to 8080
+*disabled*:
+   Disable HTTP service altogether, defaults to false.
+
+.. sourcecode:: yaml
+                
+  api:
+    port: 8080
+    
+
+Input
+~~~~~
+
+Inputs are methods for Cyanite to ingest metrics. A Cyanite installation
+may have several inputs running, and thus accepts a list of input
+configurations.
+
+Each input configuration takes the following options:
+
+*type*:
+  Type of input, available for now are "carbon" and "pickle"
+*host*:
+  Address to bind to. Valid for both "carbon" and "pickle"
+*port*:
+  Port to bind to. Valid for both "carbon" and "pickle"
+  
+.. sourcecode:: yaml
+                
+  input:
+    - type: carbon
+      port: 2003
+    - type: pickle
+      port: 2004
+
+Index
+~~~~~
+
+The index determines where metric names will be stored.
+Two types of indices are available now: "memory" and
+"elasticsearch". If no index section is present,
+An in-memory index will be assumed.
+
+The memory index takes no options.
+The elasticsearch index takes the following options:
+
+*url*:
+  The base URL for your ElasticSearch host, include
+  the ES index in the URL. Defaults to
+  http://localhost:9200/cyanite
+*es-type*:
+  The ES type to publish documents to, defaults to "path"
+*mapping*:
+  Provide a mapping for your type, defaults to:
+  
+  .. sourcecode:: yaml
+  
+     path:
+       properties:
+         path:
+           type: string
+           index: not_analyzed
+         length:
+           type: integer  
+           index: not_analyzed
+           store: false
+
+.. sourcecode:: yaml
+                
+    index:
+      type: memory
+
+Store
+~~~~~
+
+The store is where metrics get persisted.
+The only store available for now is the "cassandra"
+one.
+
+The following options are accepted:
+
+*cluster*:
+   A string or list of strings to provide cluster contact points.
+*keyspace*:
+   The keyspace to use.
+
+.. sourcecode:: yaml
+                
+  store:
+    cluster: 'localhost'
+    keyspace: 'metric'
+
+Logging
+~~~~~~~
+
+Specify where to log. Adheres to the configuration format
+defined at https://github.com/pyr/unilog
+
+.. sourcecode:: yaml
+                
+  logging:
+    level: info
+    console: true
+    files:
+      - "/var/log/cyanite/cyanite.log"
+
+        
+.. _Graphite Integration:
+
+Integration with Graphite and Grafana
+-------------------------------------
+
+Cyanite exposes an API which is not fully
+compatible with Graphite, to bridge cyanite
+to Graphite or Grafana_, two options are available:
+
+- Using alternative *storage finders* in graphite-web
+- Using graphite-api
+
+If you intend to use Grafana_, the recommended option
+is to use graphite-api.
+
+graphite-api configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You will need to install both `graphite-api` and
+`graphite-cyanite` through pip. `graphite-api`
+can then be configured quite simply
+
+graphite-web configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. _Grafana: http://grafana.org
 
 Administering Cassandra for Cyanite
 -----------------------------------

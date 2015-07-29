@@ -46,7 +46,8 @@ produce a working Java archive.
 Minimal configuration
 ----------------------
 
-Cyanite is configured with a single configuration file, formatted in YAML_.
+Cyanite is configured with a single configuration file, formatted in YAML.
+See :ref:`Configuration Syntax` for more details
 
 .. sourcecode:: yaml
 
