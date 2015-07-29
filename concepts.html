@@ -258,9 +258,9 @@ The only working component stores data to <a class="reference external" href="ht
 <h3>Storage Schema<a class="headerlink" href="#storage-schema" title="Permalink to this headline">¶</a></h3>
 <p>The following schema is used to store data:</p>
 <div class="highlight-python"><div class="highlight"><pre>CREATE KEYSPACE metric
-       WITH replication = {&#39;class&#39;: &#39;SimpleStrategy&#39;,
-                           &#39;replication_factor&#39;: &#39;1&#39;}
-       AND durable_writes = true;
+                WITH replication = {&#39;class&#39;: &#39;SimpleStrategy&#39;,
+                                    &#39;replication_factor&#39;: &#39;1&#39;}
+                AND durable_writes = true;
 
 USE metric;
 
@@ -271,9 +271,14 @@ CREATE TYPE metric_point (
   sum double
 );
 
+CREATE TYPE metric_resolution (
+  precision int,
+  period int
+);
+
 CREATE TYPE metric_id (
   path text,
-  resolution text
+  resolution frozen&lt;metric_resolution&gt;
 );
 
 CREATE TABLE metric.metric (
@@ -283,9 +288,7 @@ CREATE TABLE metric.metric (
   PRIMARY KEY (id, time)
 ) WITH COMPACT STORAGE
   AND CLUSTERING ORDER BY (time ASC)
-  AND compaction = {&#39;min_threshold&#39;: &#39;4&#39;,
-                   &#39;class&#39;: &#39;org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy&#39;,
-                   &#39;max_threshold&#39;: &#39;32&#39;}
+  AND compaction = {&#39;class&#39;: &#39;org.apache.cassandra.db.compaction.DateTieredCompactionStrategy&#39;}
   AND compression = {&#39;sstable_compression&#39;: &#39;org.apache.cassandra.io.compress.LZ4Compressor&#39;}
   AND dclocal_read_repair_chance = 0.1
   AND default_time_to_live = 0
