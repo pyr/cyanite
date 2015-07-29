@@ -182,17 +182,43 @@ graphite-api configuration
 
 You will need to install both `graphite-api` and
 `graphite-cyanite` through pip. `graphite-api`
-can then be configured quite simply
+can then be configured by providing a valid YAML file
+in `/etc/graphite-api.yaml`
+
+.. sourcecode:: yaml
+
+    search_index: /srv/graphite/index
+    finders:
+      - cyanite.CyaniteFinder
+    cyanite:
+      urls:
+        - http://cyanite-host:port
+
+
+`graphite-api` is fully documented at http://graphite-api.readthedocs.org/,
+`graphite-cyanite` specific documentation can be found at
+https://github.com/brutasse/graphite-cyanite.
 
 graphite-web configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+The only part which needs modifying once you have a working `graphite-web`
+installation is to install `graphite-cyanite` and modify your
+`local-settings.py` configuration file in Graphite:
+
+.. sourcecode:: yaml
+
+    STORAGE_FINDERS = ( 'cyanite.CyaniteFinder', )
+    CYANITE_URLS = ( 'http://host:port', )
+    
 .. _Grafana: http://grafana.org
 
 Administering Cassandra for Cyanite
 -----------------------------------
 
-Here are relevant topics when.
+Cassandra is a very versatile database - while still being ideally suited
+for time-series type workloads. Here are a few pointers which might help when
+operating a large metric cluster.
 
 Choosing a Cassandra version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
