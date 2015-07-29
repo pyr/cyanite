@@ -335,15 +335,36 @@ is to use graphite-api.</p>
 <h3>graphite-api configuration<a class="headerlink" href="#graphite-api-configuration" title="Permalink to this headline">¶</a></h3>
 <p>You will need to install both <cite>graphite-api</cite> and
 <cite>graphite-cyanite</cite> through pip. <cite>graphite-api</cite>
-can then be configured quite simply</p>
+can then be configured by providing a valid YAML file
+in <cite>/etc/graphite-api.yaml</cite></p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">search_index</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/srv/graphite/index</span>
+<span class="l-Scalar-Plain">finders</span><span class="p-Indicator">:</span>
+  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">cyanite.CyaniteFinder</span>
+<span class="l-Scalar-Plain">cyanite</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">urls</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">http://cyanite-host:port</span>
+</pre></div>
+</div>
+<p><cite>graphite-api</cite> is fully documented at <a class="reference external" href="http://graphite-api.readthedocs.org/">http://graphite-api.readthedocs.org/</a>,
+<cite>graphite-cyanite</cite> specific documentation can be found at
+<a class="reference external" href="https://github.com/brutasse/graphite-cyanite">https://github.com/brutasse/graphite-cyanite</a>.</p>
 </div>
 <div class="section" id="graphite-web-configuration">
 <h3>graphite-web configuration<a class="headerlink" href="#graphite-web-configuration" title="Permalink to this headline">¶</a></h3>
+<p>The only part which needs modifying once you have a working <cite>graphite-web</cite>
+installation is to install <cite>graphite-cyanite</cite> and modify your
+<cite>local-settings.py</cite> configuration file in Graphite:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">STORAGE_FINDERS = ( &#39;cyanite.CyaniteFinder&#39;, )</span>
+<span class="l-Scalar-Plain">CYANITE_URLS = ( &#39;http://host:port&#39;, )</span>
+</pre></div>
+</div>
 </div>
 </div>
 <div class="section" id="administering-cassandra-for-cyanite">
 <h2>Administering Cassandra for Cyanite<a class="headerlink" href="#administering-cassandra-for-cyanite" title="Permalink to this headline">¶</a></h2>
-<p>Here are relevant topics when.</p>
+<p>Cassandra is a very versatile database - while still being ideally suited
+for time-series type workloads. Here are a few pointers which might help when
+operating a large metric cluster.</p>
 <div class="section" id="choosing-a-cassandra-version">
 <h3>Choosing a Cassandra version<a class="headerlink" href="#choosing-a-cassandra-version" title="Permalink to this headline">¶</a></h3>
 <p>Cyanite will work with Cassandra 2.0 and above, it has been tested
