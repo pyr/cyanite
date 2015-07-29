@@ -34,12 +34,14 @@
   [options]
   (component/using
    (map->TCPInput (assoc options
-                         :port (or (:port options) 2003)
+                         :port (or (:port options) 2004)
                          :pipeline pickle/pipeline))
    [:engine]))
 
 (defmethod build-input :carbon
   [options]
   (component/using
-   (map->TCPInput (assoc options :pipeline carbon/pipeline))
+   (map->TCPInput (assoc options
+                         :port (or (:port options) 2003)
+                         :pipeline carbon/pipeline))
    [:engine]))
