@@ -105,6 +105,15 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="administrator.html">Administrator Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="administrator.html#configuration-syntax">Configuration Syntax</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="administrator.html#engine">Engine</a></li>
+<li class="toctree-l3"><a class="reference internal" href="administrator.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="administrator.html#input">Input</a></li>
+<li class="toctree-l3"><a class="reference internal" href="administrator.html#index">Index</a></li>
+<li class="toctree-l3"><a class="reference internal" href="administrator.html#store">Store</a></li>
+<li class="toctree-l3"><a class="reference internal" href="administrator.html#logging">Logging</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="administrator.html#administering-cassandra-for-cyanite">Administering Cassandra for Cyanite</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="administrator.html#choosing-a-cassandra-version">Choosing a Cassandra version</a></li>
 <li class="toctree-l3"><a class="reference internal" href="administrator.html#choosing-a-compaction-strategy">Choosing a compaction strategy</a></li>
@@ -205,7 +214,8 @@ produce a working Java archive.</p>
 </div>
 <div class="section" id="minimal-configuration">
 <h2>Minimal configuration<a class="headerlink" href="#minimal-configuration" title="Permalink to this headline">¶</a></h2>
-<p>Cyanite is configured with a single configuration file, formatted in <a href="#id1"><span class="problematic" id="id2">YAML_</span></a>.</p>
+<p>Cyanite is configured with a single configuration file, formatted in YAML.
+See <a class="reference internal" href="administrator.html#configuration-syntax"><span>Configuration Syntax</span></a> for more details</p>
 <div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">logging</span><span class="p-Indicator">:</span>
   <span class="l-Scalar-Plain">level</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">info</span>
   <span class="l-Scalar-Plain">console</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">true</span>

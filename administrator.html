@@ -105,6 +105,20 @@
 </ul>
 </li>
 <li class="toctree-l1 current"><a class="current reference internal" href="">Administrator Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#configuration-syntax">Configuration Syntax</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#engine">Engine</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#input">Input</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#index">Index</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#store">Store</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#logging">Logging</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#integration-with-graphite-and-grafana">Integration with Graphite and Grafana</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#graphite-api-configuration">graphite-api configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graphite-web-configuration">graphite-web configuration</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#administering-cassandra-for-cyanite">Administering Cassandra for Cyanite</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#choosing-a-cassandra-version">Choosing a Cassandra version</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#choosing-a-compaction-strategy">Choosing a compaction strategy</a></li>
@@ -165,6 +179,168 @@
   <div class="section" id="administrator-guide">
 <span id="id1"></span><h1>Administrator Guide<a class="headerlink" href="#administrator-guide" title="Permalink to this headline">¶</a></h1>
 <p>This aims to be a simple guide for working with cyanite.</p>
+<div class="section" id="configuration-syntax">
+<span id="id2"></span><h2>Configuration Syntax<a class="headerlink" href="#configuration-syntax" title="Permalink to this headline">¶</a></h2>
+<p>Cyanite&#8217;s configuration is broken up in different sections:</p>
+<ul class="simple">
+<li>engine</li>
+<li>api</li>
+<li>input</li>
+<li>index</li>
+<li>store</li>
+<li>logging</li>
+</ul>
+<p>Most sections are optional but provide defaults
+for a single host testing system.</p>
+<div class="section" id="engine">
+<h3>Engine<a class="headerlink" href="#engine" title="Permalink to this headline">¶</a></h3>
+<p>The engine specifies the behavior of Cyanite&#8217;s core
+which accepts metrics from inputs, aggregates in-memory
+and defers to an index and a store when a time-window
+elapses</p>
+<p>The engine accepts the following options:</p>
+<dl class="docutils">
+<dt><em>rules</em>:</dt>
+<dd>Rules specifies which resolutions to apply to an incoming metric.
+Rules consist of a pattern or the string &#8220;default&#8221; and an associated
+list of resolutions.
+Rules are evaluated in a first-match order. Resolutions are stored as a
+string of the form: &lt;precision&gt;:&lt;period&gt;, you may use unit specifiers
+for seconds, minutes, hours, days, weeks and months and years.</dd>
+</dl>
+<div class="highlight-yaml"><div class="highlight"><pre>engine:
+  rules:
+    &quot;web.*\.cpu&quot;: [ &quot;5s:1h&quot;, &quot;30s:1d&quot; ]
+     default: [ &quot;5s:1h&quot; ]
+</pre></div>
+</div>
+</div>
+<div class="section" id="api">
+<h3>API<a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h3>
+<p>The API specifies the behavior of the HTTP interface which is exposed.
+The API accepts the following options:</p>
+<dl class="docutils">
+<dt><em>host</em>:</dt>
+<dd>Address to listen on, defaults to 127.0.0.1</dd>
+<dt><em>port</em>:</dt>
+<dd>Port to bind to, defaults to 8080</dd>
+<dt><em>disabled</em>:</dt>
+<dd>Disable HTTP service altogether, defaults to false.</dd>
+</dl>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">api</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">port</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">8080</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="input">
+<h3>Input<a class="headerlink" href="#input" title="Permalink to this headline">¶</a></h3>
+<p>Inputs are methods for Cyanite to ingest metrics. A Cyanite installation
+may have several inputs running, and thus accepts a list of input
+configurations.</p>
+<p>Each input configuration takes the following options:</p>
+<dl class="docutils">
+<dt><em>type</em>:</dt>
+<dd>Type of input, available for now are &#8220;carbon&#8221; and &#8220;pickle&#8221;</dd>
+<dt><em>host</em>:</dt>
+<dd>Address to bind to. Valid for both &#8220;carbon&#8221; and &#8220;pickle&#8221;</dd>
+<dt><em>port</em>:</dt>
+<dd>Port to bind to. Valid for both &#8220;carbon&#8221; and &#8220;pickle&#8221;</dd>
+</dl>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">input</span><span class="p-Indicator">:</span>
+  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">carbon</span>
+    <span class="l-Scalar-Plain">port</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">2003</span>
+  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">pickle</span>
+    <span class="l-Scalar-Plain">port</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">2004</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="index">
+<h3>Index<a class="headerlink" href="#index" title="Permalink to this headline">¶</a></h3>
+<p>The index determines where metric names will be stored.
+Two types of indices are available now: &#8220;memory&#8221; and
+&#8220;elasticsearch&#8221;. If no index section is present,
+An in-memory index will be assumed.</p>
+<p>The memory index takes no options.
+The elasticsearch index takes the following options:</p>
+<dl class="docutils">
+<dt><em>url</em>:</dt>
+<dd>The base URL for your ElasticSearch host, include
+the ES index in the URL. Defaults to
+<a class="reference external" href="http://localhost:9200/cyanite">http://localhost:9200/cyanite</a></dd>
+<dt><em>es-type</em>:</dt>
+<dd>The ES type to publish documents to, defaults to &#8220;path&#8221;</dd>
+<dt><em>mapping</em>:</dt>
+<dd><p class="first">Provide a mapping for your type, defaults to:</p>
+<div class="last highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">path</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">properties</span><span class="p-Indicator">:</span>
+    <span class="l-Scalar-Plain">path</span><span class="p-Indicator">:</span>
+      <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">string</span>
+      <span class="l-Scalar-Plain">index</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">not_analyzed</span>
+    <span class="l-Scalar-Plain">length</span><span class="p-Indicator">:</span>
+      <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">integer</span>
+      <span class="l-Scalar-Plain">index</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">not_analyzed</span>
+      <span class="l-Scalar-Plain">store</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">false</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">index</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">memory</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="store">
+<h3>Store<a class="headerlink" href="#store" title="Permalink to this headline">¶</a></h3>
+<p>The store is where metrics get persisted.
+The only store available for now is the &#8220;cassandra&#8221;
+one.</p>
+<p>The following options are accepted:</p>
+<dl class="docutils">
+<dt><em>cluster</em>:</dt>
+<dd>A string or list of strings to provide cluster contact points.</dd>
+<dt><em>keyspace</em>:</dt>
+<dd>The keyspace to use.</dd>
+</dl>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">store</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">cluster</span><span class="p-Indicator">:</span> <span class="s">&#39;localhost&#39;</span>
+  <span class="l-Scalar-Plain">keyspace</span><span class="p-Indicator">:</span> <span class="s">&#39;metric&#39;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="logging">
+<h3>Logging<a class="headerlink" href="#logging" title="Permalink to this headline">¶</a></h3>
+<p>Specify where to log. Adheres to the configuration format
+defined at <a class="reference external" href="https://github.com/pyr/unilog">https://github.com/pyr/unilog</a></p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">logging</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">level</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">info</span>
+  <span class="l-Scalar-Plain">console</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">true</span>
+  <span class="l-Scalar-Plain">files</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="s">&quot;/var/log/cyanite/cyanite.log&quot;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="integration-with-graphite-and-grafana">
+<span id="graphite-integration"></span><h2>Integration with Graphite and Grafana<a class="headerlink" href="#integration-with-graphite-and-grafana" title="Permalink to this headline">¶</a></h2>
+<p>Cyanite exposes an API which is not fully
+compatible with Graphite, to bridge cyanite
+to Graphite or <a class="reference external" href="http://grafana.org">Grafana</a>, two options are available:</p>
+<ul class="simple">
+<li>Using alternative <em>storage finders</em> in graphite-web</li>
+<li>Using graphite-api</li>
+</ul>
+<p>If you intend to use <a class="reference external" href="http://grafana.org">Grafana</a>, the recommended option
+is to use graphite-api.</p>
+<div class="section" id="graphite-api-configuration">
+<h3>graphite-api configuration<a class="headerlink" href="#graphite-api-configuration" title="Permalink to this headline">¶</a></h3>
+<p>You will need to install both <cite>graphite-api</cite> and
+<cite>graphite-cyanite</cite> through pip. <cite>graphite-api</cite>
+can then be configured quite simply</p>
+</div>
+<div class="section" id="graphite-web-configuration">
+<h3>graphite-web configuration<a class="headerlink" href="#graphite-web-configuration" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
 <div class="section" id="administering-cassandra-for-cyanite">
 <h2>Administering Cassandra for Cyanite<a class="headerlink" href="#administering-cassandra-for-cyanite" title="Permalink to this headline">¶</a></h2>
 <p>Here are relevant topics when.</p>
