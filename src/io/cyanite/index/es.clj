@@ -24,11 +24,8 @@
                    :follow-redirects? true
                    :content-type "application/json"
                    :body (when body (json/generate-string body))
-                   :method method}
-              resp (async/<!! (http/request client req))]
-          (if (= 2 (quot (:status resp) 100))
-            (update resp :body async/<!!)
-            (dissoc resp :body)))))))
+                   :method method}]
+          (http/request client req))))))
 
 (defn path-length
   [path]
@@ -38,10 +35,17 @@
   [^String path]
   (clojure.lang.Murmur3/hashUnencodedChars path))
 
+(defn response!
+  [ch]
+  (let [resp (async/<!! ch)]
+    (if (= 2 (quot (:status resp) 100))
+      (update resp :body async/<!!)
+      (dissoc resp :body))))
+
 (defn try-mapping
   [client type mapping]
   (let [url  (format "_mapping/%s" type)
-        body (:body (request! client :get url))]
+        body (some-> (request! client :get url) response! :body)]
     (when (or (nil? body) (empty? body))
       (request! client :put url mapping))))
 
@@ -88,6 +92,7 @@
         (let [url (format "%s/_search" type)
               q   ((if bound? bound-query unbound-query) pattern)]
           (some->> (request! client :get url q)
+                   response!
                    :body
                    :hits
                    :hits
