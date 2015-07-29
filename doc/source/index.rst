@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-The Cyanite Guide
-=================
+Cyanite
+=======
 
 .. image:: _static/cyanite.png
    :alt: cyanite logo
@@ -27,6 +27,26 @@ Compatibility
   with time-series data, either with ``graphite-web`` or with Grafana_.
   Cyanite will strive to remain as integrated as possible with this
   eco-system and to provide simple interaction modes.
+
+
+
+.. raw:: html
+
+    <p>
+      <a class="reference external image-reference"
+         href="https://github.com/pyr/cyanite">
+        <img alt="GitHub project"
+             src="https://img.shields.io/badge/GitHub-cyanite-green.svg"
+             style="height: 18px !important; width: auto !important;">
+      </a>
+
+      <a class="reference external image-reference"
+         href="https://travis-ci.org/pyr/cyanite">
+        <img alt="Build Status"
+             src="https://travis-ci.org/pyr/cyanite.svg?branch=master"
+             style="height: 18px !important; width: auto !important;">
+      </a>
+    </p>
 
 Cyanite is Open-Source software, released under an MIT license and is
 available on github: https://github.com/pyr/cyanite. The latest
