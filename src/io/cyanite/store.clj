@@ -8,16 +8,6 @@
   (insert! [this metric])
   (fetch!  [this from to paths]))
 
-(defrecord MemoryStore [db]
-  component/Lifecycle
-  (start [this]
-    (assoc this :db (atom nil)))
-  (stop [this]
-    (dissoc this :db))
-  MetricStore
-  (insert! [this metric]
-    (swap! db update (:path metric) conj metric)))
-
 (defrecord CassandraV2Store [options session insertq fetchq
                              wrcty rdcty mkid mkpoint]
   component/Lifecycle
@@ -56,10 +46,6 @@
              {:consistency wrcty})))
 
 (defmulti build-store (comp (fnil keyword "cassandra-v2") :type))
-
-(defmethod build-store :memory
-  [options]
-  (MemoryStore. nil))
 
 (defmethod build-store :cassandra-v2
   [options]
