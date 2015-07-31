@@ -11,7 +11,7 @@
                  [org.clojure/tools.logging     "0.3.1"]
                  [org.clojure/tools.cli         "0.3.1"]
                  [spootnik/pickler              "0.1.6"]
-                 [spootnik/unilog               "0.7.5"]
+                 [spootnik/unilog               "0.7.7"]
                  [spootnik/uncaught             "0.5.2"]
                  [instaparse                    "1.4.1"]
                  [ring/ring-codec               "1.0.0"]
@@ -23,5 +23,5 @@
                  [net.jpountz.lz4/lz4           "1.3"]
                  [org.xerial.snappy/snappy-java "1.1.1.7"]
                  [com.stuartsierra/component    "0.2.3"]
-                 [io.netty/netty-all            "4.0.27.Final"]
+                 [io.netty/netty-all            "4.0.30.Final"]
                  [org.clojure/core.async        "0.1.346.0-17112a-alpha"]])
