@@ -16,7 +16,7 @@
       (for [[val time path] (pickle/ast->metrics ast)]
         {:path   path
          :metric (if (string? val) (Double/parseDouble val) val)
-         :time   (Long. time)}))
+         :time   (long time)}))
     (catch Exception e
       (warn e "cannot deserialize pickle")
       nil)))
