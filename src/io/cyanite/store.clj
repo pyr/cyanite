@@ -45,11 +45,25 @@
               (-> metric :time long)]
              {:consistency wrcty})))
 
+(defn empty-store
+  []
+  (reify
+    component/Lifecycle
+    (start [this] this)
+    (stop [this] this)
+    MetricStore
+    (fetch! [this from to paths])
+    (insert! [this metric])))
+
 (defmulti build-store (comp (fnil keyword "cassandra-v2") :type))
 
 (defmethod build-store :cassandra-v2
   [options]
   (map->CassandraV2Store {:options (dissoc options :type)}))
+
+(defmethod build-store :empty
+  [options]
+  (empty-store))
 
 (defn query! [store from to paths]
   (let [raw-series         (fetch! store from to paths)
