@@ -65,7 +65,23 @@
       (set
        (mapcat #(es/query client % false) queries)))))
 
+(defn empty-index
+  []
+  (reify
+    component/Lifecycle
+    (start [this] this)
+    (stop [this] this)
+    MetricIndex
+    (register! [this metric])
+    (leaves [this query])
+    (prefixes [this query])))
+
+
 (defmulti build-index (comp (fnil keyword "memory") :type))
+
+(defmethod build-index :empty
+  [options]
+  (empty-index))
 
 (defmethod build-index :memory
   [options]
