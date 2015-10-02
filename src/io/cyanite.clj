@@ -8,7 +8,11 @@
             [io.cyanite.engine.queue    :as queue]
             [io.cyanite.store           :as store]
             [com.stuartsierra.component :as component]
+            [metrics.reporters.console  :as console]
+            [metrics.reporters.csv      :as csv]
+            [metrics.reporters.jmx      :as jmx]
             [io.cyanite.engine          :refer [map->Engine]]
+            [io.cyanite.engine.drift    :refer [map->SystemClock map->AgentDrift]]
             [io.cyanite.api             :refer [map->Api]]
             [unilog.config              :refer [start-logging!]]
             [spootnik.uncaught          :refer [uncaught]]
@@ -55,10 +59,13 @@
       (-> config
           (dissoc :logging)
           (build-components :input input/build-input)
+          (update :clock  #(map->SystemClock %))
+          (update :drift  #(component/using (map->AgentDrift %) [:clock]))
           (update :engine #(component/using (map->Engine %) [:index
                                                              :store
+                                                             :drift
                                                              :queues]))
-          (update :queues queue/queue-engine)
+          (update :queues queue/map->BlockingMemoryQueue)
           (update :api #(component/using (map->Api {:options %}) [:index
                                                                   :store
                                                                   :queues
@@ -69,8 +76,12 @@
 (defn -main
   "Our main function, parses args and launches appropriate services"
   [& args]
-  (let [[{:keys [path help quiet]} args banner] (get-cli args)]
+  (let [[{:keys [path help quiet]} args banner] (get-cli args)
+        cr (csv/reporter "/tmp/csv" {})
+        jr (jmx/reporter {})]
 
+    (csv/start cr 5)
+    (jmx/start jr)
     (when help
       (println banner)
       (System/exit 0))

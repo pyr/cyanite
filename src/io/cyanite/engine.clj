@@ -7,7 +7,17 @@
             [io.cyanite.index           :as index]
             [io.cyanite.store           :as store]
             [io.cyanite.utils           :refer [nbhm assoc-if-absent! now!]]
-            [clojure.tools.logging      :refer [info debug]]))
+            [io.cyanite.engine.drift    :refer [drift! skewed-epoch!]]
+            [clojure.tools.logging      :refer [info debug]]
+            [metrics.timers             :refer [deftimer time!]]
+            [metrics.core               :refer [new-registry]]
+            [metrics.counters           :refer [inc! dec! defcounter]]))
+
+(deftimer t-tuple)
+(deftimer t-mkey)
+(deftimer t-snap)
+(deftimer t-assc)
+(deftimer t-enq)
 
 (defprotocol Acceptor
   (accept! [this metric]))
@@ -16,15 +26,17 @@
   (resolution [this oldest path]))
 
 (defn ingest-at-resolution
-  [buckets queues resolution metric]
-  (let [k          (b/tuple resolution (:path metric))
-        metric-key (or (get buckets k) (b/metric-key k))
-        snaps      (b/add! metric-key metric)]
-    (assoc-if-absent! buckets k metric-key)
+  [drift buckets queues resolution metric]
+  (let [k          (time! t-tuple (b/tuple resolution (:path metric)))
+        metric-key (time! t-mkey (or (get buckets k) (b/metric-key k)))
+        snaps      (time! t-snap (b/add-then-snap! metric-key metric
+                                                   (skewed-epoch! drift)))]
+    (time! t-assc
+           (assoc-if-absent! buckets k metric-key))
     (doseq [snapshot snaps]
-      (q/add! queues :writeq (assoc snapshot :resolution resolution)))))
+      (time! t-enq (q/add! queues :writeq snapshot)))))
 
-(defrecord Engine [rules planner index store queues]
+(defrecord Engine [rules planner buckets index store queues drift]
   component/Lifecycle
   (start [this]
     (let [buckets (nbhm)
@@ -32,22 +44,22 @@
       (info "starting engine")
       (q/consume! queues :ingestq {}
                   (fn [metric]
+                    (drift! drift (:time metric))
                     (let [plan (rule/->exec-plan planner metric)]
                       (doseq [resolution plan]
-                        (ingest-at-resolution buckets queues
+                        (ingest-at-resolution drift buckets queues
                                               resolution metric)))))
 
       (q/consume! queues :writeq {}
                   (fn [metric]
-                    (debug "in write callback: " (pr-str metric))
                     (index/register! index metric)
                     (store/insert! store metric)))
-      (assoc this :planner planner)))
+      (assoc this :planner planner :bucket buckets)))
   (stop [this]
     (when queues
       (q/stop! queues :ingestq)
       (q/stop! queues :writeq))
-    this)
+    (assoc this :planner nil :buckets nil))
   Acceptor
   (accept! [this metric]
     (q/add! queues :ingestq metric))
