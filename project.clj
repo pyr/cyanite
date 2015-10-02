@@ -18,7 +18,6 @@
                  [clj-yaml                      "0.4.0"]
                  [cc.qbits/jet                  "0.6.6"]
                  [cc.qbits/alia                 "2.7.2"]
-                 [com.climate/claypoole         "1.0.0"]
                  [com.boundary/high-scale-lib   "1.0.6"]
                  [net.jpountz.lz4/lz4           "1.3"]
                  [org.xerial.snappy/snappy-java "1.1.1.7"]
