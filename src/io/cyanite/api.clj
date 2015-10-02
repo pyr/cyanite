@@ -1,7 +1,6 @@
 (ns io.cyanite.api
   "Cyanite's 'HTTP interface"
   (:require [com.stuartsierra.component :as component]
-            [com.climate.claypoole      :as cp]
             [cheshire.core              :as json]
             [ring.util.codec            :as codec]
             [io.cyanite.engine.rule     :as rule]
@@ -114,16 +113,15 @@
         (assoc-route)
         (process store index engine))))
 
-(defrecord Api [options pool service store index engine]
+(defrecord Api [options server service store index engine]
   component/Lifecycle
   (start [this]
     (if (:disabled options)
       this
-      (let [tp      (cp/threadpool 1)
-            handler (make-handler store index engine)]
-        (cp/future tp (run-jetty (assoc options :ring-handler handler)))
-        (assoc this :pool tp))))
+      (let [handler (make-handler store index engine)
+            server  (run-jetty (assoc options :ring-handler handler :join? false))]
+        (assoc this :server server))))
   (stop [this]
-    (when pool
-      (cp/shutdown pool))
-    (dissoc this :pool)))
+    (when server
+      (.stop server))
+    (dissoc this :server)))
