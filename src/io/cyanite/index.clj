@@ -26,7 +26,7 @@
   (start [this]
     (assoc this :db (nbhm)))
   (stop [this]
-    (dissoc this :db))
+    (assoc this :db nil))
   MetricIndex
   (get-db [this]
     db)
@@ -52,7 +52,7 @@
   (start [this]
     (assoc this :client (es/client options)))
   (stop [this]
-    (dissoc this :client))
+    (assoc this :client nil))
   MetricIndex
   (register! [this metric]
     (es/register! client (:path metric) (-> metric :resolution :period)))

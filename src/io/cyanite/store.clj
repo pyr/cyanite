@@ -23,11 +23,11 @@
           (assoc :mkpoint mkpoint))))
   (stop [this]
     (-> this
-        (dissoc :session)
-        (dissoc :inserq!)
-        (dissoc :fetchq)
-        (dissoc :mkid)
-        (dissoc :mkpoint)))
+        (assoc :session nil)
+        (assoc :inserq! nil)
+        (assoc :fetchq nil)
+        (assoc :mkid nil)
+        (assoc :mkpoint nil)))
   MetricStore
   (fetch! [this from to paths]
     (c/runq! session fetchq

@@ -124,4 +124,4 @@
   (stop [this]
     (when server
       (.stop server))
-    (dissoc this :server)))
+    (assoc this :server nil)))
