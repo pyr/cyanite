@@ -47,24 +47,6 @@
       (error e "Could not connect to cassandra. Exiting")
       (System/exit 1))))
 
-(defn ->id
-  [id-type res-type {:keys [path resolution]}]
-  (doto (.newValue id-type)
-    (.setString "path" path)
-    (.setUDTValue
-     "resolution"
-     (doto (.newValue res-type)
-       (.setInt "precision" (:precision resolution))
-       (.setInt "period" (:period resolution))))))
-
-(defn ->point
-  [point-type {:keys [mean min max sum]}]
-  (doto (.newValue point-type)
-    (.setDouble "min" min)
-    (.setDouble "mean" mean)
-    (.setDouble "max" max)
-    (.setDouble "sum" sum)))
-
 (defn runq!
   [session prepared-statement values opts]
   (let [bound (alia/bind prepared-statement values)]
