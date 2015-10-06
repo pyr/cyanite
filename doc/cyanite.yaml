@@ -34,7 +34,7 @@
 ##   for seconds, minutes, hours, days, weeks and months and years.
 engine:
   rules:
-    "web.*\.cpu": [ "5s:1h", "30s:1d" ]
+    "web.*\\.cpu": [ "5s:1h", "30s:1d" ]
     default: [ "5s:1h" ]
 ##
 ## API
