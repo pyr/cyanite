@@ -3,9 +3,14 @@
    This is how we "
   (:import java.util.concurrent.Executors
            java.util.ArrayList)
-  (:require [clojure.tools.logging :refer [warn]]))
+  (:require [com.stuartsierra.component :as component]
+            [clojure.tools.logging      :refer [warn]]
+            [metrics.counters           :refer [defcounter inc! dec!]]))
 
+(defcounter cnt-queue)
+(defcounter cnt-errors)
 (defonce default-poolsize 4)
+(defonce default-capacity (int 10e2))
 
 (defprotocol QueueEngine
   (consume! [this k opts f])
@@ -25,38 +30,44 @@
   `(pool-future-call ~p (fn [] ~@body)))
 
 (defn linked-queue
-  [opts]
+  [sz]
   (java.util.concurrent.ArrayBlockingQueue.
-   (int (or (:queue-capacity opts) 10e3))))
+   (int sz)))
 
-(defn drain!
-  [q]
-  (let [al (ArrayList.)]
-    (.drainTo q al)
-    al))
-
-(defn queue-engine
-  [opts]
-  (let [state (atom {})]
-    (reify QueueEngine
-      (consume! [this k opts f]
-        (let [sz   (or (:pool-size opts) default-poolsize)
-              pool (threadpool sz)
-              q    (linked-queue opts)]
-          (swap! state assoc k {:pool pool :queue q})
-          (dotimes [i sz]
-            (with-future pool
-              (loop [elems (drain! q)]
-                (try
-                  (doseq [elem elems]
-                    (f elem))
-                  (catch Exception e
-                    (warn e "could not process element on queue" i "for" k)
-                    (warn (:exception (ex-data e)) "original exception")))
-                (recur (drain! q)))))))
-      (add! [this k e]
-        (if-let [q (get-in @state [k :queue])]
-          (.add q e)
-          (throw (ex-info "cannot find queue" {:queue-name k}))))
-      (stop! [this k]
-        :noop))))
+(defrecord BlockingMemoryQueue [state defaults]
+  component/Lifecycle
+  (start [this]
+    (assoc this :state (atom {})))
+  (stop [this]
+    (assoc this :state nil))
+  QueueEngine
+  (consume! [this k opts f]
+    (let [sz   (or (:pool-size opts)
+                   (get-in defaults [k :pool-size])
+                   default-poolsize)
+          cap  (or (:queue-capacity opts)
+                   (get-in defaults [k :queue-capacity])
+                   default-capacity)
+          pool (threadpool sz)
+          q    (linked-queue cap)]
+      (swap! state assoc k {:pool pool :queue q})
+      (dotimes [i sz]
+        (with-future pool
+          (loop [elem (.take q)]
+            (dec! cnt-queue)
+            (try
+              (f elem)
+              (catch Exception e
+                (warn e "could not process element on queue" i "for" k)
+                (warn (:exception (ex-data e)) "original exception")))
+            (recur (.take q)))))))
+  (add! [this k e]
+    (if-let [q (get-in @state [k :queue])]
+      (do (inc! cnt-queue)
+          (try
+            (.add q e)
+            (catch IllegalStateException e
+              ;; Queue is full
+              (inc! cnt-errors)
+              (warn "queue is full"))))
+      (throw (ex-info "cannot find queue" {:queue-name k})))))
