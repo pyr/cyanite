@@ -16,7 +16,7 @@ Binary releases
 ~~~~~~~~~~~~~~~
 
 Binary release are the simplest way to get started and are hosted on github:
-https://github.com/exoscale/cyanite/releases/latest.
+https://github.com/pyr/cyanite/releases/latest.
 
 Each release contains:
 
