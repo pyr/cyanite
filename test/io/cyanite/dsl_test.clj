@@ -1,6 +1,7 @@
 (ns io.cyanite.dsl-test
-  (:require [io.cyanite.dsl :refer :all]
-            [clojure.test   :refer :all]))
+  (:require [io.cyanite.query.parser :as parser]
+            [io.cyanite.query.path   :as path]
+            [clojure.test            :refer :all]))
 
 (deftest ast-test
   (let [inputs [["simple path"
@@ -97,9 +98,9 @@
                  #{"foo"}]
 
 ]]
-    (doseq [[shortname query expected-ast paths] inputs
-            :let [parsed-ast (query->ast query)]]
-      (testing (str "ast output for " shortname)
-        (is (= (list expected-ast) parsed-ast)))
+    (doseq [[shortname query expected-tokens paths] inputs
+            :let [tokens (parser/query->tokens query)]]
+      (testing (str "tokens output for " shortname)
+        (is (= expected-tokens tokens)))
       (testing (str "parsed paths for " shortname)
-        (is (= paths (ast->paths parsed-ast)))))))
+        (is (= paths (path/tokens->paths tokens)))))))

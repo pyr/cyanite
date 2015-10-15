@@ -86,7 +86,7 @@
 
 (defmethod dispatch :paths
   [{{:keys [query]} :params index :index}]
-  (index/prefixes index (if (blank? query) "*" query)))
+  (index/matches index (if (blank? query) "*" query) false))
 
 (defmethod dispatch :metrics
   [{{:keys [from to path agg]} :params :keys [index store engine]}]
@@ -94,7 +94,7 @@
                   (throw (ex-info "missing from parameter"
                                   {:suppress? true :status 400})))
         to    (or (parse-time to) (now!))
-        paths (->> (mapcat (partial index/leaves index)
+        paths (->> (mapcat (partial index/prefixes index)
                            (if (sequential? path) path [path]))
                    (map (partial engine/resolution engine from))
                    (remove nil?))]

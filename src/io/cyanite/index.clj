@@ -1,95 +1,54 @@
 (ns io.cyanite.index
   (:require [com.stuartsierra.component :as component]
-            [clojure.string             :as s]
-            [io.cyanite.index.es        :as es]
-            [io.cyanite.utils           :refer [nbhm keyset assoc-if-absent!]]
-            [clojure.string             :refer [split]]
-            [clojure.set                :refer [union intersection]]))
-
-(declare segmentize)
-(declare register-segment!)
-(declare query-plan)
-(declare query-segment)
-(declare prefix-list)
-(declare explode-fnmatch-query)
-
-(defrecord Prefix [pos prefix])
+            [clojure.string             :refer [join split]]
+            [clojure.set                :refer [union intersection]]
+            [globber.glob               :refer [glob]]))
 
 (defprotocol MetricIndex
-  (get-db [this])
-  (register! [this metric])
-  (leaves [this query])
-  (prefixes [this query]))
+  (push-segment! [this pos segment path length])
+  (by-pos        [this pos])
+  (by-segment    [this pos segment]))
 
-(defrecord MemoryIndex [db]
+(defrecord AgentIndex [db]
   component/Lifecycle
   (start [this]
-    (assoc this :db (nbhm)))
+    (assoc this :db (agent {})))
   (stop [this]
     (assoc this :db nil))
   MetricIndex
-  (get-db [this]
-    db)
-  (register! [this metric]
-    (let [path     (:path metric)
-          segments (segmentize path)
-          info     {:path path :length (count segments)}]
-      (doseq [[index segment] segments]
-        (register-segment!
-         db segment
-         (assoc info :index index :segment segment)))))
-  (leaves [this query]
-    (->> (query-plan query true)
-         (map (partial query-segment db))
-         (apply intersection)))
-  (prefixes [this query]
-    (->> (query-plan query false)
-         (map (partial query-segment db))
-         (apply intersection))))
+  (push-segment! [this pos segment path length]
+    (send-off db update pos
+              (fn [segments segment path length]
+                (into (sorted-map)
+                      (update segments segment
+                              (fn [paths tuple]
+                                (into (sorted-set)
+                                      (conj paths tuple)))
+                              [path length])))
+           segment path length))
+  (by-pos [this pos]
+    (-> @db (get pos) keys))
+  (by-segment [this pos segment]
+    (get (get @db pos) segment)))
 
-(defrecord ElasticSearchIndex [options client]
+(defrecord EmptyIndex []
   component/Lifecycle
-  (start [this]
-    (assoc this :client (es/client options)))
-  (stop [this]
-    (assoc this :client nil))
+  (start [this] this)
+  (stop [this] this)
   MetricIndex
-  (register! [this metric]
-    (es/register! client (:path metric) (-> metric :resolution :period)))
-  (leaves [this query]
-    (let [queries (explode-fnmatch-query query)]
-      (set
-       (mapcat #(es/query client % true) queries))))
-  (prefixes [this query]
-    (let [queries (explode-fnmatch-query query)]
-      (set
-       (mapcat #(es/query client % false) queries)))))
+  (push-segment! [this pos segment path length])
+  (by-pos [this pos])
+  (by-segment [this pos segments]))
 
-(defn empty-index
-  []
-  (reify
-    component/Lifecycle
-    (start [this] this)
-    (stop [this] this)
-    MetricIndex
-    (register! [this metric])
-    (leaves [this query])
-    (prefixes [this query])))
-
-
-(defmulti build-index (comp (fnil keyword "memory") :type))
+(defmulti build-index (comp (fnil keyword "agent") :type))
 
 (defmethod build-index :empty
   [options]
-  (empty-index))
+  (EmptyIndex.))
 
-(defmethod build-index :memory
+(defmethod build-index :agent
   [options]
-  (MemoryIndex. nil))
-
-(defmethod build-index :elasticsearch
-  [options]
-  (ElasticSearchIndex. options nil))
+  (AgentIndex. nil))
 
 ;; Implementation
 ;; ==============
@@ -104,172 +63,78 @@
 
 (defn segmentize
   [path]
-  (->> (split path #"\.")
-       (map-indexed vector)))
+  (let [elems (split path #"\.")]
+    (map-indexed vector elems)))
 
-(defn register-segment!
-  [db segment info]
-  (doseq [prefix (prefix-list (:segment info))]
-    (let [k     (Prefix. (:index info) prefix)
-          cell  (or (get db k) (nbhm))]
-      (assoc! cell (:path info) info)
-      (assoc-if-absent! db k cell))))
+(defn by-segments
+  [index pos segments]
+  (mapcat (partial by-segment index pos) segments))
 
-(defn repeat-elems
-  [query]
-  (loop [factor      1
-         [e & elems] query
-         res         []]
-    (if (nil? e)
-      [factor res]
-      (recur (* factor (count e))
-             elems
-             (conj res (->> (mapv (partial repeat factor) e)
-                            (flatten)
-                            (vec)))))))
-(defn cycle-elems
-  [n elems]
-  (->> (map cycle elems)
-       (map (partial take n))
-       (map vec)))
+(defn register!
+  [index path]
+  (let [segments (segmentize path)
+        length   (count segments)]
+    (doseq [[i s] segments]
+      (push-segment! index i s path length))))
 
-(defn combine-lists
-  [lists]
-  (let [[n elems] (repeat-elems lists)
-        cycled    (cycle-elems n elems)]
-    (loop [queries     (repeat n [])
-           [e & elems] cycled]
-      (if (nil? e)
-        queries
-        (recur (for [[q next] (partition 2 (interleave queries e))]
-                 (conj q next))
-               elems)))))
+(defn prefix-info
+  [length [path matches]]
+  (let [lengths (set (map second matches))]
+    {:path   path
+     :leaf   (boolean (lengths length))}))
 
-(defn explode-string
-  [query re f]
-  (let [m (re-matcher re query)]
-    (loop [i   0
-           res []]
-      (if-let [mr (and (.find m) (.toMatchResult m))]
-        (recur
-         (.end mr)
-         (-> res
-             (conj (vector (.substring query i (.start mr))))
-             (conj (f (.substring query (.start mr) (.end mr))))))
-        (if (< i (.length query))
-          (conj res (vector (.substring query i)))
-          res)))))
+(defn truncate-to
+  [pattern-length [path length]]
+  [(join "." (take pattern-length (split path #"\.")))
+   length])
 
-(defn curly-vector
-  [curly]
-  (let [trimmed (.substring curly 1 (dec (.length curly)))]
-    (split trimmed #",")))
+(defn matches
+  [index pattern leaves?]
+  (let [segments (segmentize pattern)
+        length   (count segments)
+        pred     (partial (if leaves? = <=) length)
+        matches  (for [[pos pattern] segments]
+                   (->> (by-pos index pos)
+                        (glob pattern)
+                        (by-segments index pos)
+                        (filter (comp pred second))
+                        (set)))
+        paths    (reduce union #{} matches)]
+    (->> (reduce intersection paths matches)
+         (map (partial truncate-to length))
+         (group-by first)
+         (map (partial prefix-info length))
+         (sort-by :path))))
 
-(defn parse-curlies
-  [query]
-  (let [exploded (explode-string query #"\{[^}]+\}" curly-vector)]
-    (combine-lists exploded)))
+(defn prefixes
+  [index pattern]
+  (matches index pattern false))
 
-(defn charclass-vector
-  [curly]
-  (let [trimmed (.substring curly 1 (dec (.length curly)))]
-    (mapv str (seq trimmed))))
-
-(defn parse-charclasses
-  [query]
-  (let [exploded (explode-string query #"\[[^]]+\]" charclass-vector)]
-    (combine-lists exploded)))
-
-(defn s->prefix
-  [i s]
-  (let [[prefix & _] (split s #"\*")]
-    (Prefix. i (or prefix ""))))
-
-(defn s->matcher
-  [s]
-  (if (re-find #"\*" s)
-    (let [pat (re-pattern (s/replace s "*" ".*"))]
-      (fn [candidate]
-        (re-find pat candidate)))
-    (fn [candidate] (= s candidate))))
-
-(defn matcher-applies?
-  [input index matcher]
-  (and (= (:index input) index)
-       (matcher (:segment input))))
-
-(defn yield-segment
-  [index length valid-strings]
-  {:valid    valid-strings
-   :index    index
-   :prefixes (mapv (partial s->prefix index) valid-strings)
-   :matcher  (let [matchers (mapv s->matcher valid-strings)]
-               (if length
-                 (fn [input]
-                   (and (= length (:length input))
-                        (some (partial matcher-applies? input index) matchers)))
-                 (fn [input]
-                   (some (partial matcher-applies? input index) matchers))))})
-
-(defn explode-fnmatch-query
-  [q]
-  (->> (parse-curlies q)
-       (map (partial apply str))
-       (mapcat parse-charclasses)
-       (map (partial apply str))))
-
-(defn parse-segment
-  [length [index query]]
-  (->> (parse-curlies query)
-       (map (partial apply str))
-       (mapcat parse-charclasses)
-       (map (partial apply str))
-       (yield-segment index length)))
-
-(defn query-plan
-  [path length?]
-  (let [segments (segmentize path)]
-    (mapv (partial parse-segment (when length? (count segments))) segments)))
-
-(defn prefix-list
-  [s]
-  (loop [current  ""
-         prefixes []
-         [h & t]  (seq s)]
-    (if (nil? h)
-      (conj prefixes s)
-      (recur (str current h) (conj prefixes current) t))))
-
-(defn index-matches?
-  [index info]
-  (= index (:index info)))
-
-(defn print-intermediate
-  [prefix coll]
-  (println prefix (pr-str (vec coll)))
-  coll)
-
-(defn query-segment
-  [db {:keys [prefixes valid index matcher]}]
-  (->> (mapcat (partial get db) prefixes)
-       (filter matcher)
-       (map :path)
-       (set)))
+(defn leaves
+  [index pattern]
+  (matches index pattern true))
 
 ;; Workbench
 ;; =========
-
 (comment
 
-  (let [i (component/start (MemoryIndex. nil))
-        db (get-db i)]
-    (register! i {:path "foo.bar.baz"})
-    (register! i {:path "foo.qux.baz"})
-    (register! i {:path "foo.qux.baz.gix"})
+  (let [i  (component/start (AgentIndex. nil))
+        db (:db i)]
 
-    (leaves i "fo[ob].*.{baz,biz}")
+    (register! i "foo.bar.baz.bim")
+    (register! i "foo.bar.baz.bim.bam.boum.barf")
+    (register! i "foo.bar.baz.bim.bam.boum")
+    (register! i "foo.bar.qux")
+    (register! i "bar.bar.qux")
+    (register! i "foo.baz.qux")
 
-    )
+    (await db)
+    (matches i "foo.bar.*" false))
+
+
+
+
+
 
 
   )
