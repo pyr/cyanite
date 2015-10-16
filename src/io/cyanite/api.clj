@@ -2,7 +2,6 @@
   "Cyanite's 'HTTP interface"
   (:require [com.stuartsierra.component :as component]
             [cheshire.core              :as json]
-            [ring.util.codec            :as codec]
             [io.cyanite.engine.rule     :as rule]
             [io.cyanite.engine          :as engine]
             [io.cyanite.engine.queue    :as q]
