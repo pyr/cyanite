@@ -75,8 +75,8 @@
 (defn ->params
   [^QueryStringDecoder dx]
   (for [[k vlist] (.parameters dx)
-        :let [vcoll (seq vlist)]]
-    [(keyword (str k)) (if (> 1 (count vcoll)) vcoll (first vcoll))]))
+        :let [vs (seq vlist)]]
+    [(keyword (str k)) (if (< 1 (count vs)) vs (first vs))]))
 
 (defn request-handler
   "Capture context and msg and yield a closure
