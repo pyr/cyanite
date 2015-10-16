@@ -87,7 +87,8 @@
 
 (defmethod dispatch :paths
   [{{:keys [query]} :params index :index}]
-  (index/matches index (if (blank? query) "*" query) false))
+  (debug "path fetch request for:" (pr-str path))
+  (index/prefixes index (if (blank? query) "*" query)))
 
 (defmethod dispatch :query
   [{{:keys [from to query]} :params :keys [index store engine]}]
@@ -99,6 +100,7 @@
 
 (defmethod dispatch :metrics
   [{{:keys [from to path agg]} :params :keys [index store engine]}]
+  (debug "metric fetch request for:" (pr-str path))
   (let [from  (or (parse-time from)
                   (throw (ex-info "missing from parameter"
                                   {:suppress? true :status 400})))
