@@ -5,6 +5,7 @@
             [io.cyanite.signals         :as sig]
             [io.cyanite.input           :as input]
             [io.cyanite.index           :as index]
+            [io.cyanite.index.cassandra]
             [io.cyanite.engine.queue    :as queue]
             [io.cyanite.store           :as store]
             [com.stuartsierra.component :as component]
