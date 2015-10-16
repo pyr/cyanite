@@ -9,6 +9,7 @@
             [io.cyanite.engine.buckets  :as b]
             [io.cyanite.index           :as index]
             [io.cyanite.store           :as store]
+            [io.cyanite.query           :as query]
             [qbits.jet.server           :refer [run-jetty]]
             [io.cyanite.utils           :refer [nbhm assoc-if-absent! now!]]
             [clojure.tools.logging      :refer [info debug error]]
@@ -88,6 +89,14 @@
   [{{:keys [query]} :params index :index}]
   (index/matches index (if (blank? query) "*" query) false))
 
+(defmethod dispatch :query
+  [{{:keys [from to query]} :params :keys [index store engine]}]
+  (let [from  (or (parse-time from)
+                  (throw (ex-info "missing from parameter"
+                                  {:suppress? true :status 400})))
+        to    (or (parse-time to) (now!))]
+    (query/run-query! store index engine from to query)))
+
 (defmethod dispatch :metrics
   [{{:keys [from to path agg]} :params :keys [index store engine]}]
   (let [from  (or (parse-time from)
@@ -98,7 +107,7 @@
                            (if (sequential? path) path [path]))
                    (map (partial engine/resolution engine from))
                    (remove nil?))]
-    (store/query! store from to paths)))
+    (store/query! store index engine from to paths)))
 
 (defmethod dispatch :default
   [_]
