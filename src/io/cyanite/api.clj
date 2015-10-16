@@ -29,20 +29,6 @@
    [:metrics #"^/metrics.*"]
    [:ping  #"^/ping/?"]])
 
-(defn assoc-params
-  "Parse query args"
-  [{:keys [query-string] :as request}]
-  (let [kwm (comp (partial reduce merge {})
-                  (partial remove (comp nil? first))
-                  (partial map (juxt (comp keyword lower-case key) val)))]
-    (if-let [params (and (seq query-string)
-                         (codec/form-decode query-string))]
-      (assoc request
-             :params (kwm (cond (map? params)    params
-                                (string? params) {params nil}
-                                :else            {})))
-      (assoc request :params {}))))
-
 (defn match-route
   "Predicate which returns the matched elements"
   [{:keys [uri path-info] :as request} [action re]]
@@ -120,7 +106,6 @@
   [store index engine]
   (fn [request]
     (-> request
-        (assoc-params)
         (assoc-route)
         (process store index engine))))
 

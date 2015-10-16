@@ -25,6 +25,7 @@
            io.netty.handler.codec.http.DefaultFullHttpResponse
            io.netty.handler.codec.http.HttpVersion
            io.netty.handler.codec.http.HttpObjectAggregator
+           io.netty.handler.codec.http.QueryStringDecoder
            io.netty.bootstrap.ServerBootstrap
            io.netty.buffer.Unpooled
            java.nio.charset.Charset))
@@ -71,6 +72,12 @@
       (.set hmap (name k) v))
     resp))
 
+(defn ->params
+  [^QueryStringDecoder dx]
+  (for [[k vlist] (.parameters dx)
+        :let [vcoll (seq vlist)]]
+    [(keyword (str k)) (if (> 1 (count vcoll)) vcoll (first vcoll))]))
+
 (defn request-handler
   "Capture context and msg and yield a closure
    which generates a response.
@@ -78,7 +85,9 @@
    The closure may be called at once or submitted to a pool."
   [f ^ChannelHandlerContext ctx ^FullHttpRequest msg]
   (fn []
-    (let [req  {:uri            (.getUri msg)
+    (let [dx   (QueryStringDecoder. (.getUri msg))
+          req  {:uri            (.path dx)
+                :params         (reduce merge {} (->params dx))
                 :request-method (method->data (.getMethod msg))
                 :version        (-> msg .getProtocolVersion .text)
                 :headers        (headers (.headers msg))
@@ -125,7 +134,7 @@
                          (.channel (if (epoll?)
                                      EpollServerSocketChannel
                                      NioServerSocketChannel))
-                         (.handler (LoggingHandler. LogLevel/WARN))
+                         (.handler (LoggingHandler. LogLevel/DEBUG))
                          (.childHandler (initializer (:ring-handler options))))
              channel   (-> bootstrap
                            (.bind ^String (or (:host options) "127.0.0.1")
