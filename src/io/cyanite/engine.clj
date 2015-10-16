@@ -52,7 +52,7 @@
 
       (q/consume! queues :writeq {}
                   (fn [metric]
-                    (index/register! index metric)
+                    (index/register! index (:path metric))
                     (store/insert! store metric)))
       (assoc this :planner planner :bucket buckets)))
   (stop [this]
