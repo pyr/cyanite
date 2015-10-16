@@ -6,31 +6,29 @@
             [io.cyanite.query.ast    :as ast]
             [io.cyanite.query.path   :as path]
             [io.cyanite.index        :as index]
-            [io.cyanite.store        :as store]))
+            [io.cyanite.store        :as store]
+            [io.cyanite.engine       :as engine]))
 
-(defn by-name
-  [index store from to path]
-  (let [leaves (index/leaves index path)]
-    (store/fetch! store from to leaves)))
+(defn path-leaves
+  [index paths]
+  (reduce merge {} (for [p paths] [p (index/leaves index p)])))
 
-(defn by-pattern
-  [index store from to paths]
-  (reduce merge {} (for [p paths] [p (by-name index store from to p)])))
+(defn merge-paths
+  [by-path series]
+  (->> (for [[p leaves] by-path]
+         [p (remove nil? (map (partial get series) leaves))])
+       (reduce merge {})))
 
 (defn run-query!
-  [index store from to q]
-  (let [tokens (parser/query->tokens q)
-        paths  (path/tokens->paths tokens)
-        series (by-pattern index store from to paths)]
-    (ast/run-query! tokens series)))
-
-(comment
-
-  (parser/query->tokens "divideSeries(sumSeries(f1,f2),scale(f3,2.0))")
-  (ast/tokens->ast (parser/query->tokens "scale(f1,2.0)"))
-  (ast/tokens->ast (parser/query->tokens "sumSeries(scale(f1,2.0),divideSeries(f2,f3))"))
-  (run-query! "scale(f1,2.0)")
-  (run-query! "sumSeries(f1,f2)")
-  (run-query! "divideSeries(sumSeries(f1,f2),scale(f3,2.0))")
-
-)
+  [index store engine from to query]
+  (let [tokens  (parser/query->tokens query)
+        paths   (path/tokens->paths tokens)
+        by-path (path-leaves index paths)
+        leaves  (->> (mapcat val by-path)
+                     (partial engine/resolution from)
+                     (remove nil?)
+                     (set))
+        series  (store/query! store from to (seq leaves))
+        merged  (merge-paths by-path series)
+        params  (select-keys series [:from :to :step])]
+    (assoc params :series (ast/run-query! tokens merged))))
