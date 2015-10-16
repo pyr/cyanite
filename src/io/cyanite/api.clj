@@ -10,7 +10,7 @@
             [io.cyanite.index           :as index]
             [io.cyanite.store           :as store]
             [io.cyanite.query           :as query]
-            [qbits.jet.server           :refer [run-jetty]]
+            [io.cyanite.http            :as http]
             [io.cyanite.utils           :refer [nbhm assoc-if-absent! now!]]
             [clojure.tools.logging      :refer [info debug error]]
             [clojure.string             :refer [lower-case blank?]]))
@@ -128,9 +128,9 @@
     (if (:disabled options)
       this
       (let [handler (make-handler store index engine)
-            server  (run-jetty (assoc options :ring-handler handler :join? false))]
+            server  (http/run-server options handler)]
         (assoc this :server server))))
   (stop [this]
-    (when server
-      (.stop server))
+    (when (fn? server)
+      (server))
     (assoc this :server nil)))
