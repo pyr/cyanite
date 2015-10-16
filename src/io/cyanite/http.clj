@@ -74,9 +74,17 @@
 
 (defn ->params
   [^QueryStringDecoder dx]
-  (for [[k vlist] (.parameters dx)
-        :let [vs (seq vlist)]]
-    [(keyword (str k)) (if (< 1 (count vs)) vs (first vs))]))
+  (reduce
+   merge {}
+   (for [[k vlist] (.parameters dx)
+         :let [vs (seq vlist)]]
+     [(keyword (str k)) (if (< 1 (count vs)) vs (first vs))])))
+
+(defn body-params
+  [^FullHttpRequest msg headers body]
+  (when-let [content-type (:content-type headers)]
+    (when (.startsWith content-type "application/x-www-form-urlencoded")
+      (QueryStringDecoder. body false))))
 
 (defn request-handler
   "Capture context and msg and yield a closure
@@ -85,13 +93,19 @@
    The closure may be called at once or submitted to a pool."
   [f ^ChannelHandlerContext ctx ^FullHttpRequest msg]
   (fn []
-    (let [dx   (QueryStringDecoder. (.getUri msg))
-          req  {:uri            (.path dx)
-                :params         (reduce merge {} (->params dx))
-                :request-method (method->data (.getMethod msg))
-                :version        (-> msg .getProtocolVersion .text)
-                :headers        (headers (.headers msg))
-                :body           (bb->string (.content msg))}
+    (let [headers (headers (.headers msg))
+          body    (bb->string (.content msg))
+          dx      (QueryStringDecoder. (.getUri msg))
+          p1      (->params dx)
+          p2      (some-> msg (body-params headers body) ->params)
+          req     {:uri            (.path dx)
+                   :get-params     p1
+                   :body-params    p2
+                   :params         (merge p1 p2)
+                   :request-method (method->data (.getMethod msg))
+                   :version        (-> msg .getProtocolVersion .text)
+                   :headers        headers
+                   :body           body}
           resp (data->response (f req) (.getProtocolVersion msg))]
       (-> (.writeAndFlush ctx resp)
           (.addListener ChannelFutureListener/CLOSE)))))
