@@ -87,7 +87,7 @@
 
 (defmethod dispatch :paths
   [{{:keys [query]} :params index :index}]
-  (debug "path fetch request for:" (pr-str path))
+  (debug "path fetch request for:" (pr-str query))
   (index/prefixes index (if (blank? query) "*" query)))
 
 (defmethod dispatch :query
