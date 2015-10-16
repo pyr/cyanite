@@ -1,7 +1,7 @@
 (ns io.cyanite.http
   "Small wrapper around netty for HTTP servers"
   (:require [com.stuartsierra.component :as component]
-            [clojure.tools.logging      :refer [error info]])
+            [clojure.tools.logging      :refer [error]])
   (:import io.netty.channel.ChannelHandlerContext
            io.netty.channel.ChannelHandlerAdapter
            io.netty.channel.ChannelInboundHandlerAdapter
@@ -125,7 +125,7 @@
                          (.channel (if (epoll?)
                                      EpollServerSocketChannel
                                      NioServerSocketChannel))
-                         (.handler (LoggingHandler. LogLevel/INFO))
+                         (.handler (LoggingHandler. LogLevel/WARN))
                          (.childHandler (initializer (:ring-handler options))))
              channel   (-> bootstrap
                            (.bind ^String (or (:host options) "127.0.0.1")
