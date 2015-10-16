@@ -131,3 +131,5 @@ logging:
   console: true
   files:
     - "/var/log/cyanite/cyanite.log"
+  overrides:
+    io.cyanite: "debug"
