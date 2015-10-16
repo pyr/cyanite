@@ -7,7 +7,7 @@
   :aot :all
   :main io.cyanite
   :plugins [[lein-ancient "0.6.7"]]
-  :dependencies [[org.clojure/clojure           "1.8.0-alpha2"]
+  :dependencies [[org.clojure/clojure           "1.8.0-beta1"]
                  [org.clojure/tools.logging     "0.3.1"]
                  [org.clojure/tools.cli         "0.3.2"]
                  [spootnik/pickler              "0.1.6"]
@@ -24,5 +24,4 @@
                  [net.jpountz.lz4/lz4           "1.3"]
                  [org.xerial.snappy/snappy-java "1.1.1.7"]
                  [com.stuartsierra/component    "0.2.3"]
-                 [io.netty/netty-all            "4.0.32.Final"]
-                 [org.clojure/core.async        "0.1.346.0-17112a-alpha"]])
+                 [io.netty/netty-all            "4.0.32.Final"]])
