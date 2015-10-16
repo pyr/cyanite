@@ -92,6 +92,7 @@
         to    (or (parse-time to) (now!))
         paths (->> (mapcat (partial index/prefixes index)
                            (if (sequential? path) path [path]))
+                   (map :path)
                    (map (partial engine/resolution engine from))
                    (remove nil?))]
     (store/query! store from to paths)))
