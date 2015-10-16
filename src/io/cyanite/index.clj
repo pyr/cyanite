@@ -80,8 +80,12 @@
 (defn prefix-info
   [length [path matches]]
   (let [lengths (set (map second matches))]
-    {:path   path
-     :leaf   (boolean (lengths length))}))
+    {:path         path
+     :text         (last (split path #"\."))
+     :id           path
+     :allowChilren (if (some (partial < length) lengths) 1 0)
+     :expandable   (if (some (partial < length) lengths) 1 0)
+     :leaf         (if (boolean (lengths length)) 1 0)}))
 
 (defn truncate-to
   [pattern-length [path length]]
