@@ -18,7 +18,6 @@
                  [instaparse                    "1.4.1"]
                  [cheshire                      "5.5.0"]
                  [metrics-clojure               "2.5.1"]
-                 [ring/ring-codec               "1.0.0"]
                  [clj-yaml                      "0.4.0"]
                  [cc.qbits/alia                 "2.10.0"]
                  [com.boundary/high-scale-lib   "1.0.6"]
