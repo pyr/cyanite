@@ -11,8 +11,7 @@
    :external false
    :console true
    :files  []
-   :level  "info"
-   :overrides {:io.cyanite "debug"}})
+   :level  "info"})
 
 (defn load-path
   "Try to find a pathname, on the command line, in
