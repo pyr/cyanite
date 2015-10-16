@@ -24,9 +24,11 @@
 
 (def routes
   "Dead simple router"
-  [[:paths #"^/paths.*"]
+  [[:paths   #"^/paths.*"]
+   [:paths   #"^/metrics/find"]
    [:metrics #"^/metrics.*"]
-   [:ping  #"^/ping/?"]])
+   [:render  #"^/render"]
+   [:ping    #"^/ping/?"]])
 
 (defn match-route
   "Predicate which returns the matched elements"
@@ -78,13 +80,16 @@
                     {:status 400 :suppress? true})))
   (index/prefixes index (if (blank? query) "*" query)))
 
-(defmethod dispatch :query
-  [{{:keys [from to query]} :params :keys [index store engine]}]
+(defmethod dispatch :render
+  [{{:keys [from until target format]} :params :keys [index store engine]}]
+  (when (not= format "json")
+    (throw (ex-info "Cyanite only outputs JSON for now"
+                    {:suppress? true :status 400})))
   (let [from  (or (parse-time from)
                   (throw (ex-info "missing from parameter"
                                   {:suppress? true :status 400})))
-        to    (or (parse-time to) (now!))]
-    (query/run-query! store index engine from to query)))
+        to    (or (parse-time until) (now!))]
+    (query/run-query! store index engine from to target)))
 
 (defmethod dispatch :metrics
   [{{:keys [from to path agg]} :params :keys [index store engine]}]
@@ -108,6 +113,7 @@
   "Yield a ring-handler for a request"
   [store index engine]
   (fn [request]
+    (debug "got request: " (pr-str request))
     (-> request
         (assoc-route)
         (process store index engine))))
