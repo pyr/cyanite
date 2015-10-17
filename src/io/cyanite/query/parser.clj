@@ -202,7 +202,7 @@
    <w>            = weightedavg
 
 
-   <uqpath>       = #'(?i)[a-z0-9.*]+'
+   <uqpath>       = #'(?i)[a-z0-9.*-]+'
    <qpath>        = <'\"'> uqpath <'\"'>
    path           = uqpath | qpath
    <func>         = a|c|d|e|g|h|i|k|l|m|n|o|p|r|s|t|u|w
