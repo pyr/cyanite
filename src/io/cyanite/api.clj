@@ -2,6 +2,7 @@
   "Cyanite's 'HTTP interface"
   (:require [com.stuartsierra.component :as component]
             [cheshire.core              :as json]
+            [clj-time.core              :as t]
             [io.cyanite.engine.rule     :as rule]
             [io.cyanite.engine          :as engine]
             [io.cyanite.engine.queue    :as q]
@@ -11,16 +12,48 @@
             [io.cyanite.query           :as query]
             [io.cyanite.http            :as http]
             [io.cyanite.utils           :refer [nbhm assoc-if-absent! now!]]
+            [clj-time.coerce            :refer [to-epoch]]
             [clojure.tools.logging      :refer [info debug error]]
             [clojure.string             :refer [lower-case blank?]]))
+
+
+(defn sub-time
+  [s]
+  (let [[_ value unit] (re-find #"^([0-9]+)([a-z])" s)]
+    (when-not (and value unit)
+      (throw (ex-info (str "invalid time interval: " s) {:value value
+                                                         :unit unit})))
+    (when (and value unit)
+      (to-epoch
+       (t/minus (t/now)
+                ((case unit
+                   "s" t/seconds
+                   "m" t/minutes
+                   "h" t/hours
+                   "d" t/days
+                   "w" t/weeks
+                   t/seconds)
+                 (Long/valueOf value)))))))
 
 (defn parse-time
   "Parse an epoch into a long"
   [time-string]
-  (try (Long/parseLong time-string)
-       (catch NumberFormatException _
-         (error "wrong time format: " time-string)
-         nil)))
+  (cond
+    (nil? time-string)
+    nil
+
+    (= time-string "now")
+    (now!)
+
+    (.startsWith time-string "-")
+    (sub-time (.substring time-string 1))
+
+
+    :else
+    (try (Long/parseLong time-string)
+         (catch NumberFormatException _
+           (error "wrong time format: " time-string)
+           nil))))
 
 (def routes
   "Dead simple router"
