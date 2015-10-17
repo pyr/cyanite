@@ -16,9 +16,17 @@
 
 (defn merge-paths
   [by-path series]
-  (->> (for [[p leaves] by-path]
-         [p (remove nil? (map (partial get series) leaves))])
-       (reduce merge {})))
+  (let [fetch-series (fn [leaf] (get-in series [:series (:path leaf)]))]
+    (->> (for [[p leaves] by-path]
+           [p (remove nil? (map fetch-series leaves))])
+         (reduce merge {}))))
+
+(defn add-date
+  [from step data]
+  (loop [res        []
+         [d & ds]   data
+         point      from]
+    (if d (recur (conj res [d point]) ds (+ point step)) res)))
 
 (defn run-query!
   [store index engine from to query]
@@ -27,17 +35,13 @@
         paths   (path/tokens->paths tokens)
         by-path (path-leaves index paths)
         leaves  (->> (mapcat val by-path)
+                     (map :path)
                      (map (partial engine/resolution engine from))
                      (remove nil?)
                      (set))
         series  (store/query! store from to (seq leaves))
         merged  (merge-paths by-path series)
-        params  (select-keys series [:from :to :step])]
-    (debug "merged series:" (pr-str merged))
-    (debug "tokens:" (pr-str tokens))
-    (assoc params :series (ast/run-query! tokens merged))))
-
-
-(comment
-  (parser/query->tokens "STRESS.host.ip-0.com.graphite.stresser.a.mean")
-  )
+        from    (:from series)
+        step    (:step series)]
+    (let [[n [data]] (ast/run-query! tokens merged)]
+      [{:target n :datapoints (add-date from step data)}])))
