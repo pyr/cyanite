@@ -7,7 +7,8 @@
             [io.cyanite.query.path   :as path]
             [io.cyanite.index        :as index]
             [io.cyanite.store        :as store]
-            [io.cyanite.engine       :as engine]))
+            [io.cyanite.engine       :as engine]
+            [clojure.tools.logging   :refer [debug]]))
 
 (defn path-leaves
   [index paths]
@@ -20,15 +21,23 @@
        (reduce merge {})))
 
 (defn run-query!
-  [index store engine from to query]
+  [store index engine from to query]
+  (debug "running query: " (pr-str query))
   (let [tokens  (parser/query->tokens query)
         paths   (path/tokens->paths tokens)
         by-path (path-leaves index paths)
         leaves  (->> (mapcat val by-path)
-                     (partial engine/resolution from)
+                     (map (partial engine/resolution engine from))
                      (remove nil?)
                      (set))
         series  (store/query! store from to (seq leaves))
         merged  (merge-paths by-path series)
         params  (select-keys series [:from :to :step])]
+    (debug "merged series:" (pr-str merged))
+    (debug "tokens:" (pr-str tokens))
     (assoc params :series (ast/run-query! tokens merged))))
+
+
+(comment
+  (parser/query->tokens "STRESS.host.ip-0.com.graphite.stresser.a.mean")
+  )
