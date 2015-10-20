@@ -62,7 +62,7 @@ See :ref:`Configuration Syntax` for more details
     store:
       cluster: "127.0.0.1"
     index:
-      type: "memory"
+      type: "agent"
     api:
       port: 8080
     engine:

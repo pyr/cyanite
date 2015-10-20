@@ -94,38 +94,22 @@ Index
 ~~~~~
 
 The index determines where metric names will be stored.
-Two types of indices are available now: "memory" and
-"elasticsearch". If no index section is present,
-An in-memory index will be assumed.
+Two types of indices are available now: "agent" and
+"cassandra". If no index section is present,
+An in-memory (agent) index will be assumed.
 
-The memory index takes no options.
-The elasticsearch index takes the following options:
+The agent index takes no options.
+The cassandra index takes the following options:
 
-*url*:
-  The base URL for your ElasticSearch host, include
-  the ES index in the URL. Defaults to
-  http://localhost:9200/cyanite
-*es-type*:
-  The ES type to publish documents to, defaults to "path"
-*mapping*:
-  Provide a mapping for your type, defaults to:
-  
-  .. sourcecode:: yaml
-  
-     path:
-       properties:
-         path:
-           type: string
-           index: not_analyzed
-         length:
-           type: integer  
-           index: not_analyzed
-           store: false
+*cluster*:
+   A string or list of strings to provide cluster contact points.
+*keyspace*:
+   The keyspace to use.
 
 .. sourcecode:: yaml
                 
     index:
-      type: memory
+      type: agent
 
 Store
 ~~~~~
