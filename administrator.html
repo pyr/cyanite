@@ -234,35 +234,19 @@ configurations.</p>
 <div class="section" id="index">
 <h3>Index<a class="headerlink" href="#index" title="Permalink to this headline">¶</a></h3>
 <p>The index determines where metric names will be stored.
-Two types of indices are available now: &#8220;memory&#8221; and
-&#8220;elasticsearch&#8221;. If no index section is present,
-An in-memory index will be assumed.</p>
-<p>The memory index takes no options.
-The elasticsearch index takes the following options:</p>
+Two types of indices are available now: &#8220;agent&#8221; and
+&#8220;cassandra&#8221;. If no index section is present,
+An in-memory (agent) index will be assumed.</p>
+<p>The agent index takes no options.
+The cassandra index takes the following options:</p>
 <dl class="docutils">
-<dt><em>url</em>:</dt>
-<dd>The base URL for your ElasticSearch host, include
-the ES index in the URL. Defaults to
-<a class="reference external" href="http://localhost:9200/cyanite">http://localhost:9200/cyanite</a></dd>
-<dt><em>es-type</em>:</dt>
-<dd>The ES type to publish documents to, defaults to &#8220;path&#8221;</dd>
-<dt><em>mapping</em>:</dt>
-<dd><p class="first">Provide a mapping for your type, defaults to:</p>
-<div class="last highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">path</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">properties</span><span class="p-Indicator">:</span>
-    <span class="l-Scalar-Plain">path</span><span class="p-Indicator">:</span>
-      <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">string</span>
-      <span class="l-Scalar-Plain">index</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">not_analyzed</span>
-    <span class="l-Scalar-Plain">length</span><span class="p-Indicator">:</span>
-      <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">integer</span>
-      <span class="l-Scalar-Plain">index</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">not_analyzed</span>
-      <span class="l-Scalar-Plain">store</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">false</span>
-</pre></div>
-</div>
-</dd>
+<dt><em>cluster</em>:</dt>
+<dd>A string or list of strings to provide cluster contact points.</dd>
+<dt><em>keyspace</em>:</dt>
+<dd>The keyspace to use.</dd>
 </dl>
 <div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">index</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">memory</span>
+  <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">agent</span>
 </pre></div>
 </div>
 </div>
