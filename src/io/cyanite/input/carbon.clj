@@ -19,7 +19,7 @@
       (throw (ex-info "invalid carbon line: missing fields" {:line line}))
 
       (re-find #"(?i)nan" metric)
-      (throw (ex-info "invalid carbon line: NaN metric" {:line line})))
+      (throw (ex-info (str "invalid carbon line: NaN metric for path:" path) {:line line})))
     (let [metric (try (Double. metric)
                       (catch NumberFormatException e
                         (throw (ex-info "invalid metric" {:metric metric}))))
