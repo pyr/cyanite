@@ -93,22 +93,25 @@
    The closure may be called at once or submitted to a pool."
   [f ^ChannelHandlerContext ctx ^FullHttpRequest msg]
   (fn []
-    (let [headers (headers (.headers msg))
-          body    (bb->string (.content msg))
-          dx      (QueryStringDecoder. (.getUri msg))
-          p1      (->params dx)
-          p2      (some-> msg (body-params headers body) ->params)
-          req     {:uri            (.path dx)
-                   :get-params     p1
-                   :body-params    p2
-                   :params         (merge p1 p2)
-                   :request-method (method->data (.getMethod msg))
-                   :version        (-> msg .getProtocolVersion .text)
-                   :headers        headers
-                   :body           body}
-          resp (data->response (f req) (.getProtocolVersion msg))]
-      (-> (.writeAndFlush ctx resp)
-          (.addListener ChannelFutureListener/CLOSE)))))
+    (try
+      (let [headers (headers (.headers msg))
+            body    (bb->string (.content msg))
+            dx      (QueryStringDecoder. (.getUri msg))
+            p1      (->params dx)
+            p2      (some-> msg (body-params headers body) ->params)
+            req     {:uri            (.path dx)
+                     :get-params     p1
+                     :body-params    p2
+                     :params         (merge p1 p2)
+                     :request-method (method->data (.getMethod msg))
+                     :version        (-> msg .getProtocolVersion .text)
+                     :headers        headers
+                     :body           body}
+            resp (data->response (f req) (.getProtocolVersion msg))]
+        (-> (.writeAndFlush ctx resp)
+            (.addListener ChannelFutureListener/CLOSE)))
+      (finally
+        (.release msg)))))
 
 (defn netty-handler
   "Simple netty-handler, everything may happen in
