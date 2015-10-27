@@ -215,6 +215,18 @@ Choosing a compaction strategy
 
 ``DateTieredCompactionStrategy``  is likely to be your best bet.
 
+The following config causes most compaction activity to occur at 10m and 2h windows.\
+If you want to allow 24h windows, simply raise max_sstable_age days to '1.0'.
+Note that you must be using Apache Cassandra 2.1 in order to set fractional values for
+max_sstable_age_days. If you are running an earlier version, then leave it at 1.
+
+.. sourcecode:: json
+
+    compaction = {'class': 'DateTieredCompactionStrategy',
+    'min_threshold': '12', 'max_threshold': '32',
+    'max_sstable_age_days': '0.083', 'base_time_seconds': '50' }
+
+
 Choosing a read and write consistency level
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
