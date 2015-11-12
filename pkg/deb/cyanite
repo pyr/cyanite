@@ -1,5 +1,63 @@
 #!/bin/bash
 
+yaml2bash()
+{
+    IFS=''
+    prefix=$2
+    cat $1 | {
+        depth=1
+        spaces_level=0
+        option_number=0
+        option_key[0]=option
+        spaces[0]=0
+        spaces[1]=1
+        i=0
+        in_array=false
+        array_i=0
+        while read line
+        do
+            # skip commented and empty lines
+            if ! echo "$line" | grep -Eq '^\s*#|^\s*$'
+            then
+                line=$(echo "$line"| sed "s/\t/    /g") # replace tabs with 4 spaces
+                line_virtual_spaces=$(echo "$line" | grep -o '^\s*'|wc -m) # -2 for real spacing. 0 is non (fake) level, 1 is zero level.
+                test "$line_virtual_spaces" == "1" && line_spaces=0 || line_spaces=$((line_virtual_spaces - 2))
+                cut_line=${line:$line_spaces}
+
+                # check if line represents array member
+                if test "${cut_line:0:1}" != "-"
+                then
+                    # if we got back from array parsing, clean up
+                    $in_array && in_array=false && array_i=0 && values[$((i-1))]="(${array[@]})" && unset array
+                    option_name=$(echo "${cut_line}" | cut -d ':' -f 1)
+                    # echo -n "'$option_name' "
+                    test "$line_spaces" -lt "$spaces_level" && depth=${spaces[$line_virtual_spaces]} #&& echo -n "--"
+                    test "$line_spaces" -gt "$spaces_level" && unset options[$((i-1))] && depth=$((++depth)) && spaces[$line_virtual_spaces]=$depth
+                    option_key[$depth]="${option_key[$((depth - 1))]}_$option_name"
+                    options[$i]=${option_key[$depth]#option_}
+                    spaces_level=$line_spaces
+                    # echo "depth='$depth' virtual_spaces='$line_virtual_spaces'"
+                    value=$( echo "$cut_line" | sed "s/$option_name:\s*//" )
+                    # if value starts with [ – it's an array
+                    echo "$value" | grep -q "^\[" && value=$( echo "$value"| sed -e 's/^\[/(/;s/\]\s*$/)/;s/,//g')
+                    # if value starts with {
+                    test -n "$value" && values[$i]="$value"
+                    i=$((++i))
+                else
+                    in_array=true
+                    array[$((array_i++))]="${cut_line:2}"
+                fi
+                # echo "${cut_line:0:1}"
+            fi
+        done
+        $in_array && in_array=false && array_i=0 && values[$((i-1))]="(${array[@]})" && unset array
+        for i in ${!options[@]}
+        do
+            echo "${options[i]//-/_}=${values[i]}"
+        done
+    }
+}
+
 if [ -f /etc/default/cyanite ]; then
     . /etc/default/cyanite
 fi
@@ -7,4 +65,6 @@ fi
 JAR="$EXTRA_CLASSPATH:/usr/lib/cyanite/cyanite.jar"
 CONFIG="/etc/cyanite.yaml"
 
-exec java $EXTRA_JAVA_OPTS $OPTS -cp "$JAR" io.cyanite "$CONFIG"
+eval $(yaml2bash $CONFIG)
+
+exec java $EXTRA_JAVA_OPTS $OPTS ${java_options[@]} -cp "$JAR" io.cyanite "$CONFIG"
