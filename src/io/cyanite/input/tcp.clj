@@ -54,8 +54,11 @@
       (try
         (assoc this :server (-> server
                                 (.bind ^String host (int port))
-                                .channel
-                                .closeFuture))
+                                .channel))
         (catch Exception e
           (warn e "could not start server")))))
-  (stop [this] this))
+  (stop [this]
+    (-> server
+        .close
+        .syncUninterruptibly)
+    (assoc this :server nil)))
