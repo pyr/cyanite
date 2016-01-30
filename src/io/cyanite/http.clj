@@ -130,7 +130,7 @@
   (proxy [ChannelInitializer] []
     (initChannel [channel]
       (let [pipeline (.pipeline channel)]
-        (.addLast pipeline "codec"      (HttpServerCodec.))
+        (.addLast pipeline "codec"      (HttpServerCodec. 1048576 8192 8192))
         (.addLast pipeline "aggregator" (HttpObjectAggregator. 1048576))
         (.addLast pipeline "handler"    (netty-handler handler))))))
 
