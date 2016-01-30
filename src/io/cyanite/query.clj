@@ -29,19 +29,20 @@
     (if d (recur (conj res [d point]) ds (+ point step)) res)))
 
 (defn run-query!
-  [store index engine from to query]
-  (debug "running query: " (pr-str query))
-  (let [tokens  (parser/query->tokens query)
-        paths   (path/tokens->paths tokens)
-        by-path (path-leaves index paths)
-        leaves  (->> (mapcat val by-path)
-                     (map :path)
-                     (map (partial engine/resolution engine to))
-                     (remove nil?)
-                     (set))
-        series  (store/query! store from to (seq leaves))
-        merged  (merge-paths by-path series)
-        from    (:from series)
-        step    (:step series)]
-    (let [[n [data]] (ast/run-query! tokens merged)]
-      [{:target n :datapoints (add-date from step data)}])))
+  [store index engine from to queries]
+  (debug "running query: " (pr-str queries))
+  (for [query queries]
+    (let [tokens  (parser/query->tokens query)
+          paths   (path/tokens->paths tokens)
+          by-path (path-leaves index paths)
+          leaves  (->> (mapcat val by-path)
+                       (map :path)
+                       (map (partial engine/resolution engine to))
+                       (remove nil?)
+                       (set))
+          series  (store/query! store from to (seq leaves))
+          merged  (merge-paths by-path series)
+          from    (:from series)
+          step    (:step series)]
+      (let [[n [data]] (ast/run-query! tokens merged)]
+        {:target n :datapoints (add-date from step data)}))))
