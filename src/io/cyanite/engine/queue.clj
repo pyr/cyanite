@@ -14,8 +14,7 @@
 
 (defprotocol QueueEngine
   (consume! [this k opts f])
-  (add! [this k e])
-  (stop! [this k]))
+  (add! [this k e]))
 
 (defn threadpool
   [sz]
@@ -39,6 +38,8 @@
   (start [this]
     (assoc this :state (atom {})))
   (stop [this]
+    (if-let [pool (:pool @state)]
+      (.shutdown (:pool @state)))
     (assoc this :state nil))
   QueueEngine
   (consume! [this k opts f]
@@ -60,7 +61,8 @@
               (catch Exception e
                 (warn e "could not process element on queue" i "for" k)
                 (warn (:exception (ex-data e)) "original exception")))
-            (recur (.take q)))))))
+            (if-not (Thread/interrupted)
+              (recur (.take q))))))))
   (add! [this k e]
     (if-let [q (get-in @state [k :queue])]
       (do (inc! cnt-queue)

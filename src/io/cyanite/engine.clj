@@ -56,9 +56,6 @@
                     (store/insert! store metric)))
       (assoc this :planner planner :bucket buckets)))
   (stop [this]
-    (when queues
-      (q/stop! queues :ingestq)
-      (q/stop! queues :writeq))
     (assoc this :planner nil :buckets nil))
   Acceptor
   (accept! [this metric]

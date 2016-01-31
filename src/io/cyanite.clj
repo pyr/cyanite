@@ -87,20 +87,22 @@
       (println banner)
       (System/exit 0))
 
-    (let [system  (config->system path quiet)]
+    (let [system (atom (config->system path quiet))]
       (info "installing signal handlers")
       (sig/with-handler :term
         (info "caught SIGTERM, quitting")
-        (component/stop-system system)
+        (component/stop-system @system)
         (info "all components shut down")
         (System/exit 0))
 
       (sig/with-handler :hup
         (info "caught SIGHUP, reloading")
-        (component/stop-system system))
-      (info "ready to start system")
+        (swap! system #(-> %
+                           component/stop-system
+                           component/start-system)))
 
-      (component/start-system system)))
+      (info "ready to start the system")
+      (swap! system component/start-system)))
   nil)
 
 ;; Install our uncaught exception handler.
