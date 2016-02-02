@@ -26,7 +26,9 @@
   (loop [res        []
          [d & ds]   data
          point      from]
-    (if d (recur (conj res [d point]) ds (+ point step)) res)))
+    (if ds
+      (recur (if d (conj res [d point]) res) ds (+ point step))
+      res)))
 
 (defn run-query!
   [store index engine from to query]
