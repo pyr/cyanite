@@ -207,7 +207,7 @@ operating a large metric cluster.
 Choosing a Cassandra version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Cyanite will work with Cassandra 2.0 and above, it has been tested
+Cyanite will work with Cassandra 2.1 and above, it has been tested
 with the 2.1 releases extensively and thus is recommended.
 
 Choosing a compaction strategy
