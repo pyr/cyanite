@@ -55,6 +55,38 @@
     (fetch! [this from to paths])
     (insert! [this metric])))
 
+(defn memory-store
+  "Extremely inefficient memory store for testing/mocking purposes"
+  []
+  (let [state (atom {})]
+    (reify
+      component/Lifecycle
+      (start [this] this)
+      (stop [this] this)
+      MetricStore
+      (fetch! [this from to paths]
+        (let [st @state]
+         (mapcat
+          (fn [path]
+            (->> (get st path)
+                 (filter
+                  (fn [[time _]]
+                    (and (>= time from)
+                         (<= time to))))
+                 (map
+                  (fn [[time point]]
+                    {:id    path
+                     :time  time
+                     :point point}))))
+          paths)))
+      (insert! [this metric]
+        (swap! state
+               (fn [old]
+                 (update-in old
+                            [(select-keys metric [:path :resolution])
+                             (:time metric)]
+                            (constantly (select-keys metric [:max :min :sum :mean])))))))))
+
 (defmulti build-store (comp (fnil keyword "cassandra-v2") :type))
 
 (defmethod build-store :cassandra-v2
@@ -64,6 +96,10 @@
 (defmethod build-store :empty
   [options]
   (empty-store))
+
+(defmethod build-store :memory
+  [options]
+  (memory-store))
 
 (defn query! [store from to paths]
   (let [raw-series         (fetch! store from to paths)
