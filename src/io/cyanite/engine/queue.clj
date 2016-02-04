@@ -6,6 +6,7 @@
            com.lmax.disruptor.RingBuffer
            com.lmax.disruptor.dsl.Disruptor
            com.lmax.disruptor.EventFactory
+           com.lmax.disruptor.EventTranslatorOneArg
            com.lmax.disruptor.EventHandler)
   (:require [com.stuartsierra.component :as component]
             [clojure.tools.logging      :refer [warn]]
@@ -14,7 +15,7 @@
 (defcounter cnt-queue)
 (defcounter cnt-errors)
 (defonce default-poolsize 4)
-(defonce default-capacity (int 10e2))
+(defonce default-capacity (int 1024))
 
 (defprotocol QueueEngine
   (consume! [this k opts f])
@@ -25,6 +26,25 @@
   (reify EventFactory
     (newInstance [this]
       (ctor))))
+
+(defprotocol WrapperEvent
+  (get-data [_])
+  (set-data [this v]))
+
+;; For sakes of prototyping, we are using the mutable
+;; wrapper. This is not very idiomatic to ring buffer,
+;; so it's better to use mutable bags of primitives.
+;; If the approach with RB proves itself, we will migrate
+;; the code to use it.
+(deftype Event [^{:volatile-mutable true} x]
+  WrapperEvent
+  (get-data [_] x)
+  (set-data [this v] (set! x v)))
+
+(defn wrapper-event-factory
+  []
+  (make-event-factory
+   (fn [] (Event. nil))))
 
 (defn threadpool
   [sz]
@@ -38,45 +58,50 @@
   [p & body]
   `(pool-future-call ~p (fn [] ~@body)))
 
-(defn ring-buffer
-  [size]
-  )
+(defn disruptor
+  [event-factory size executor]
+  (Disruptor. event-factory size executor))
+
+(defn make-translator
+  [f]
+  (reify EventTranslatorOneArg
+    (translateTo [this event sequence arg0]
+      (f event arg0))))
+
 (defn linked-queue
   [sz]
   (java.util.concurrent.ArrayBlockingQueue.
    (int sz)))
 
-(defrecord BlockingMemoryQueue [state pool defaults]
+(defrecord BlockingMemoryQueue [state defaults]
   component/Lifecycle
   (start [this]
-    (let [sz   (or (:pool-size opts)
-                   (get-in defaults [k :pool-size])
-                   default-poolsize)]
-      (assoc this
-             :state (atom {})
-             pool (threadpool sz))))
+    (assoc this
+           :state (atom {})
+           ))
   (stop [this]
-    (.shutdown (:pool @state))
+    (doseq [[_ {:keys [[pool disruptor]]}] @state]
+      (.shutdown disruptor)
+      (.shutdown pool))
     (assoc this :state nil))
   QueueEngine
-  (consume! [this k opts event-ctor f]
-    (let [cap  (or (:queue-capacity opts)
-                   (get-in defaults [k :queue-capacity])
-                   default-capacity)
-          rb    (ring-buffer (event-factory event-ctor) cap pool)]
-      (swap! state assoc k {:ring-buffer rb})
-      (.handleEventsWith rb
-                         (reify EventHandler
-                           (onEvent [this event sequence eob]
-                             (f event))))
-      (.start rb)))
+  (consume! [this k opts f]
+    (let [sz   (or (:pool-size opts)
+                   (get-in defaults [k :pool-size])
+                   default-poolsize)
+          pool (threadpool sz)
+          cap       (or (:queue-capacity opts)
+                        (get-in defaults [k :queue-capacity])
+                        default-capacity)
+          disruptor (disruptor (wrapper-event-factory) cap pool)]
+      (swap! state assoc k {:disruptor  disruptor
+                            :translator (make-translator (fn [e v]  (set-data e v)))})
+      (.handleEventsWith disruptor
+                         (into-array [(reify EventHandler
+                                         (onEvent [this event sequence eob]
+                                           (f (get-data event))))]))
+      (.start disruptor)))
   (add! [this k e]
-    (if-let [q (get-in @state [k :queue])]
-      (do (inc! cnt-queue)
-          (try
-            (.add q e)
-            (catch IllegalStateException e
-              ;; Queue is full
-              (inc! cnt-errors)
-              (warn "queue is full"))))
-      (throw (ex-info "cannot find queue" {:queue-name k})))))
+    ;; TODO: dereferencing is an expensive operation going through the atomic memory barrier
+    (let [{:keys [disruptor translator]} (get @state k)]
+      (.publishEvent disruptor translator e))))
