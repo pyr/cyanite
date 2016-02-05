@@ -1,6 +1,5 @@
 (ns io.cyanite.engine.queue
-  "Queueing mechanism at the heart of cyanite.
-   This is how we "
+  "Queueing mechanism at the heart of cyanite."
   (:import java.util.concurrent.Executors
            java.util.ArrayList
            com.lmax.disruptor.RingBuffer
@@ -23,15 +22,15 @@
   (consume! [this f])
   (add! [this e]))
 
+(defprotocol WrapperEvent
+  (get-data  [_])
+  (set-data! [this v]))
+
 (defn make-event-factory
   [ctor]
   (reify EventFactory
     (newInstance [this]
       (ctor))))
-
-(defprotocol WrapperEvent
-  (get-data [_])
-  (set-data! [this v]))
 
 ;; For sakes of prototyping, we are using the mutable
 ;; wrapper. This is not very idiomatic to ring buffer,
@@ -40,13 +39,14 @@
 ;; the code to use it.
 (deftype Event [^{:volatile-mutable true} x]
   WrapperEvent
-  (get-data [_] x)
-  (set-data! [this v] (set! x v)))
+  (get-data [_]
+    x)
+  (set-data! [this v]
+    (set! x v)))
 
 (defn wrapper-event-factory
   []
-  (make-event-factory
-   (fn [] (Event. nil))))
+  (make-event-factory (fn [] (Event. nil))))
 
 (defn threadpool
   [sz]
