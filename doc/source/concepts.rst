@@ -142,7 +142,7 @@ The following schema is used to store data::
      PRIMARY KEY (id, time)
    ) WITH COMPACT STORAGE
      AND CLUSTERING ORDER BY (time ASC)
-     AND compaction = {'class': 'org.apache.cassandra.db.compaction.DateTieredCompactionStrategy'}
+     AND compaction = {'class': 'DateTieredCompactionStrategy', 'min_threshold': '12', 'max_threshold': '32', 'max_sstable_age_days': '0.083', 'base_time_seconds': '50' }
      AND compression = {'sstable_compression': 'org.apache.cassandra.io.compress.LZ4Compressor'}
      AND dclocal_read_repair_chance = 0.1
      AND default_time_to_live = 0
