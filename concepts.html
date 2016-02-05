@@ -172,15 +172,11 @@ and other components to query and present data.</li>
 <h2>Input Components<a class="headerlink" href="#input-components" title="Permalink to this headline">¶</a></h2>
 <p>Input components are arbitrary means of inputting metrics.
 Out of the box there are three available types of input
-components:</p>
-<ul class="simple">
-<li><code class="docutils literal"><span class="pre">carbon</span></code>: a TCP listener for the text protocol known as <em>Carbon</em>,
-which is part of the <em>Graphite</em> tool-suite.</li>
-<li><code class="docutils literal"><span class="pre">pickle</span></code>: a <a class="reference external" href="https://docs.python.org/2/library/pickle.html">pickle</a> serialized version of the above protocol, as
-produced by the other daemons in the <em>Graphite</em> tool-suite.</li>
-<li><code class="docutils literal"><span class="pre">fake</span></code>: a fake input which produces a new value every 500
-milisecond for test purposes.</li>
-</ul>
+components, such as <code class="docutils literal"><span class="pre">carbon</span></code>: a TCP listener for the text
+protocol known as <em>Carbon</em>, which is part of the <em>Graphite</em>
+tool-suite.</p>
+<p>The other inputs, such as Kafka, Pickle are planned but not
+yet supported by Cyanite.</p>
 <p>Input components are responsible for producing metrics in a normalized
 way:</p>
 <div class="highlight-json"><div class="highlight"><pre><span class="p">{</span>
@@ -270,7 +266,7 @@ CREATE TABLE metric.metric (
   PRIMARY KEY (id, time)
 ) WITH COMPACT STORAGE
   AND CLUSTERING ORDER BY (time ASC)
-  AND compaction = {&#39;class&#39;: &#39;org.apache.cassandra.db.compaction.DateTieredCompactionStrategy&#39;}
+  AND compaction = {&#39;class&#39;: &#39;DateTieredCompactionStrategy&#39;, &#39;min_threshold&#39;: &#39;12&#39;, &#39;max_threshold&#39;: &#39;32&#39;, &#39;max_sstable_age_days&#39;: &#39;0.083&#39;, &#39;base_time_seconds&#39;: &#39;50&#39; }
   AND compression = {&#39;sstable_compression&#39;: &#39;org.apache.cassandra.io.compress.LZ4Compressor&#39;}
   AND dclocal_read_repair_chance = 0.1
   AND default_time_to_live = 0

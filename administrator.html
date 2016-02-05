@@ -204,8 +204,8 @@ The API accepts the following options:</p>
 <dt><em>disabled</em>:</dt>
 <dd>Disable HTTP service altogether, defaults to false.</dd>
 </dl>
-<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">api</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">port</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">8080</span>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l l-Scalar l-Scalar-Plain">api</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">port</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">8080</span>
 </pre></div>
 </div>
 </div>
@@ -217,17 +217,15 @@ configurations.</p>
 <p>Each input configuration takes the following options:</p>
 <dl class="docutils">
 <dt><em>type</em>:</dt>
-<dd>Type of input, available for now are &#8220;carbon&#8221; and &#8220;pickle&#8221;</dd>
+<dd>Type of input, for now only &#8220;carbon&#8221;</dd>
 <dt><em>host</em>:</dt>
-<dd>Address to bind to. Valid for both &#8220;carbon&#8221; and &#8220;pickle&#8221;</dd>
+<dd>Address to bind to.</dd>
 <dt><em>port</em>:</dt>
-<dd>Port to bind to. Valid for both &#8220;carbon&#8221; and &#8220;pickle&#8221;</dd>
+<dd>Port to bind to.</dd>
 </dl>
-<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">input</span><span class="p-Indicator">:</span>
-  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">carbon</span>
-    <span class="l-Scalar-Plain">port</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">2003</span>
-  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">pickle</span>
-    <span class="l-Scalar-Plain">port</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">2004</span>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l l-Scalar l-Scalar-Plain">input</span><span class="p p-Indicator">:</span>
+  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">carbon</span>
+    <span class="l l-Scalar l-Scalar-Plain">port</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">2003</span>
 </pre></div>
 </div>
 </div>
@@ -245,8 +243,8 @@ The cassandra index takes the following options:</p>
 <dt><em>keyspace</em>:</dt>
 <dd>The keyspace to use.</dd>
 </dl>
-<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">index</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">agent</span>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l l-Scalar l-Scalar-Plain">index</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">agent</span>
 </pre></div>
 </div>
 </div>
@@ -262,9 +260,9 @@ one.</p>
 <dt><em>keyspace</em>:</dt>
 <dd>The keyspace to use.</dd>
 </dl>
-<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">store</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">cluster</span><span class="p-Indicator">:</span> <span class="s">&#39;localhost&#39;</span>
-  <span class="l-Scalar-Plain">keyspace</span><span class="p-Indicator">:</span> <span class="s">&#39;metric&#39;</span>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l l-Scalar l-Scalar-Plain">store</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">cluster</span><span class="p p-Indicator">:</span> <span class="s">&#39;localhost&#39;</span>
+  <span class="l l-Scalar l-Scalar-Plain">keyspace</span><span class="p p-Indicator">:</span> <span class="s">&#39;metric&#39;</span>
 </pre></div>
 </div>
 </div>
@@ -272,11 +270,11 @@ one.</p>
 <h3>Logging<a class="headerlink" href="#logging" title="Permalink to this headline">¶</a></h3>
 <p>Specify where to log. Adheres to the configuration format
 defined at <a class="reference external" href="https://github.com/pyr/unilog">https://github.com/pyr/unilog</a></p>
-<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">logging</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">level</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">info</span>
-  <span class="l-Scalar-Plain">console</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">true</span>
-  <span class="l-Scalar-Plain">files</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="s">&quot;/var/log/cyanite/cyanite.log&quot;</span>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l l-Scalar l-Scalar-Plain">logging</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">level</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">info</span>
+  <span class="l l-Scalar l-Scalar-Plain">console</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+  <span class="l l-Scalar l-Scalar-Plain">files</span><span class="p p-Indicator">:</span>
+    <span class="p p-Indicator">-</span> <span class="s">&quot;/var/log/cyanite/cyanite.log&quot;</span>
 </pre></div>
 </div>
 </div>
@@ -298,12 +296,12 @@ is to use graphite-api.</p>
 <cite>graphite-cyanite</cite> through pip. <cite>graphite-api</cite>
 can then be configured by providing a valid YAML file
 in <cite>/etc/graphite-api.yaml</cite></p>
-<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">search_index</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/srv/graphite/index</span>
-<span class="l-Scalar-Plain">finders</span><span class="p-Indicator">:</span>
-  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">cyanite.CyaniteFinder</span>
-<span class="l-Scalar-Plain">cyanite</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">urls</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">http://cyanite-host:port</span>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l l-Scalar l-Scalar-Plain">search_index</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">/srv/graphite/index</span>
+<span class="l l-Scalar l-Scalar-Plain">finders</span><span class="p p-Indicator">:</span>
+  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">cyanite.CyaniteFinder</span>
+<span class="l l-Scalar l-Scalar-Plain">cyanite</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">urls</span><span class="p p-Indicator">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">http://cyanite-host:port</span>
 </pre></div>
 </div>
 <p><cite>graphite-api</cite> is fully documented at <a class="reference external" href="http://graphite-api.readthedocs.org/">http://graphite-api.readthedocs.org/</a>,
@@ -315,8 +313,8 @@ in <cite>/etc/graphite-api.yaml</cite></p>
 <p>The only part which needs modifying once you have a working <cite>graphite-web</cite>
 installation is to install <cite>graphite-cyanite</cite> and modify your
 <cite>local-settings.py</cite> configuration file in Graphite:</p>
-<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">STORAGE_FINDERS = ( &#39;cyanite.CyaniteFinder&#39;, )</span>
-<span class="l-Scalar-Plain">CYANITE_URLS = ( &#39;http://host:port&#39;, )</span>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l l-Scalar l-Scalar-Plain">STORAGE_FINDERS = ( &#39;cyanite.CyaniteFinder&#39;, )</span>
+<span class="l l-Scalar l-Scalar-Plain">CYANITE_URLS = ( &#39;http://host:port&#39;, )</span>
 </pre></div>
 </div>
 </div>
@@ -328,12 +326,29 @@ for time-series type workloads. Here are a few pointers which might help when
 operating a large metric cluster.</p>
 <div class="section" id="choosing-a-cassandra-version">
 <h3>Choosing a Cassandra version<a class="headerlink" href="#choosing-a-cassandra-version" title="Permalink to this headline">¶</a></h3>
-<p>Cyanite will work with Cassandra 2.0 and above, it has been tested
+<p>Cyanite will work with Cassandra 2.1 and above, it has been tested
 with the 2.1 releases extensively and thus is recommended.</p>
 </div>
 <div class="section" id="choosing-a-compaction-strategy">
 <h3>Choosing a compaction strategy<a class="headerlink" href="#choosing-a-compaction-strategy" title="Permalink to this headline">¶</a></h3>
 <p><code class="docutils literal"><span class="pre">DateTieredCompactionStrategy</span></code>  is likely to be your best bet.</p>
+<p>The following config causes most compaction activity to occur at 10m and 2h windows.If you want to allow 24h windows, simply raise max_sstable_age days to &#8216;1.0&#8217;.
+Note that you must be using Apache Cassandra 2.1 in order to set fractional values for
+max_sstable_age_days. If you are running an earlier version, then leave it at 1.</p>
+<div class="highlight-json"><div class="highlight"><pre>compaction = {&#39;class&#39;: &#39;DateTieredCompactionStrategy&#39;,
+&#39;min_threshold&#39;: &#39;12&#39;, &#39;max_threshold&#39;: &#39;32&#39;,
+&#39;max_sstable_age_days&#39;: &#39;0.083&#39;, &#39;base_time_seconds&#39;: &#39;50&#39; }
+</pre></div>
+</div>
+<p>If you are willing to modify your Cassandra installation, <code class="docutils literal"><span class="pre">TimeWindowCompactionStrategy</span></code> gives great results
+and fits the cyanite use case perfectly. To use it you will need to build the project yourself, as per instructions on
+<a class="reference external" href="https://github.com/jeffjirsa/twcs">https://github.com/jeffjirsa/twcs</a>. Once built, you can publish the JAR to the classpath of your Cassandra installation.
+The following config can be used to take advantage of it:</p>
+<div class="highlight-json"><div class="highlight"><pre>compaction = {&#39;unchecked_tombstone_compaction&#39;: &#39;false&#39;,
+              &#39;tombstone_threshold&#39;: &#39;0.2&#39;,
+              &#39;class&#39;: &#39;com.jeffjirsa.cassandra.db.compaction.TimeWindowCompactionStrategy&#39;}
+</pre></div>
+</div>
 </div>
 <div class="section" id="choosing-a-read-and-write-consistency-level">
 <h3>Choosing a read and write consistency level<a class="headerlink" href="#choosing-a-read-and-write-consistency-level" title="Permalink to this headline">¶</a></h3>
