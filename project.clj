@@ -11,7 +11,6 @@
                  [org.clojure/tools.logging     "0.3.1"]
                  [org.clojure/tools.cli         "0.3.3"]
                  [com.stuartsierra/component    "0.3.1"]
-                 [spootnik/pickler              "0.1.6"]
                  [spootnik/unilog               "0.7.13"]
                  [spootnik/uncaught             "0.5.3"]
                  [spootnik/globber              "0.4.1"]
