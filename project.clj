@@ -14,6 +14,7 @@
                  [spootnik/unilog               "0.7.13"]
                  [spootnik/uncaught             "0.5.3"]
                  [spootnik/globber              "0.4.1"]
+                 [org.javassist/javassist       "3.20.0-GA"]
                  [instaparse                    "1.4.1"]
                  [cheshire                      "5.5.0"]
                  [metrics-clojure               "2.6.1"]
