@@ -22,31 +22,11 @@
   (consume! [this f])
   (add! [this e]))
 
-(defprotocol WrapperEvent
-  (get-data  [_])
-  (set-data! [this v]))
-
 (defn make-event-factory
   [ctor]
   (reify EventFactory
     (newInstance [this]
       (ctor))))
-
-;; For sakes of prototyping, we are using the mutable
-;; wrapper. This is not very idiomatic to ring buffer,
-;; so it's better to use mutable bags of primitives.
-;; If the approach with RB proves itself, we will migrate
-;; the code to use it.
-(deftype Event [^{:volatile-mutable true} x]
-  WrapperEvent
-  (get-data [_]
-    x)
-  (set-data! [this v]
-    (set! x v)))
-
-(defn wrapper-event-factory
-  []
-  (make-event-factory (fn [] (Event. nil))))
 
 (defn threadpool
   [sz]
@@ -66,7 +46,7 @@
   [f]
   (reify EventHandler
     (onEvent [this event sequence eob]
-      (f (get-data event)))))
+      (f @event))))
 
 (defrecord DisruptorQueue [disruptor translator]
   QueueEngine
@@ -81,9 +61,10 @@
 (defn make-queue
   [defaults]
   (let [capacity (or (:queue-capacity defaults) default-capacity)
-        pool     (threadpool (or (:pool-size defaults) default-poolsize))]
-    (DisruptorQueue. (disruptor (wrapper-event-factory) capacity pool)
-                     (make-translator (fn [e v] (set-data! e v))))))
+        pool     (threadpool (or (:pool-size defaults) default-poolsize))
+        factory  (make-event-factory #(volatile! nil))]
+    (DisruptorQueue. (disruptor factory capacity pool)
+                     (make-translator vreset!))))
 
 (defrecord BlockingMemoryQueue [ingestq writeq defaults]
   component/Lifecycle
