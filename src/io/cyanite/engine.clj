@@ -34,7 +34,7 @@
     (time! t-assc
            (assoc-if-absent! buckets k metric-key))
     (doseq [snapshot snaps]
-      (time! t-enq (q/add! queues :writeq snapshot)))))
+      (time! t-enq (q/add! (:writeq queues) snapshot)))))
 
 (defrecord Engine [rules planner buckets index store queues drift]
   component/Lifecycle
@@ -42,7 +42,7 @@
     (let [buckets (nbhm)
           planner (map rule/->rule rules)]
       (info "starting engine")
-      (q/consume! queues :ingestq {}
+      (q/consume! (:ingestq queues)
                   (fn [metric]
                     (drift! drift (:time metric))
                     (let [plan (rule/->exec-plan planner metric)]
@@ -50,7 +50,7 @@
                         (ingest-at-resolution drift buckets queues
                                               resolution metric)))))
 
-      (q/consume! queues :writeq {}
+      (q/consume! (:writeq queues)
                   (fn [metric]
                     (index/register! index (:path metric))
                     (store/insert! store metric)))
@@ -59,7 +59,7 @@
     (assoc this :planner nil :buckets nil))
   Acceptor
   (accept! [this metric]
-    (q/add! queues :ingestq metric))
+    (q/add! (:ingestq queues) metric))
   Resolutionator
   (resolution [this oldest path]
     (let [plan (rule/->exec-plan planner {:path path})
