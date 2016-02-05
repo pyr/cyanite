@@ -43,4 +43,4 @@
   (deref [this]
     @slot))
 
-(prefer-method print-method clojure.lang.IPersistentMap clojure.lang.IDeref)
+(prefer-method print-method clojure.lang.IRecord clojure.lang.IDeref)

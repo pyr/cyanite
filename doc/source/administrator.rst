@@ -41,7 +41,7 @@ The engine accepts the following options:
    for seconds, minutes, hours, days, weeks and months and years.
 
 .. sourcecode:: yaml
-                
+
    engine:
      rules:
        "web.*\.cpu": [ "5s:1h", "30s:1d" ]
@@ -61,10 +61,10 @@ The API accepts the following options:
    Disable HTTP service altogether, defaults to false.
 
 .. sourcecode:: yaml
-                
+
   api:
     port: 8080
-    
+
 
 Input
 ~~~~~
@@ -76,19 +76,17 @@ configurations.
 Each input configuration takes the following options:
 
 *type*:
-  Type of input, available for now are "carbon" and "pickle"
+  Type of input, for only "carbon"
 *host*:
-  Address to bind to. Valid for both "carbon" and "pickle"
+  Address to bind to.
 *port*:
-  Port to bind to. Valid for both "carbon" and "pickle"
-  
+  Port to bind to.
+
 .. sourcecode:: yaml
-                
+
   input:
     - type: carbon
       port: 2003
-    - type: pickle
-      port: 2004
 
 Index
 ~~~~~
@@ -107,7 +105,7 @@ The cassandra index takes the following options:
    The keyspace to use.
 
 .. sourcecode:: yaml
-                
+
     index:
       type: agent
 
@@ -126,7 +124,7 @@ The following options are accepted:
    The keyspace to use.
 
 .. sourcecode:: yaml
-                
+
   store:
     cluster: 'localhost'
     keyspace: 'metric'
@@ -138,14 +136,14 @@ Specify where to log. Adheres to the configuration format
 defined at https://github.com/pyr/unilog
 
 .. sourcecode:: yaml
-                
+
   logging:
     level: info
     console: true
     files:
       - "/var/log/cyanite/cyanite.log"
 
-        
+
 .. _Graphite Integration:
 
 Integration with Graphite and Grafana
@@ -194,7 +192,7 @@ installation is to install `graphite-cyanite` and modify your
 
     STORAGE_FINDERS = ( 'cyanite.CyaniteFinder', )
     CYANITE_URLS = ( 'http://host:port', )
-    
+
 .. _Grafana: http://grafana.org
 
 Administering Cassandra for Cyanite
