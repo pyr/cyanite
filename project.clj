@@ -7,7 +7,7 @@
   :aot :all
   :main io.cyanite
   :plugins [[lein-ancient "0.6.7"]]
-  :dependencies [[org.clojure/clojure           "1.8.0-beta1"]
+  :dependencies [[org.clojure/clojure           "1.8.0"]
                  [org.clojure/tools.logging     "0.3.1"]
                  [org.clojure/tools.cli         "0.3.3"]
                  [com.stuartsierra/component    "0.3.0"]
