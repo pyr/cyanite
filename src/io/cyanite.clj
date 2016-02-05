@@ -13,6 +13,7 @@
             [metrics.reporters.csv      :as csv]
             [metrics.reporters.jmx      :as jmx]
             [io.cyanite.engine          :refer [map->Engine]]
+            [io.cyanite.engine.writer   :refer [map->Writer]]
             [io.cyanite.engine.drift    :refer [map->SystemClock map->AgentDrift]]
             [io.cyanite.api             :refer [map->Api]]
             [unilog.config              :refer [start-logging!]]
@@ -60,17 +61,19 @@
       (-> config
           (dissoc :logging)
           (build-components :input input/build-input)
-          (update :clock  #(map->SystemClock %))
-          (update :drift  #(component/using (map->AgentDrift %) [:clock]))
-          (update :engine #(component/using (map->Engine %) [:index
-                                                             :store
-                                                             :drift
-                                                             :queues]))
-          (update :queues queue/map->BlockingMemoryQueue)
-          (update :api #(component/using (map->Api {:options %}) [:index
-                                                                  :store
-                                                                  :queues
-                                                                  :engine]))
+          (update :clock    #(map->SystemClock %))
+          (update :drift    #(component/using (map->AgentDrift %) [:clock]))
+          (update :queues   queue/map->BlockingMemoryQueue)
+          (update :engine   #(component/using (map->Engine %) [:drift
+                                                               :queues
+                                                               :writer]))
+          (update :writer   #(component/using (map->Writer %) [:index
+                                                               :store
+                                                               :queues]))
+          (update :api      #(component/using (map->Api {:options %}) [:index
+                                                                       :store
+                                                                       :queues
+                                                                       :engine]))
           (update :index index/build-index)
           (update :store store/build-store)))))
 
