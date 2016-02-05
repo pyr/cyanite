@@ -211,7 +211,7 @@ with the 2.1 releases extensively and thus is recommended.
 Choosing a compaction strategy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``DateTieredCompactionStrategy``  is likely to be your best bet.
+``DateTieredCompactionStrategy``  is likely to be your best bet. 
 
 The following config causes most compaction activity to occur at 10m and 2h windows.\
 If you want to allow 24h windows, simply raise max_sstable_age days to '1.0'.
@@ -223,6 +223,17 @@ max_sstable_age_days. If you are running an earlier version, then leave it at 1.
     compaction = {'class': 'DateTieredCompactionStrategy',
     'min_threshold': '12', 'max_threshold': '32',
     'max_sstable_age_days': '0.083', 'base_time_seconds': '50' }
+
+If you are willing to modify your Cassandra installation, ``TimeWindowCompactionStrategy`` gives great results
+and fits the cyanite use case perfectly. To use it you will need to build the project yourself, as per instructions on
+https://github.com/jeffjirsa/twcs. Once built, you can publish the JAR to the classpath of your Cassandra installation.
+The following config can be used to take advantage of it:
+
+.. sourcecode:: json
+
+    compaction = {'unchecked_tombstone_compaction': 'false',
+                  'tombstone_threshold': '0.2',
+                  'class': 'com.jeffjirsa.cassandra.db.compaction.TimeWindowCompactionStrategy'}
 
 
 Choosing a read and write consistency level
