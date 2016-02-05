@@ -31,7 +31,7 @@
 
 (defprotocol WrapperEvent
   (get-data [_])
-  (set-data [this v]))
+  (set-data! [this v]))
 
 ;; For sakes of prototyping, we are using the mutable
 ;; wrapper. This is not very idiomatic to ring buffer,
@@ -41,7 +41,7 @@
 (deftype Event [^{:volatile-mutable true} x]
   WrapperEvent
   (get-data [_] x)
-  (set-data [this v] (set! x v)))
+  (set-data! [this v] (set! x v)))
 
 (defn wrapper-event-factory
   []
@@ -83,7 +83,7 @@
   (let [capacity (or (:queue-capacity defaults) default-capacity)
         pool     (threadpool (or (:pool-size defaults) default-poolsize))]
     (DisruptorQueue. (disruptor (wrapper-event-factory) capacity pool)
-                     (make-translator (fn [e v] (set-data e v))))))
+                     (make-translator (fn [e v] (set-data! e v))))))
 
 (defrecord BlockingMemoryQueue [ingestq writeq defaults]
   component/Lifecycle
