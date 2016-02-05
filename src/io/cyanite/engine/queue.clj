@@ -68,11 +68,6 @@
     (translateTo [this event sequence arg0]
       (f event arg0))))
 
-(defn linked-queue
-  [sz]
-  (java.util.concurrent.ArrayBlockingQueue.
-   (int sz)))
-
 (defrecord BlockingMemoryQueue [state defaults]
   component/Lifecycle
   (start [this]
