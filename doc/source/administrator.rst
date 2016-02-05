@@ -76,7 +76,7 @@ configurations.
 Each input configuration takes the following options:
 
 *type*:
-  Type of input, for only "carbon"
+  Type of input, for now only "carbon"
 *host*:
   Address to bind to.
 *port*:
