@@ -41,7 +41,7 @@ The engine accepts the following options:
    for seconds, minutes, hours, days, weeks and months and years.
 
 .. sourcecode:: yaml
-                
+
    engine:
      rules:
        "web.*\.cpu": [ "5s:1h", "30s:1d" ]
@@ -61,10 +61,10 @@ The API accepts the following options:
    Disable HTTP service altogether, defaults to false.
 
 .. sourcecode:: yaml
-                
+
   api:
     port: 8080
-    
+
 
 Input
 ~~~~~
@@ -76,19 +76,17 @@ configurations.
 Each input configuration takes the following options:
 
 *type*:
-  Type of input, available for now are "carbon" and "pickle"
+  Type of input, for now only "carbon"
 *host*:
-  Address to bind to. Valid for both "carbon" and "pickle"
+  Address to bind to.
 *port*:
-  Port to bind to. Valid for both "carbon" and "pickle"
-  
+  Port to bind to.
+
 .. sourcecode:: yaml
-                
+
   input:
     - type: carbon
       port: 2003
-    - type: pickle
-      port: 2004
 
 Index
 ~~~~~
@@ -107,7 +105,7 @@ The cassandra index takes the following options:
    The keyspace to use.
 
 .. sourcecode:: yaml
-                
+
     index:
       type: agent
 
@@ -126,7 +124,7 @@ The following options are accepted:
    The keyspace to use.
 
 .. sourcecode:: yaml
-                
+
   store:
     cluster: 'localhost'
     keyspace: 'metric'
@@ -138,14 +136,14 @@ Specify where to log. Adheres to the configuration format
 defined at https://github.com/pyr/unilog
 
 .. sourcecode:: yaml
-                
+
   logging:
     level: info
     console: true
     files:
       - "/var/log/cyanite/cyanite.log"
 
-        
+
 .. _Graphite Integration:
 
 Integration with Graphite and Grafana
@@ -194,7 +192,7 @@ installation is to install `graphite-cyanite` and modify your
 
     STORAGE_FINDERS = ( 'cyanite.CyaniteFinder', )
     CYANITE_URLS = ( 'http://host:port', )
-    
+
 .. _Grafana: http://grafana.org
 
 Administering Cassandra for Cyanite
@@ -213,7 +211,7 @@ with the 2.1 releases extensively and thus is recommended.
 Choosing a compaction strategy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``DateTieredCompactionStrategy``  is likely to be your best bet.
+``DateTieredCompactionStrategy``  is likely to be your best bet. 
 
 The following config causes most compaction activity to occur at 10m and 2h windows.\
 If you want to allow 24h windows, simply raise max_sstable_age days to '1.0'.
@@ -225,6 +223,17 @@ max_sstable_age_days. If you are running an earlier version, then leave it at 1.
     compaction = {'class': 'DateTieredCompactionStrategy',
     'min_threshold': '12', 'max_threshold': '32',
     'max_sstable_age_days': '0.083', 'base_time_seconds': '50' }
+
+If you are willing to modify your Cassandra installation, ``TimeWindowCompactionStrategy`` gives great results
+and fits the cyanite use case perfectly. To use it you will need to build the project yourself, as per instructions on
+https://github.com/jeffjirsa/twcs. Once built, you can publish the JAR to the classpath of your Cassandra installation.
+The following config can be used to take advantage of it:
+
+.. sourcecode:: json
+
+    compaction = {'unchecked_tombstone_compaction': 'false',
+                  'tombstone_threshold': '0.2',
+                  'class': 'com.jeffjirsa.cassandra.db.compaction.TimeWindowCompactionStrategy'}
 
 
 Choosing a read and write consistency level

@@ -26,6 +26,7 @@ CREATE TABLE metric.metric (
   PRIMARY KEY (id, time)
 ) WITH COMPACT STORAGE
   AND CLUSTERING ORDER BY (time ASC)
+  AND compaction = {'class': 'DateTieredCompactionStrategy',  'min_threshold': '12', 'max_threshold': '32', 'max_sstable_age_days': '0.083', 'base_time_seconds': '50' }
   AND compaction = {'min_threshold': '4', 'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy', 'max_threshold': '32'}
   AND compression = {'sstable_compression': 'org.apache.cassandra.io.compress.LZ4Compressor'}
   AND dclocal_read_repair_chance = 0.1

@@ -62,16 +62,14 @@ api:
 ## Each input configuration takes the following options:
 ##
 ## *type*:
-##   Type of input, available for now are "carbon" and "pickle"
+##   Type of input, for now only "carbon"
 ## *host*:
-##   Address to bind to. Valid for both "carbon" and "pickle"
+##   Address to bind to.
 ## *port*:
-##   Port to bind to. Valid for both "carbon" and "pickle"
+##   Port to bind to.
 input:
   - type: carbon
     port: 2003
-  - type: pickle
-    port: 2004
 ##
 ## Index
 ## =====
@@ -87,7 +85,7 @@ input:
 ## *cluster*:
 ##   A string or list of strings to provide cluster contact points.
 ## *keyspace*:
-##   The keyspace to use.  
+##   The keyspace to use.
 index:
   type: agent
 ##
@@ -103,7 +101,7 @@ index:
 ## *cluster*:
 ##   A string or list of strings to provide cluster contact points.
 ## *keyspace*:
-##   The keyspace to use.  
+##   The keyspace to use.
 store:
   cluster: 'localhost'
   keyspace: 'metric'

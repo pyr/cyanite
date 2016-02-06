@@ -34,14 +34,12 @@ Input Components
 
 Input components are arbitrary means of inputting metrics.
 Out of the box there are three available types of input
-components:
+components, such as ``carbon``: a TCP listener for the text
+protocol known as *Carbon*, which is part of the *Graphite*
+tool-suite.
 
-- ``carbon``: a TCP listener for the text protocol known as *Carbon*,
-  which is part of the *Graphite* tool-suite.
-- ``pickle``: a pickle_ serialized version of the above protocol, as
-  produced by the other daemons in the *Graphite* tool-suite.
-- ``fake``: a fake input which produces a new value every 500
-  milisecond for test purposes.
+The other inputs, such as Kafka, Pickle are planned but not
+yet supported by Cyanite.
 
 Input components are responsible for producing metrics in a normalized
 way:
@@ -59,8 +57,8 @@ component through its ``accept!`` function:
 
 .. sourcecode:: clojure
 
-    (accept! engine {:path "web01.cpu" :metric 40.0 :time 1437572671})                
-  
+    (accept! engine {:path "web01.cpu" :metric 40.0 :time 1437572671})
+
 Engine Component
 ----------------
 
@@ -117,26 +115,26 @@ The following schema is used to store data::
                    WITH replication = {'class': 'SimpleStrategy',
                                        'replication_factor': '1'}
                    AND durable_writes = true;
-   
+
    USE metric;
-   
+
    CREATE TYPE metric_point (
      max double,
      mean double,
      min double,
      sum double
    );
-   
+
    CREATE TYPE metric_resolution (
      precision int,
      period int
    );
-   
+
    CREATE TYPE metric_id (
      path text,
      resolution frozen<metric_resolution>
    );
-   
+
    CREATE TABLE metric.metric (
      id frozen<metric_id>,
      time bigint,
@@ -144,7 +142,7 @@ The following schema is used to store data::
      PRIMARY KEY (id, time)
    ) WITH COMPACT STORAGE
      AND CLUSTERING ORDER BY (time ASC)
-     AND compaction = {'class': 'org.apache.cassandra.db.compaction.DateTieredCompactionStrategy'}
+     AND compaction = {'class': 'DateTieredCompactionStrategy', 'min_threshold': '12', 'max_threshold': '32', 'max_sstable_age_days': '0.083', 'base_time_seconds': '50' }
      AND compression = {'sstable_compression': 'org.apache.cassandra.io.compress.LZ4Compressor'}
      AND dclocal_read_repair_chance = 0.1
      AND default_time_to_live = 0
@@ -154,14 +152,13 @@ The following schema is used to store data::
      AND min_index_interval = 128
      AND read_repair_chance = 0.0
      AND speculative_retry = '99.0PERCENTILE';
-     
+
 This schema leverages Cassandra's ``Compact Storage`` option to ensure a minimal overhead.
 Please be sure to choose the optimal compaction strategy for your use case. If available
 the ``DateTieredCompactionStrategy`` is likely your best bet.
 
 
 .. _Apache Cassandra: http://cassandra.apache.org
-.. _pickle: https://docs.python.org/2/library/pickle.html
 
 Index Component
 ---------------
@@ -189,4 +186,4 @@ The API component exposes the following HTTP routes:
 - ``/metrics``: query metrics.  Takes ``from``, ``to`` (optional), and any number of ``path`` arguments.
 - ``/paths``: query paths.  Takes a ``query`` argument.
 
-Any other request will yield a 404 response.  
+Any other request will yield a 404 response.
