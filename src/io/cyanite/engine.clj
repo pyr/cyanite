@@ -1,7 +1,6 @@
 (ns io.cyanite.engine
   "The core of cyanite"
-  (:require [io.cyanite.engine          :as engine]
-            [com.stuartsierra.component :as component]
+  (:require [com.stuartsierra.component :as component]
             [io.cyanite.engine.rule     :as rule]
             [io.cyanite.engine.queue    :as q]
             [io.cyanite.engine.buckets  :as b]
@@ -31,7 +30,7 @@
     (time! t-assc
            (assoc-if-absent! buckets k metric-key))
     (doseq [snapshot snaps]
-      (time! t-enq (engine/accept! writer snapshot)))))
+      (time! t-enq (accept! writer snapshot)))))
 
 (defrecord Engine [rules queues ingestq planner drift writer]
   component/Lifecycle
@@ -50,10 +49,10 @@
 
       (assoc this :planner planner :bucket buckets :ingestq ingestq)))
   (stop [this])
-  engine/Acceptor
+  Acceptor
   (accept! [this metric]
     (q/add! ingestq metric))
-  engine/Resolutionator
+  Resolutionator
   (resolution [this oldest path]
     (let [plan (rule/->exec-plan planner {:path path})
           ts   (now!)]
