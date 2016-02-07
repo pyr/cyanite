@@ -44,6 +44,21 @@
   (deref [this]
     0))
 
+(defrecord SynchronousQueue [consumers]
+  component/Lifecycle
+  (start [this]
+    (let [q (assoc this :consumers (atom []))]
+      (assoc this :consumers (atom []) :ingestq q :writeq q)))
+  (stop [this]
+    (assoc this :consumers nil))
+  queue/QueueEngine
+  (shutdown! [this])
+  (add! [this e]
+    (doseq [f @consumers]
+      (f e)))
+  (consume! [this f]
+    (swap! consumers conj f)))
+
 (def ^:dynamic *system*)
 
 (defn make-test-system
@@ -51,7 +66,7 @@
   (-> config
       (update :clock  #(map->TimeTravellingClock %))
       (update :drift  #(component/using (map->NoOpDrift %) [:clock]))
-      (update :queues queue/map->BlockingMemoryQueue)
+      (update :queues map->SynchronousQueue)
       (update :index  index/build-index)
       (update :writer #(component/using (map->MemoryWriter %) [:index
                                                                :queues]))))
