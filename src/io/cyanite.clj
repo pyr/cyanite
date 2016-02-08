@@ -100,9 +100,8 @@
 
       (sig/with-handler :hup
         (info "caught SIGHUP, reloading")
-        (swap! system #(-> %
-                           component/stop-system
-                           component/start-system)))
+        (swap! system (comp component/start-system
+                            component/stop-sytsem)))
 
       (info "ready to start the system")
       (swap! system component/start-system)))
