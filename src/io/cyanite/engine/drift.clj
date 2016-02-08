@@ -43,4 +43,30 @@
   (deref [this]
     @slot))
 
+;; A no-op implementation of the drift,
+;; might be used in test purposes or
+;; to avoid the drift calculation ovrehead
+;; in production systems.
+(defrecord NoOpDrift [clock]
+  component/Lifecycle
+  (start [this] this)
+  (stop [this] this)
+  Drift
+  (drift! [this ts] nil)
+  (skewed-epoch! [this]
+    (epoch! clock))
+  clojure.lang.IDeref
+  (deref [this]
+    0))
+
+(defmulti build-drift (comp (fnil keyword "agent") :type))
+
+(defmethod build-drift :no-op
+  [options]
+  (map->NoOpDrift options))
+
+(defmethod build-drift :agent
+  [options]
+  (map->AgentDrift options))
+
 (prefer-method print-method clojure.lang.IRecord clojure.lang.IDeref)

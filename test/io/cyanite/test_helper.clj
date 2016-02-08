@@ -32,18 +32,6 @@
   (set-time! [this t]
     (reset! time t)))
 
-(defrecord NoOpDrift [clock]
-  component/Lifecycle
-  (start [this] this)
-  (stop [this] this)
-  drift/Drift
-  (drift! [this ts] nil)
-  (skewed-epoch! [this]
-    (drift/epoch! clock))
-  clojure.lang.IDeref
-  (deref [this]
-    0))
-
 (defrecord SynchronousQueue [consumers]
   component/Lifecycle
   (start [this]
@@ -65,7 +53,7 @@
   [config]
   (-> config
       (update :clock  #(map->TimeTravellingClock %))
-      (update :drift  #(component/using (map->NoOpDrift %) [:clock]))
+      (update :drift  #(component/using (drift/build-drift %) [:clock]))
       (update :queues map->SynchronousQueue)
       (update :index  index/build-index)
       (update :writer #(component/using (map->MemoryWriter %) [:index

@@ -14,7 +14,7 @@
             [metrics.reporters.jmx      :as jmx]
             [io.cyanite.engine          :refer [map->Engine]]
             [io.cyanite.engine.writer   :refer [map->Writer]]
-            [io.cyanite.engine.drift    :refer [map->SystemClock map->AgentDrift]]
+            [io.cyanite.engine.drift    :refer [map->SystemClock build-drift]]
             [io.cyanite.api             :refer [map->Api]]
             [unilog.config              :refer [start-logging!]]
             [spootnik.uncaught          :refer [uncaught]]
@@ -62,7 +62,7 @@
           (dissoc :logging)
           (build-components :input input/build-input)
           (update :clock    #(map->SystemClock %))
-          (update :drift    #(component/using (map->AgentDrift %) [:clock]))
+          (update :drift    #(component/using (build-drift %) [:clock]))
           (update :queues   queue/map->BlockingMemoryQueue)
           (update :engine   #(component/using (map->Engine %) [:drift
                                                                :queues

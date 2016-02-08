@@ -89,6 +89,21 @@ input:
 index:
   type: agent
 ##
+## Drift
+## =====
+##
+## Detects the drift on the agent clock and ensures
+## that the snapshot epoch is calculated correctly
+## despite the time difference between the agent
+## and the calculating machine.
+##
+## Default implementation is `agent`.
+## If you trust your clocks and/or would like to
+## avoid drift handling on Cyanite side, you
+## can opt-out for `no-op` one.
+drift:
+  type: agent
+##
 ## Store
 ## =====
 ##
