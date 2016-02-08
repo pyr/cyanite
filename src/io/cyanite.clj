@@ -58,24 +58,21 @@
       (println "starting with configuration: " path))
     (let [config (config/load-path path)]
       (start-logging! (merge config/default-logging (:logging config)))
-      (-> config
-          (dissoc :logging)
+      (-> (component/system-map
+           :input  (input/build-input (:input config))
+           :clock  (map->SystemClock {})
+           :queues (queue/map->BlockingMemoryQueue (:queue config))
+           :drift  (build-drift (:drift config))
+           :engine (map->Engine (:engine config))
+           :writer (map->Writer (:writer config))
+           :api    (map->Api (:api config))
+           :index  (index/build-index (:index config))
+           :store  (store/build-store (:store config)))
           (build-components :input input/build-input)
-          (update :clock    #(map->SystemClock %))
-          (update :drift    #(component/using (build-drift %) [:clock]))
-          (update :queues   queue/map->BlockingMemoryQueue)
-          (update :engine   #(component/using (map->Engine %) [:drift
-                                                               :queues
-                                                               :writer]))
-          (update :writer   #(component/using (map->Writer %) [:index
-                                                               :store
-                                                               :queues]))
-          (update :api      #(component/using (map->Api {:options %}) [:index
-                                                                       :store
-                                                                       :queues
-                                                                       :engine]))
-          (update :index index/build-index)
-          (update :store store/build-store)))))
+          (component/system-using {:drift [:clock]
+                                   :engine [:drift :queues :writer]
+                                   :writer [:index :store :queues]
+                                   :api    [:index :store :queues :engine]})))))
 
 (defn -main
   "Our main function, parses args and launches appropriate services"
