@@ -25,5 +25,5 @@
                  [com.lmax/disruptor            "3.3.4"]
                  [com.boundary/high-scale-lib   "1.0.6"]
                  [net.jpountz.lz4/lz4           "1.3"]
-                 [org.xerial.snappy/snappy-java "1.1.2"]
+                 [org.xerial.snappy/snappy-java "1.1.2.1"]
                  [io.netty/netty-all            "4.0.34.Final"]])
