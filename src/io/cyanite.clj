@@ -79,12 +79,8 @@
 (defn -main
   "Our main function, parses args and launches appropriate services"
   [& args]
-  (let [[{:keys [path help quiet]} args banner] (get-cli args)
-        cr (csv/reporter "/tmp/csv" {})
-        jr (jmx/reporter {})]
+  (let [[{:keys [path help quiet]} args banner] (get-cli args)]
 
-    (csv/start cr 5)
-    (jmx/start jr)
     (when help
       (println banner)
       (System/exit 0))
@@ -103,7 +99,8 @@
                             component/stop-system)))
 
       (info "ready to start the system")
-      (swap! system component/start-system)))
+      (swap! system component/start-system)
+      (reporter/instrument! (:reporter @system) [:cyanite])))
   nil)
 
 ;; Install our uncaught exception handler.
