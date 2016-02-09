@@ -12,6 +12,7 @@
             [metrics.reporters.console  :as console]
             [metrics.reporters.csv      :as csv]
             [metrics.reporters.jmx      :as jmx]
+            [spootnik.reporter          :as reporter]
             [io.cyanite.engine          :refer [map->Engine]]
             [io.cyanite.engine.writer   :refer [map->Writer]]
             [io.cyanite.engine.drift    :refer [map->SystemClock build-drift]]
@@ -66,9 +67,11 @@
            :writer (map->Writer (:writer config))
            :api    (map->Api (:api config))
            :index  (index/build-index (:index config))
-           :store  (store/build-store (:store config)))
+           :store  (store/build-store (:store config))
+           :reporter (reporter/make-reporter (:reporter config)))
           (build-components :input input/build-input)
           (component/system-using {:drift [:clock]
+                                   :queues [:reporter]
                                    :engine [:drift :queues :writer]
                                    :writer [:index :store :queues]
                                    :api    [:index :store :queues :engine]})))))
@@ -76,12 +79,8 @@
 (defn -main
   "Our main function, parses args and launches appropriate services"
   [& args]
-  (let [[{:keys [path help quiet]} args banner] (get-cli args)
-        cr (csv/reporter "/tmp/csv" {})
-        jr (jmx/reporter {})]
+  (let [[{:keys [path help quiet]} args banner] (get-cli args)]
 
-    (csv/start cr 5)
-    (jmx/start jr)
     (when help
       (println banner)
       (System/exit 0))
@@ -100,7 +99,8 @@
                             component/stop-system)))
 
       (info "ready to start the system")
-      (swap! system component/start-system)))
+      (swap! system component/start-system)
+      (reporter/instrument! (:reporter @system) [:cyanite])))
   nil)
 
 ;; Install our uncaught exception handler.
