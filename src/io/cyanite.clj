@@ -43,12 +43,9 @@
    an updated system with top-level keys.
    components are created by call f on them
    options."
-  [system k f]
-  (if (seq (get system k))
-    (merge (dissoc system k)
-           (reduce merge {} (map (juxt :type f) (get system k))))
-    ;; When key didn't exist in map, create, call the constructor
-    ;; on an empty option map
+  [system config k f]
+  (if (seq config)
+    (reduce merge system (map (juxt :type f) config))
     (assoc system k (f {}))))
 
 (defn config->system
@@ -65,12 +62,12 @@
            :drift  (build-drift (:drift config))
            :engine (map->Engine (:engine config))
            :writer (map->Writer (:writer config))
-           :api    (map->Api (:api config))
+           :api    (map->Api {:options (:api config)})
            :index  (index/build-index (:index config))
            :store  (store/build-store (:store config))
            :reporter (reporter/make-reporter (:reporter config)))
-          (build-components :input input/build-input)
-          (component/system-using {:drift [:clock]
+          (build-components (:input config) :input input/build-input)
+          (component/system-using {:drift  [:clock]
                                    :queues [:reporter]
                                    :engine [:drift :queues :writer]
                                    :writer [:index :store :queues]
