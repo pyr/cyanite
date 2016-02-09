@@ -12,6 +12,7 @@
             [metrics.reporters.console  :as console]
             [metrics.reporters.csv      :as csv]
             [metrics.reporters.jmx      :as jmx]
+            [spootnik.reporter          :as reporter]
             [io.cyanite.engine          :refer [map->Engine]]
             [io.cyanite.engine.writer   :refer [map->Writer]]
             [io.cyanite.engine.drift    :refer [map->SystemClock build-drift]]
@@ -66,9 +67,11 @@
            :writer (map->Writer (:writer config))
            :api    (map->Api (:api config))
            :index  (index/build-index (:index config))
-           :store  (store/build-store (:store config)))
+           :store  (store/build-store (:store config))
+           :reporter (reporter/make-reporter (:reporter config)))
           (build-components :input input/build-input)
           (component/system-using {:drift [:clock]
+                                   :queues [:reporter]
                                    :engine [:drift :queues :writer]
                                    :writer [:index :store :queues]
                                    :api    [:index :store :queues :engine]})))))

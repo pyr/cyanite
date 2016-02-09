@@ -9,13 +9,10 @@
            com.lmax.disruptor.ExceptionHandler
            com.lmax.disruptor.EventHandler)
   (:require [com.stuartsierra.component :as component]
+            [spootnik.reporter          :as r]
             [clojure.tools.logging      :refer [warn error]]
             [metrics.counters           :refer [defcounter inc! dec!]]))
 
-(defcounter cnt-ingestq)
-(defcounter cnt-writeq)
-(defcounter cnt-errors-ingestq)
-(defcounter cnt-errors-writeq)
 
 (defonce default-poolsize 4)
 (defonce default-capacity (int 1024))
@@ -63,37 +60,47 @@
       ;; no-op
       )))
 
-(defrecord DisruptorQueue [disruptor translator cnt error-cnt]
+(defrecord DisruptorQueue [disruptor translator alias reporter]
   QueueEngine
   (shutdown! [this]
     (.shutdown disruptor))
   (add! [this e]
     (.publishEvent disruptor translator e))
   (consume! [this f]
-    (.handleEventsWith disruptor (into-array EventHandler [(event-handler (fn [e]
-                                                                            (inc! cnt)
-                                                                            (f e)))]))
-    (.handleExceptionsWith disruptor (exception-handler (fn [[ex event]]
-                                                          (inc! error-cnt)
-                                                          (error ex "could not handle an event"))))
+    (.handleEventsWith
+     disruptor
+     (into-array EventHandler
+                 [(event-handler (fn [e]
+                                   (r/inc! reporter [:cyanite alias :events])
+                                   (f e)))]))
+    (.handleExceptionsWith
+     disruptor
+     (exception-handler (fn [[ex event]]
+                          (r/inc! reporter [:cyanite alias :errors])
+                          (r/capture! reporter ex))))
     (.start disruptor)))
 
 (defn make-queue
-  [defaults cnt error-cnt]
+  [defaults alias reporter]
   (let [capacity (or (:queue-capacity defaults) default-capacity)
         pool     (threadpool (or (:pool-size defaults) default-poolsize))
         factory  (make-event-factory #(volatile! nil))]
     (DisruptorQueue. (disruptor factory capacity pool)
                      (make-translator vreset!)
-                     cnt
-                     error-cnt)))
+                     alias
+                     reporter)))
 
-(defrecord BlockingMemoryQueue [ingestq writeq defaults]
+(defrecord BlockingMemoryQueue [ingestq writeq defaults reporter]
   component/Lifecycle
   (start [this]
+    (r/build! reporter :counter [:cyanite :ingestq :events])
+    (r/build! reporter :counter [:cyanite :writeq :events])
+    (r/build! reporter :counter [:cyanite :ingestq :errors])
+    (r/build! reporter :counter [:cyanite :writeq :errors])
+
     (assoc this
-           :ingestq (make-queue defaults cnt-ingestq cnt-errors-ingestq)
-           :writeq  (make-queue defaults cnt-writeq cnt-errors-writeq)))
+           :ingestq (make-queue defaults :ingestq reporter)
+           :writeq  (make-queue defaults :writeq reporter)))
   (stop [this]
     (shutdown! ingestq)
     (shutdown! writeq)
