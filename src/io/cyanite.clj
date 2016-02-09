@@ -59,7 +59,6 @@
     (let [config (config/load-path path)]
       (start-logging! (merge config/default-logging (:logging config)))
       (-> (component/system-map
-           :input  (input/build-input (:input config))
            :clock  (map->SystemClock {})
            :queues (queue/map->BlockingMemoryQueue (:queue config))
            :drift  (build-drift (:drift config))
