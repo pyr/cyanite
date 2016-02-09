@@ -21,7 +21,7 @@
                  [metrics-clojure               "2.6.1"]
                  [clj-yaml                      "0.4.0"]
                  [clj-time                      "0.11.0"]
-                 [cc.qbits/alia                 "2.10.0"]
+                 [cc.qbits/alia                 "2.12.1"]
                  [com.lmax/disruptor            "3.3.4"]
                  [com.boundary/high-scale-lib   "1.0.6"]
                  [net.jpountz.lz4/lz4           "1.3"]
