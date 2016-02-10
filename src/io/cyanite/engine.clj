@@ -4,8 +4,8 @@
             [io.cyanite.engine.rule     :as rule]
             [io.cyanite.engine.queue    :as q]
             [spootnik.reporter          :as r]
-            [io.cyanite.utils           :refer [nbhm assoc-if-absent! now! entries remove!]]
-            [io.cyanite.engine.drift    :refer [drift! skewed-epoch!]]
+            [io.cyanite.utils           :refer [nbhm assoc-if-absent! entries remove!]]
+            [io.cyanite.engine.drift    :refer [drift! skewed-epoch! epoch!]]
             [clojure.tools.logging      :refer [info debug error]])
   (:import io.cyanite.engine.rule.Resolution))
 
@@ -46,6 +46,7 @@
           slot       (time-slot resolution (:time metric))
           new-monoid #(atom (MetricMonoid. 0 nil nil 0))
           monoid     (or (get slots slot) (new-monoid))]
+      (assoc-if-absent! slots slot monoid)
       (swap! monoid ingest! val)))
   Snapshoter
   (snapshot! [this now]
@@ -100,11 +101,12 @@
   (snapshot! [this]
     (snapshot! this (skewed-epoch! drift)))
   (snapshot! [this now]
+    (info "snapshotting at timeslot:" now)
     (vec (mapcat (partial snapshot-path now) (entries state))))
   Resolutioner
   (resolution [this oldest path]
     (let [plan (rule/->exec-plan planner {:path path})
-          ts   (now!)]
+          ts   (epoch! drift)]
       (when-let [resolution (some #(rule/fit? % oldest ts)
                                   (sort-by :precision plan))]
         {:path path :resolution resolution}))))

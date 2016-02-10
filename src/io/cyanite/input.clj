@@ -3,7 +3,6 @@
             [io.cyanite.engine          :as engine]
             [io.cyanite.input.carbon    :as carbon]
             [io.cyanite.input.tcp       :refer [map->TCPInput]]
-            [io.cyanite.utils           :refer [now!]]
             [clojure.tools.logging      :refer [info]]))
 
 (defmulti build-input (comp (fnil keyword "carbon") :type))

@@ -36,8 +36,3 @@
         (.get db k))
       (valAt [this k def]
         (or (.get db k) def)))))
-
-(defn now!
-  "Yield a UNIX epoch"
-  []
-  (quot (System/currentTimeMillis) 1000))

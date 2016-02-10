@@ -32,6 +32,9 @@
     (assoc this :slot (agent 0)))
   (stop [this]
     (assoc this :slot nil))
+  Clock
+  (epoch! [this]
+    (epoch! clock))
   Drift
   (drift! [this ts]
     (let [drift (- ts (epoch! clock))]
@@ -53,6 +56,9 @@
     (assoc this :slot (volatile! 0)))
   (stop [this]
     (assoc this :slot nil))
+  Clock
+  (epoch! [this]
+    (epoch! clock))
   Drift
   (drift! [this ts]
     (let [drift (- ts (epoch! clock))]
@@ -72,6 +78,9 @@
   component/Lifecycle
   (start [this] this)
   (stop [this] this)
+  Clock
+  (epoch! [this]
+    (epoch! clock))
   Drift
   (drift! [this ts] nil)
   (skewed-epoch! [this]

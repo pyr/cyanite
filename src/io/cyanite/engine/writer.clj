@@ -9,7 +9,7 @@
             [io.cyanite.pool            :refer [with-schedule set-thread-name!]]
             [clojure.tools.logging      :refer [info debug]]))
 
-(defrecord Writer [index store engine pool reporter task]
+(defrecord Writer [index store engine pool reporter]
   component/Lifecycle
   (start [this]
     (info "starting writer engine")

@@ -73,8 +73,8 @@
                                    :queues [:reporter]
                                    :pool   [:reporter]
                                    :engine [:drift :queues :reporter]
-                                   :writer [:pool :index :store :queues :reporter]
-                                   :api    [:index :store :queues :engine]})))))
+                                   :writer [:pool :index :store :engine :reporter]
+                                   :api    [:index :store :queues :engine :drift]})))))
 
 (defn -main
   "Our main function, parses args and launches appropriate services"
