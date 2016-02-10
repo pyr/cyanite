@@ -170,22 +170,3 @@
   [tokens series]
   (binding [*series* series]
     (transform! (tokens->ast tokens))))
-
-(comment
-  ;;
-  (require 'io.cyanite.query.series.parser)
-  (run-query! (io.cyanite.query.series.parser/query->tokens
-               "sumSeries(f*)")
-              {"f*" [["f1" [1 1 1]]
-                     ["f2" [2 2 2]]]})
-
-  ;;
-  (run-query! (io.cyanite.query.series.parser/query->tokens
-               "divideSeries(sumSeries(g*),absolute(scale(sumSeries(f1,f2),-2)))")
-              {"g*" [["g1" [1 1 1]]
-                     ["g2" [1 1 1]]]
-               "f1" [["f1" [1 1 1]]]
-               "f2" [["f2" [1 1 1]]]})
-
-
-  )
