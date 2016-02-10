@@ -44,10 +44,11 @@
                       {}))
 
       (= 1 (count payload))
-      (-> payload first second)
+      (-> payload first)
 
       :else
-      (apply mapv f (map second payload)))))
+      (apply mapv f payload))))
+
 
 (defn index-series
   [series]
