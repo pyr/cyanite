@@ -43,6 +43,27 @@
   (deref [this]
     @slot))
 
+;; Hold the state of our drift in a volatile,
+;; we don't care much about the atomicity guarantees
+;; of our drift, we want a reasonable approximation
+;; of the clock drift.
+(defrecord VolatileDrift [slot clock]
+  component/Lifecycle
+  (start [this]
+    (assoc this :slot (volatile! 0)))
+  (stop [this]
+    (assoc this :slot nil))
+  Drift
+  (drift! [this ts]
+    (let [drift (- ts (epoch! clock))]
+      (when (pos? drift)
+        (vswap! slot max drift))))
+  (skewed-epoch! [this]
+    (- (epoch! clock) @slot))
+  clojure.lang.IDeref
+  (deref [this]
+    @slot))
+
 ;; A no-op implementation of the drift,
 ;; might be used in test purposes or
 ;; to avoid the drift calculation ovrehead
@@ -64,6 +85,10 @@
 (defmethod build-drift :no-op
   [options]
   (map->NoOpDrift options))
+
+(defmethod build-drift :volatile
+  [options]
+  (map->VolatileDrift options))
 
 (defmethod build-drift :agent
   [options]

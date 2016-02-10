@@ -19,6 +19,8 @@
 
 (defrecord Resolution [precision period])
 
+(defrecord ResolutionChain [precisions])
+
 (defn fit?
   "Does a point fit in a resolution, given
    a reference to now ?"
