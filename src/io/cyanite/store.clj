@@ -63,15 +63,18 @@
       component/Lifecycle
       (start [this] this)
       (stop [this] this)
+      clojure.lang.IDeref
+      (deref [this]
+        @state)
       MetricStore
       (fetch! [this from to paths]
         (let [st @state]
-         (mapcat
-          (fn [path]
-            (->> (get st path)
-                 (filter
-                  (fn [[time _]]
-                    (and (>= time from)
+          (mapcat
+           (fn [path]
+             (->> (get st path)
+                  (filter
+                   (fn [[time _]]
+                     (and (>= time from)
                          (<= time to))))
                  (map
                   (fn [[time point]]

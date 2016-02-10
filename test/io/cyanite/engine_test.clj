@@ -9,7 +9,9 @@
   (with-config
     {:engine (component/using (e/map->Engine {:rules {"default" ["5s:1h"]}}) [:drift
                                                                               :queues
-                                                                              :writer])}
+                                                                              :writer])
+     :writer (component/using (map->MemoryWriter {}) [:index
+                                                      :queues])}
     (let [engine    (:engine *system*)
           clock     (:clock *system*)
           writer    (:writer *system*)

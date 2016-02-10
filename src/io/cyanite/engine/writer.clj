@@ -18,7 +18,7 @@
                     (store/insert! store metric)))
       (assoc this :writeq writeq)))
   (stop [this]
-    (assoc this))
+    this)
   engine/Acceptor
   (accept! [this metric]
     (q/add! writeq metric)))

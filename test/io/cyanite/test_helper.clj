@@ -1,9 +1,9 @@
 (ns io.cyanite.test-helper
-  (:require  [com.stuartsierra.component :as component]
-             [io.cyanite.engine          :as engine]
-             [io.cyanite.engine.drift    :as drift]
-             [io.cyanite.engine.queue    :as queue]
-             [io.cyanite.index           :as index]))
+  (:require [com.stuartsierra.component :as component]
+            [io.cyanite.engine          :as engine]
+            [io.cyanite.engine.drift    :as drift]
+            [io.cyanite.engine.queue    :as queue]
+            [io.cyanite.index           :as index]))
 
 (defrecord MemoryWriter [state]
   component/Lifecycle
@@ -32,13 +32,7 @@
   (set-time! [this t]
     (reset! time t)))
 
-(defrecord SynchronousQueue [consumers]
-  component/Lifecycle
-  (start [this]
-    (let [q (assoc this :consumers (atom []))]
-      (assoc this :consumers (atom []) :ingestq q :writeq q)))
-  (stop [this]
-    (assoc this :consumers nil))
+(defrecord SynchronousQueueEngine [consumers]
   queue/QueueEngine
   (shutdown! [this])
   (add! [this e]
@@ -46,6 +40,15 @@
       (f e)))
   (consume! [this f]
     (swap! consumers conj f)))
+
+(defrecord SynchronousQueue []
+  component/Lifecycle
+  (start [this]
+    (assoc this
+           :ingestq (SynchronousQueueEngine. (atom []))
+           :writeq (SynchronousQueueEngine. (atom []))))
+  (stop [this]
+    (assoc this :consumers nil)))
 
 (def ^:dynamic *system*)
 
@@ -55,9 +58,7 @@
       (update :clock  #(map->TimeTravellingClock %))
       (update :drift  #(component/using (drift/build-drift %) [:clock]))
       (update :queues map->SynchronousQueue)
-      (update :index  index/build-index)
-      (update :writer #(component/using (map->MemoryWriter %) [:index
-                                                               :queues]))))
+      (update :index  index/build-index)))
 
 
 (defmacro with-config
