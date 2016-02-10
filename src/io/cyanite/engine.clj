@@ -54,11 +54,11 @@
 
 (defn fetch-resolutions
   [state rules metric]
-  (let [path (:path metric)
-        m    (or (get state path)
-                 (make-resolutions rules metric))]
-    (assoc-if-absent! state path m)
-    m))
+  (let [path        (:path metric)
+        resolutions (or (get state path)
+                        (make-resolutions rules metric))]
+    (assoc-if-absent! state path resolutions)
+    resolutions))
 
 (defrecord Engine [rules state queues ingestq planner drift writer]
   component/Lifecycle
