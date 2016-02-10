@@ -3,6 +3,13 @@
 
 (def ^:dynamic *series*)
 
+(defn nil-safe-op
+  [f]
+  (fn [& vals]
+    (if (some nil? vals)
+      nil
+      (apply f vals))))
+
 (defprotocol SeriesTransform
   "A protocol to realize operations on series."
   (transform! [this]))
@@ -68,7 +75,7 @@
 (defn traverse!
   [repr outer inner & series]
   (let [renamed (series-rename series repr)]
-    [renamed [[renamed (apply mapv outer (flatten-series inner series))]]]))
+    [renamed [(apply mapv (nil-safe-op outer) (flatten-series (nil-safe-op inner) series))]]))
 
 (extend-protocol SeriesTransform
   String
