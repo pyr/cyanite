@@ -4,7 +4,7 @@
             [io.cyanite.engine.rule     :as rule]
             [io.cyanite.engine.queue    :as q]
             [spootnik.reporter          :as r]
-            [io.cyanite.utils           :refer [nbhm assoc-if-absent! now!]]
+            [io.cyanite.utils           :refer [nbhm assoc-if-absent! now! entries remove!]]
             [io.cyanite.engine.drift    :refer [drift! skewed-epoch!]]
             [clojure.tools.logging      :refer [info debug error]])
   (:import io.cyanite.engine.rule.Resolution))
@@ -19,14 +19,14 @@
   (ingest! [this metric]))
 
 (defprotocol Snapshoter
-  (snapshot! [this] [this floor]))
+  (snapshot! [this] [this now]))
 
 (defn time-slot
   [^Resolution resolution ^Long now]
   (let [p (:precision resolution)]
     (* p (quot now p))))
 
-(defrecord MetricSnapshot [mean min max sum])
+(defrecord MetricSnapshot [path time mean min max sum])
 
 (defrecord MetricMonoid [count minv maxv sum]
   Ingester
@@ -35,9 +35,9 @@
                    (if minv (min minv val) val)
                    (if maxv (max maxv val) val)
                    (+ sum val)))
-  clojure.lang.IDeref
-  (deref [this]
-    (MetricSnapshot. (double (/ sum count)) minv maxv sum)))
+  Snapshoter
+  (snapshot! [this now]
+    (MetricSnapshot. nil now (double (/ sum count)) minv maxv sum)))
 
 (defrecord MetricResolution [resolution slots]
   Ingester
@@ -46,7 +46,14 @@
           slot       (time-slot resolution (:time metric))
           new-monoid #(atom (MetricMonoid. 0 nil nil 0))
           monoid     (or (get slots slot) (new-monoid))]
-      (swap! monoid ingest! val))))
+      (swap! monoid ingest! val)))
+  Snapshoter
+  (snapshot! [this now]
+    (let [floor   (time-slot resolution now)
+          entries (filter #(< (key %) floor) (entries slots))]
+      (doseq [slot (map key entries)]
+        (remove! slots slot))
+      (mapv #(snapshot! (val %) (key %)) entries))))
 
 (defn make-resolutions
   [rules metric]
@@ -60,6 +67,14 @@
                         (make-resolutions rules metric))]
     (assoc-if-absent! state path resolutions)
     resolutions))
+
+(defn snapshot-resolution
+  [path now resolution]
+  (mapv #(assoc % :path path) (snapshot! resolution now)))
+
+(defn snapshot-path
+  [now [path resolutions]]
+  (vec (mapcat (partial snapshot-resolution path now))))
 
 (defrecord Engine [rules state queues ingestq planner drift reporter]
   component/Lifecycle
@@ -84,8 +99,8 @@
   Snapshoter
   (snapshot! [this]
     (snapshot! this (skewed-epoch! drift)))
-  (snapshot! [this floor]
-    (error "No snapshoting for now, I will eat up all your ram!"))
+  (snapshot! [this now]
+    (vec (mapcat (partial snapshot-path now) (entries state))))
   Resolutioner
   (resolution [this oldest path]
     (let [plan (rule/->exec-plan planner {:path path})
