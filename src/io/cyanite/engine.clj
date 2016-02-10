@@ -50,11 +50,11 @@
       (swap! monoid ingest! val)))
   Snapshoter
   (snapshot! [this now]
-    (let [floor   (time-slot resolution now)
-          entries (filter #(< (key %) floor) (entries slots))]
-      (doseq [slot (map key entries)]
+    (let [floor    (time-slot resolution now)
+          to-purge (filter #(< (key %) floor) (entries slots))]
+      (doseq [slot (map key to-purge)]
         (remove! slots slot))
-      (mapv #(snapshot! (val %) (key %)) entries))))
+      (mapv #(snapshot! (val %) (key %)) to-purge))))
 
 (defn make-resolutions
   [rules metric]
@@ -101,8 +101,8 @@
   (snapshot! [this]
     (snapshot! this (skewed-epoch! drift)))
   (snapshot! [this now]
-    (info "snapshotting at timeslot:" now)
-    (vec (mapcat (partial snapshot-path now) (entries state))))
+    (let [entry-set (entries state)]
+      (vec (mapcat (partial snapshot-path now) entry-set))))
   Resolutioner
   (resolution [this oldest path]
     (let [plan (rule/->exec-plan planner {:path path})

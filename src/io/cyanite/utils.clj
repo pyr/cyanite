@@ -20,7 +20,7 @@
         this)
       MutableMap
       (entries [this]
-        (.entrySet [this]))
+        (.entrySet db))
       (keyset [this]
         (.keySet db))
       (remove! [this k]
