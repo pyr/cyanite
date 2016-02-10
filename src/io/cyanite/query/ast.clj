@@ -110,6 +110,23 @@
      nil
      (resolve! series 1 1))))
 
+(defrecord DerivativeOperation [series]
+  SeriesTransform
+  (transform! [this]
+    (traverse!
+     "derivative($0)"
+     (let [st (volatile! ::none)]
+       (fn [i]
+         (if-not (nil? i)
+           (let [prev @st]
+             (vreset! st i)
+             (if (= ::none prev)
+               i
+               (- i prev))))))
+
+     nil
+     (resolve! series 1 1))))
+
 (defrecord AbsoluteOperation [series]
   SeriesTransform
   (transform! [this]
@@ -140,6 +157,10 @@
 (defmethod tokens->ast :absolute
   [[_ series]]
   (AbsoluteOperation. (tokens->ast series)))
+
+(defmethod tokens->ast :derivative
+  [[_ series]]
+  (DerivativeOperation. (tokens->ast series)))
 
 (defmethod tokens->ast :default
   [x]
