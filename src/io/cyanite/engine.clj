@@ -4,7 +4,7 @@
             [io.cyanite.engine.rule     :as rule]
             [io.cyanite.engine.queue    :as q]
             [io.cyanite.engine.buckets  :as b]
-            [io.cyanite.utils           :refer [nbhm assoc-if-absent! now!]]
+            [io.cyanite.utils           :refer [nbhm assoc-if-absent!]]
             [io.cyanite.engine.drift    :refer [drift! skewed-epoch!]]
             [clojure.tools.logging      :refer [info debug]]
             [metrics.timers             :refer [deftimer time!]]))
@@ -19,7 +19,7 @@
   (accept! [this value]))
 
 (defprotocol Resolutionator
-  (resolution [this oldest path]))
+  (resolution [this oldest newest path]))
 
 (defn ingest-at-resolution
   [drift buckets writer resolution metric]
@@ -53,9 +53,8 @@
   (accept! [this metric]
     (q/add! ingestq metric))
   Resolutionator
-  (resolution [this oldest path]
-    (let [plan (rule/->exec-plan planner {:path path})
-          ts   (now!)]
-      (when-let [resolution (some #(rule/fit? % oldest ts)
+  (resolution [this oldest newest path]
+    (let [plan (rule/->exec-plan planner {:path path})]
+      (when-let [resolution (some #(rule/fit? % oldest newest)
                                   (sort-by :precision plan))]
         {:path path :resolution resolution}))))

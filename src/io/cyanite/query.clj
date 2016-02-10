@@ -39,7 +39,7 @@
           by-path (path-leaves index paths)
           leaves  (->> (mapcat val by-path)
                        (map :path)
-                       (map (partial engine/resolution engine to))
+                       (map (partial engine/resolution engine from to))
                        (remove nil?)
                        (set))
           series  (store/query! store from to (seq leaves))
