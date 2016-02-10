@@ -4,6 +4,7 @@
 
 (defprotocol MutableMap
   "Mutable map functionality"
+  (entries [this] "Return a set of entries")
   (keyset [this] "Return the keyset")
   (remove! [this k] "Atomically remove and return an element")
   (assoc-if-absent! [this k v] "CAS type put"))
@@ -18,6 +19,8 @@
         (.put db k v)
         this)
       MutableMap
+      (entries [this]
+        (.entrySet db))
       (keyset [this]
         (.keySet db))
       (remove! [this k]
@@ -33,8 +36,3 @@
         (.get db k))
       (valAt [this k def]
         (or (.get db k) def)))))
-
-(defn now!
-  "Yield a UNIX epoch"
-  []
-  (quot (System/currentTimeMillis) 1000))

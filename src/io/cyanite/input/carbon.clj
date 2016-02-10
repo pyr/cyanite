@@ -37,4 +37,4 @@
    #(ReadTimeoutHandler. read-timeout)
    (tcp/with-input input
      (when (seq input)
-       (engine/accept! engine (parse-line input))))])
+       (engine/enqueue! engine (parse-line input))))])
