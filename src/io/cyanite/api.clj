@@ -6,7 +6,6 @@
             [io.cyanite.engine.rule     :as rule]
             [io.cyanite.engine          :as engine]
             [io.cyanite.engine.queue    :as q]
-            [io.cyanite.engine.buckets  :as b]
             [io.cyanite.index           :as index]
             [io.cyanite.store           :as store]
             [io.cyanite.query           :as query]
