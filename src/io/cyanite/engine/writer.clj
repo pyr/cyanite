@@ -5,21 +5,23 @@
             [io.cyanite.engine.queue    :as q]
             [io.cyanite.index           :as index]
             [io.cyanite.store           :as store]
+            [spootnik.reporter          :as r]
+            [io.cyanite.pool            :refer [with-schedule set-thread-name!]]
             [clojure.tools.logging      :refer [info debug]]))
 
-(defrecord Writer [index store queues writeq]
+(defrecord Writer [index store engine pool reporter task]
   component/Lifecycle
   (start [this]
     (info "starting writer engine")
-    (let [writeq (:writeq queues)]
-      (q/consume! writeq (partial engine/ingest! this))
-      (assoc this :writeq writeq)))
+    (with-schedule [pool 10]
+      (set-thread-name! "cyanite-snapshot")
+      (info "starting snapshot.")
+      (doseq [metric (engine/snapshot! engine)]
+        (engine/ingest! this metric)))
+    this)
   (stop [this]
-    (assoc this))
+    this)
   engine/Ingester
   (ingest! [this metric]
     (index/register! index (:path metric))
-    (store/insert! store metric))
-  engine/Enqueuer
-  (enqueue! [this metric]
-    (q/add! writeq metric)))
+    (store/insert! store metric)))

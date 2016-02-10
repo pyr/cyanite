@@ -3,6 +3,7 @@
   (:require [com.stuartsierra.component :as component]
             [io.cyanite.engine.rule     :as rule]
             [io.cyanite.engine.queue    :as q]
+            [spootnik.reporter          :as r]
             [io.cyanite.utils           :refer [nbhm assoc-if-absent! now!]]
             [io.cyanite.engine.drift    :refer [drift! skewed-epoch!]]
             [clojure.tools.logging      :refer [info debug error]])
@@ -60,7 +61,7 @@
     (assoc-if-absent! state path resolutions)
     resolutions))
 
-(defrecord Engine [rules state queues ingestq planner drift writer]
+(defrecord Engine [rules state queues ingestq planner drift reporter]
   component/Lifecycle
   (start [this]
     (let [state   (nbhm)
@@ -68,6 +69,7 @@
           ingestq (:ingestq queues)]
       (info "starting engine")
       (q/consume! ingestq (partial ingest! this))
+      (r/instrument! reporter [:cyanite])
       (assoc this :planner planner :state state :ingestq ingestq)))
   (stop [this]
     (assoc this :planner nil :state nil :ingestq nil))

@@ -36,9 +36,9 @@
   component/Lifecycle
   (start [this]
     (let [q (assoc this :consumers (atom []))]
-      (assoc this :consumers (atom []) :ingestq q :writeq q)))
+      (assoc this :consumers (atom []) :ingestq q)))
   (stop [this]
-    (assoc this :consumers nil))
+    (assoc this :consumers nil :ingestq nil))
   queue/QueueEngine
   (shutdown! [this])
   (add! [this e]

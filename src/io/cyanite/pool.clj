@@ -69,4 +69,8 @@
 
 (defmacro with-schedule
   [[pool delay] & body]
-  `(recurring ~pool (fn [] ~@body) 0 delay secs))
+  `(recurring ~pool (fn [] ~@body) ~delay))
+
+(defn make-pool
+  [config]
+  (map->Pool config))
