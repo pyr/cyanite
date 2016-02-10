@@ -13,8 +13,8 @@
   clojure.lang.IDeref
   (deref [this]
     @state)
-  engine/Acceptor
-  (accept! [this metric]
+  engine/Enqueuer
+  (enqueue! [this metric]
     (swap! state conj metric)))
 
 (defprotocol TimeTraveller

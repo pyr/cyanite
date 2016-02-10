@@ -8,10 +8,10 @@
             [clojure.tools.logging      :refer [info debug error]])
   (:import io.cyanite.engine.rule.Resolution))
 
-(defprotocol Acceptor
-  (accept! [this value]))
+(defprotocol Enqueuer
+  (enqueue! [this value]))
 
-(defprotocol Resolutionator
+(defprotocol Resolutioner
   (resolution [this oldest path]))
 
 (defprotocol Ingester
@@ -76,15 +76,15 @@
     (drift! drift (:time metric))
     (doseq [resolution (fetch-resolutions state rules metric)]
       (ingest! resolution metric)))
-  Acceptor
-  (accept! [this metric]
+  Enqueuer
+  (enqueue! [this metric]
     (q/add! ingestq metric))
   Snapshoter
   (snapshot! [this]
     (snapshot! this (skewed-epoch! drift)))
   (snapshot! [this floor]
     (error "No snapshoting for now, I will eat up all your ram!"))
-  Resolutionator
+  Resolutioner
   (resolution [this oldest path]
     (let [plan (rule/->exec-plan planner {:path path})
           ts   (now!)]

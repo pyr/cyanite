@@ -12,13 +12,14 @@
   (start [this]
     (info "starting writer engine")
     (let [writeq (:writeq queues)]
-      (q/consume! writeq
-                  (fn [metric]
-                    (index/register! index (:path metric))
-                    (store/insert! store metric)))
+      (q/consume! writeq (partial engine/ingest! this))
       (assoc this :writeq writeq)))
   (stop [this]
     (assoc this))
-  engine/Acceptor
-  (accept! [this metric]
+  engine/Ingester
+  (ingest! [this metric]
+    (index/register! index (:path metric))
+    (store/insert! store metric))
+  engine/Enqueuer
+  (enqueue! [this metric]
     (q/add! writeq metric)))
