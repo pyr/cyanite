@@ -4,7 +4,8 @@
   :license {:name "MIT License"
             :url "https://github.com/pyr/cyanite/tree/master/LICENSE"}
   :maintainer {:email "pyr@spootnik.org"}
-  :aot :all
+  :profiles {:uberjar {:aot      :all
+                       :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}}
   :main io.cyanite
   :plugins [[lein-ancient "0.6.7"]]
   :dependencies [[org.clojure/clojure           "1.8.0"]
