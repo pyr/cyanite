@@ -84,9 +84,10 @@
           planner (map rule/->rule rules)
           ingestq (:ingestq queues)]
       (info "starting engine")
-      (q/consume! ingestq (partial ingest! this))
-      (r/instrument! reporter [:cyanite])
-      (assoc this :planner planner :state state :ingestq ingestq)))
+      (let [this (assoc this :planner planner :state state :ingestq ingestq)]
+        (q/consume! ingestq (partial ingest! this))
+        (r/instrument! reporter [:cyanite])
+        this)))
   (stop [this]
     (assoc this :planner nil :state nil :ingestq nil))
   Ingester
