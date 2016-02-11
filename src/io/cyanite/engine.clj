@@ -92,7 +92,7 @@
   Ingester
   (ingest! [this metric]
     (drift! drift (:time metric))
-    (doseq [resolution (fetch-resolutions state rules metric)]
+    (doseq [resolution (fetch-resolutions state planner metric)]
       (ingest! resolution metric)))
   Enqueuer
   (enqueue! [this metric]
