@@ -41,8 +41,8 @@
                        (map :path)
                        (map (partial engine/resolution engine from to))
                        (remove nil?)
-                       (set))
-          series  (store/query! store from to (seq leaves))
+                       (distinct))
+          series  (store/query! store from to leaves)
           merged  (merge-paths by-path series)
           from    (:from series)
           step    (:step series)]
