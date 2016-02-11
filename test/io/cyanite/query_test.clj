@@ -9,27 +9,21 @@
 
 (deftest query-test
   (with-config
-    {:engine (component/using
-              (e/map->Engine {:rules {"default" ["5s:1h"]}})
-              [:drift
-               :queues
-               :writer])
-     :store  (s/memory-store)
-     :writer (component/using
-              (writer/map->Writer {})
-              [:index
-               :store
-               :queues])}
+    {:engine {:rules {"default" ["5s:1h"]}}}
+    {}
     (let [store     (:store *system*)
           clock     (:clock *system*)
           index     (:index *system*)
+          writer    (:writer *system*)
           engine    (:engine *system*)
           base-time 1454877020]
       (doseq [i (range 0 11)]
         (set-time! clock (* (+ base-time i) 1000))
-        (e/accept! engine {:path "a.b.c" :metric i :time (+ base-time i)})
-        (e/accept! engine {:path "a.b.d" :metric (* 100 i) :time (+ base-time i)})
-        (e/accept! engine {:path "a.b.f" :metric (* 1000 i) :time (+ base-time i)}))
+        (e/ingest! engine {:path "a.b.c" :metric i :time (+ base-time i)})
+        (e/ingest! engine {:path "a.b.d" :metric (* 100 i) :time (+ base-time i)})
+        (e/ingest! engine {:path "a.b.f" :metric (* 1000 i) :time (+ base-time i)})
+        (when (= 0 (mod i 5))
+          (e/snapshot! writer)))
 
       (are [query result]
           (= (run-query! store index engine base-time (+ base-time 60)
