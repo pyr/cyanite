@@ -75,7 +75,7 @@
 
 (defn snapshot-path
   [now [path resolutions]]
-  (vec (mapcat (partial snapshot-resolution path now))))
+  (vec (mapcat (partial snapshot-resolution path now) resolutions)))
 
 (defrecord Engine [rules state queues ingestq planner drift reporter]
   component/Lifecycle
