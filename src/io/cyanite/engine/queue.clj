@@ -90,18 +90,12 @@
                      alias
                      reporter)))
 
-(defrecord BlockingMemoryQueue [ingestq writeq defaults reporter]
+(defrecord BlockingMemoryQueue [ingestq defaults reporter]
   component/Lifecycle
   (start [this]
     (r/build! reporter :counter [:cyanite :ingestq :events])
-    (r/build! reporter :counter [:cyanite :writeq :events])
     (r/build! reporter :counter [:cyanite :ingestq :errors])
-    (r/build! reporter :counter [:cyanite :writeq :errors])
-
-    (assoc this
-           :ingestq (make-queue defaults :ingestq reporter)
-           :writeq  (make-queue defaults :writeq reporter)))
+    (assoc this :ingestq (make-queue defaults :ingestq reporter)))
   (stop [this]
     (shutdown! ingestq)
-    (shutdown! writeq)
-    (assoc this :ingestq nil :writeq nil)))
+    (assoc this :ingestq nil)))

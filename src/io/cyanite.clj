@@ -8,6 +8,7 @@
             [io.cyanite.index.cassandra]
             [io.cyanite.engine.queue    :as queue]
             [io.cyanite.store           :as store]
+            [io.cyanite.pool            :as pool]
             [com.stuartsierra.component :as component]
             [metrics.reporters.console  :as console]
             [metrics.reporters.csv      :as csv]
@@ -65,13 +66,15 @@
            :api    (map->Api {:options (:api config)})
            :index  (index/build-index (:index config))
            :store  (store/build-store (:store config))
+           :pool     (pool/make-pool (:pool config))
            :reporter (reporter/make-reporter (:reporter config)))
           (build-components (:input config) :input input/build-input)
           (component/system-using {:drift  [:clock]
                                    :queues [:reporter]
-                                   :engine [:drift :queues :writer]
-                                   :writer [:index :store :queues]
-                                   :api    [:index :store :queues :engine]})))))
+                                   :pool   [:reporter]
+                                   :engine [:drift :queues :reporter]
+                                   :writer [:pool :index :store :engine :reporter]
+                                   :api    [:index :store :queues :engine :drift]})))))
 
 (defn -main
   "Our main function, parses args and launches appropriate services"
@@ -96,8 +99,7 @@
                             component/stop-system)))
 
       (info "ready to start the system")
-      (swap! system component/start-system)
-      (reporter/instrument! (:reporter @system) [:cyanite])))
+      (swap! system component/start-system)))
   nil)
 
 ;; Install our uncaught exception handler.
