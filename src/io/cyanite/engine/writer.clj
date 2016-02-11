@@ -13,14 +13,17 @@
   component/Lifecycle
   (start [this]
     (info "starting writer engine")
-    (with-schedule [pool 10]
-      (set-thread-name! "cyanite-snapshot")
-      (info "starting snapshot.")
-      (doseq [metric (engine/snapshot! engine)]
-        (engine/ingest! this metric)))
-    this)
+    (let [task (with-schedule [pool 10]
+                 (set-thread-name! "cyanite-snapshot")
+                 (info "starting snapshot.")
+                 (engine/snapshot! this))]
+      (assoc this :task task)))
   (stop [this]
     this)
+  engine/Snapshoter
+  (snapshot! [this]
+    (doseq [metric (engine/snapshot! engine)]
+      (engine/ingest! this metric)))
   engine/Ingester
   (ingest! [this metric]
     (index/register! index (:path metric))
