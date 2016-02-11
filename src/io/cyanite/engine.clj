@@ -71,7 +71,7 @@
 
 (defn snapshot-resolution
   [path now resolution]
-  (mapv #(assoc % :path path) (snapshot! resolution now)))
+  (mapv #(assoc % :path path :resolution (:resolution resolution)) (snapshot! resolution now)))
 
 (defn snapshot-path
   [now [path resolutions]]
