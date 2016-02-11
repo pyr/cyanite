@@ -13,7 +13,7 @@
   (enqueue! [this value]))
 
 (defprotocol Resolutioner
-  (resolution [this oldest path]))
+  (resolution [this oldest newest path]))
 
 (defprotocol Ingester
   (ingest! [this metric]))
@@ -104,10 +104,9 @@
     (let [entry-set (entries state)]
       (vec (mapcat (partial snapshot-path now) entry-set))))
   Resolutioner
-  (resolution [this oldest path]
-    (let [plan (rule/->exec-plan planner {:path path})
-          ts   (epoch! drift)]
-      (when-let [resolution (some #(rule/fit? % oldest ts)
+  (resolution [this oldest newest path]
+    (let [plan (rule/->exec-plan planner {:path path})]
+      (when-let [resolution (some #(rule/fit? % oldest newest)
                                   (sort-by :precision plan))]
         {:path path :resolution resolution}))))
 
