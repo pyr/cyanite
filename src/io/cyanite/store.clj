@@ -55,40 +55,38 @@
     (fetch! [this from to paths])
     (insert! [this metric])))
 
-(defn memory-store
-  "Extremely inefficient memory store for testing/mocking purposes"
-  []
-  (let [state (atom {})]
-    (reify
-      component/Lifecycle
-      (start [this] this)
-      (stop [this] this)
-      clojure.lang.IDeref
-      (deref [this]
-        @state)
-      MetricStore
-      (fetch! [this from to paths]
-        (let [st @state]
-          (mapcat
-           (fn [path]
-             (->> (get st path)
-                  (filter
-                   (fn [[time _]]
-                     (and (>= time from)
-                         (<= time to))))
-                 (map
-                  (fn [[time point]]
-                    {:id    path
-                     :time  time
-                     :point point}))))
-          paths)))
-      (insert! [this metric]
-        (swap! state
-               (fn [old]
-                 (update-in old
-                            [(select-keys metric [:path :resolution])
-                             (:time metric)]
-                            (constantly (select-keys metric [:max :min :sum :mean])))))))))
+(defrecord MemoryStore [state]
+  component/Lifecycle
+  (start [this]
+    (assoc this :state (atom {})))
+  (stop [this]
+    (assoc this :state nil))
+  clojure.lang.IDeref
+  (deref [this]
+    @state)
+  MetricStore
+  (fetch! [this from to paths]
+    (let [st @state]
+      (mapcat
+       (fn [path]
+         (->> (get st path)
+              (filter
+               (fn [[time _]]
+                 (and (>= time from)
+                      (<= time to))))
+              (map
+               (fn [[time point]]
+                 {:id    path
+                  :time  time
+                  :point point}))))
+       paths)))
+  (insert! [this metric]
+    (swap! state
+           (fn [old]
+             (update-in old
+                        [(select-keys metric [:path :resolution])
+                         (:time metric)]
+                        (constantly (select-keys metric [:max :min :sum :mean])))))))
 
 (defmulti build-store (comp (fnil keyword "cassandra-v2") :type))
 
@@ -102,7 +100,7 @@
 
 (defmethod build-store :memory
   [options]
-  (memory-store))
+  (map->MemoryStore options))
 
 (defn query! [store from to paths]
   (let [raw-series         (fetch! store from to paths)
