@@ -54,7 +54,7 @@
           to-purge (filter #(< (key %) floor) (entries slots))]
       (doseq [slot (map key to-purge)]
         (remove! slots slot))
-      (mapv #(snapshot! (val %) (key %)) to-purge))))
+      (mapv #(snapshot! @(val %) (key %)) to-purge))))
 
 (defn make-resolutions
   [rules metric]
