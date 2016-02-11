@@ -71,8 +71,12 @@
      disruptor
      (into-array EventHandler
                  [(event-handler (fn [e]
-                                   (r/inc! reporter [:cyanite alias :events])
-                                   (f e)))]))
+                                   (try
+                                     (r/inc! reporter [:cyanite alias :events])
+                                     (f e)
+                                     (catch Exception ex
+                                       (r/inc! reporter [:cyanite alias :errors])
+                                       (r/capture! reporter ex)))))]))
     (.handleExceptionsWith
      disruptor
      (exception-handler (fn [[ex event]]
