@@ -2,7 +2,6 @@
   "Main cyanite namespace"
   (:gen-class)
   (:require [io.cyanite.config          :as config]
-            [io.cyanite.signals         :as sig]
             [io.cyanite.input           :as input]
             [io.cyanite.index           :as index]
             [io.cyanite.index.cassandra]
@@ -18,6 +17,7 @@
             [io.cyanite.engine.writer   :refer [map->Writer]]
             [io.cyanite.engine.drift    :refer [map->SystemClock build-drift]]
             [io.cyanite.api             :refer [map->Api]]
+            [signal.handler             :refer [with-handler]]
             [unilog.config              :refer [start-logging!]]
             [spootnik.uncaught          :refer [uncaught]]
             [clojure.tools.logging      :refer [info warn]]
@@ -87,13 +87,13 @@
 
     (let [system (atom (config->system path quiet))]
       (info "installing signal handlers")
-      (sig/with-handler :term
+      (with-handler :term
         (info "caught SIGTERM, quitting")
         (component/stop-system @system)
         (info "all components shut down")
         (System/exit 0))
 
-      (sig/with-handler :hup
+      (with-handler :hup
         (info "caught SIGHUP, reloading")
         (swap! system (comp component/start-system
                             component/stop-system)))
