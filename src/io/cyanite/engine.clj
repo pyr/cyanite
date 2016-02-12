@@ -13,7 +13,7 @@
   (enqueue! [this value]))
 
 (defprotocol Resolutioner
-  (resolution [this oldest path]))
+  (resolution [this oldest newest path]))
 
 (defprotocol Ingester
   (ingest! [this metric]))
@@ -54,7 +54,7 @@
           to-purge (filter #(< (key %) floor) (entries slots))]
       (doseq [slot (map key to-purge)]
         (remove! slots slot))
-      (mapv #(snapshot! (val %) (key %)) to-purge))))
+      (mapv #(snapshot! @(val %) (key %)) to-purge))))
 
 (defn make-resolutions
   [rules metric]
@@ -71,11 +71,11 @@
 
 (defn snapshot-resolution
   [path now resolution]
-  (mapv #(assoc % :path path) (snapshot! resolution now)))
+  (mapv #(assoc % :path path :resolution (:resolution resolution)) (snapshot! resolution now)))
 
 (defn snapshot-path
   [now [path resolutions]]
-  (vec (mapcat (partial snapshot-resolution path now))))
+  (vec (mapcat (partial snapshot-resolution path now) resolutions)))
 
 (defrecord Engine [rules state queues ingestq planner drift reporter]
   component/Lifecycle
@@ -84,15 +84,16 @@
           planner (map rule/->rule rules)
           ingestq (:ingestq queues)]
       (info "starting engine")
-      (q/consume! ingestq (partial ingest! this))
-      (r/instrument! reporter [:cyanite])
-      (assoc this :planner planner :state state :ingestq ingestq)))
+      (let [this (assoc this :planner planner :state state :ingestq ingestq)]
+        (q/consume! ingestq (partial ingest! this))
+        (r/instrument! reporter [:cyanite])
+        this)))
   (stop [this]
     (assoc this :planner nil :state nil :ingestq nil))
   Ingester
   (ingest! [this metric]
     (drift! drift (:time metric))
-    (doseq [resolution (fetch-resolutions state rules metric)]
+    (doseq [resolution (fetch-resolutions state planner metric)]
       (ingest! resolution metric)))
   Enqueuer
   (enqueue! [this metric]
@@ -104,11 +105,12 @@
     (let [entry-set (entries state)]
       (vec (mapcat (partial snapshot-path now) entry-set))))
   Resolutioner
-  (resolution [this oldest path]
-    (let [plan (rule/->exec-plan planner {:path path})
-          ts   (epoch! drift)]
-      (when-let [resolution (some #(rule/fit? % oldest ts)
-                                  (sort-by :precision plan))]
-        {:path path :resolution resolution}))))
+  (resolution [this oldest newest path]
+    (let [plan (->> (rule/->exec-plan planner {:path path})
+                    (sort-by :precision))]
+      (if-let [resolution (some #(rule/fit? % oldest newest)
+                                plan)]
+        {:path path :resolution resolution}
+        {:path path :resolution (first plan)}))))
 
 (prefer-method print-method clojure.lang.IRecord clojure.lang.IDeref)

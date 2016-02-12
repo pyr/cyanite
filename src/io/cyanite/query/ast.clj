@@ -3,6 +3,13 @@
 
 (def ^:dynamic *series*)
 
+(defn nil-safe-op
+  [f]
+  (fn [& vals]
+    (if (some nil? vals)
+      nil
+      (apply f vals))))
+
 (defprotocol SeriesTransform
   "A protocol to realize operations on series."
   (transform! [this]))
@@ -44,10 +51,11 @@
                       {}))
 
       (= 1 (count payload))
-      (-> payload first second)
+      (-> payload first)
 
       :else
-      (apply mapv f (map second payload)))))
+      (apply mapv f payload))))
+
 
 (defn index-series
   [series]
@@ -67,7 +75,7 @@
 (defn traverse!
   [repr outer inner & series]
   (let [renamed (series-rename series repr)]
-    [renamed [[renamed (apply mapv outer (flatten-series inner series))]]]))
+    [renamed [(apply mapv (nil-safe-op outer) (flatten-series (nil-safe-op inner) series))]]))
 
 (extend-protocol SeriesTransform
   String
@@ -102,6 +110,23 @@
      nil
      (resolve! series 1 1))))
 
+(defrecord DerivativeOperation [series]
+  SeriesTransform
+  (transform! [this]
+    (traverse!
+     "derivative($0)"
+     (let [st (volatile! ::none)]
+       (fn [i]
+         (if-not (nil? i)
+           (let [prev @st]
+             (vreset! st i)
+             (if (= ::none prev)
+               i
+               (- i prev))))))
+
+     nil
+     (resolve! series 1 1))))
+
 (defrecord AbsoluteOperation [series]
   SeriesTransform
   (transform! [this]
@@ -133,6 +158,10 @@
   [[_ series]]
   (AbsoluteOperation. (tokens->ast series)))
 
+(defmethod tokens->ast :derivative
+  [[_ series]]
+  (DerivativeOperation. (tokens->ast series)))
+
 (defmethod tokens->ast :default
   [x]
   (throw (ex-info "unsupported function in cyanite" {:arg x})))
@@ -141,22 +170,3 @@
   [tokens series]
   (binding [*series* series]
     (transform! (tokens->ast tokens))))
-
-(comment
-  ;;
-  (require 'io.cyanite.query.series.parser)
-  (run-query! (io.cyanite.query.series.parser/query->tokens
-               "sumSeries(f*)")
-              {"f*" [["f1" [1 1 1]]
-                     ["f2" [2 2 2]]]})
-
-  ;;
-  (run-query! (io.cyanite.query.series.parser/query->tokens
-               "divideSeries(sumSeries(g*),absolute(scale(sumSeries(f1,f2),-2)))")
-              {"g*" [["g1" [1 1 1]]
-                     ["g2" [1 1 1]]]
-               "f1" [["f1" [1 1 1]]]
-               "f2" [["f2" [1 1 1]]]})
-
-
-  )
