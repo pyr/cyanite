@@ -9,6 +9,31 @@
   (by-pos        [this pos])
   (by-segment    [this pos segment]))
 
+(defn push-segment*
+  [segments segment path length]
+  (into (sorted-map)
+        (update segments segment
+                (fn [paths tuple]
+                  (into (sorted-set)
+                        (conj paths tuple)))
+                [path length])))
+
+(defrecord AtomIndex [db]
+  component/Lifecycle
+  (start [this]
+    (assoc this :db (atom {})))
+  (stop [this]
+    (assoc this :db nil))
+  MetricIndex
+  (push-segment! [this pos segment path length]
+    (swap! db update pos
+           push-segment*
+           segment path length))
+  (by-pos [this pos]
+    (-> @db (get pos) keys))
+  (by-segment [this pos segment]
+    (get (get @db pos) segment)))
+
 (defrecord AgentIndex [db]
   component/Lifecycle
   (start [this]
@@ -18,14 +43,8 @@
   MetricIndex
   (push-segment! [this pos segment path length]
     (send-off db update pos
-              (fn [segments segment path length]
-                (into (sorted-map)
-                      (update segments segment
-                              (fn [paths tuple]
-                                (into (sorted-set)
-                                      (conj paths tuple)))
-                              [path length])))
-           segment path length))
+              push-segment*
+              segment path length))
   (by-pos [this pos]
     (-> @db (get pos) keys))
   (by-segment [this pos segment]

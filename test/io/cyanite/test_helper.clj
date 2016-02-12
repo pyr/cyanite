@@ -60,7 +60,7 @@
        ;; No-op compoments
        :pool     (map->NoOpPool {})
        :drift    (drift/map->NoOpDrift {})
-       :index    (index/map->AgentIndex {})
+       :index    (index/map->AtomIndex {})
        :queues   (map->SynchronousQueue {})
        :store    (store/map->MemoryStore {})
        ;; Default versions
