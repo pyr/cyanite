@@ -106,9 +106,11 @@
       (vec (mapcat (partial snapshot-path now) entry-set))))
   Resolutioner
   (resolution [this oldest newest path]
-    (let [plan (rule/->exec-plan planner {:path path})]
-      (when-let [resolution (some #(rule/fit? % oldest newest)
-                                  (sort-by :precision plan))]
-        {:path path :resolution resolution}))))
+    (let [plan (->> (rule/->exec-plan planner {:path path})
+                    (sort-by :precision))]
+      (if-let [resolution (some #(rule/fit? % oldest newest)
+                                plan)]
+        {:path path :resolution resolution}
+        {:path path :resolution (first plan)}))))
 
 (prefer-method print-method clojure.lang.IRecord clojure.lang.IDeref)
