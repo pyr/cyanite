@@ -38,12 +38,12 @@
               :fetch-size Integer/MAX_VALUE}))
 
   (insert! [this metric]
-    (c/runq! session insertq
-             [(-> metric :resolution :period int)
-              (mkpoint metric)
-              (mkid metric)
-              (-> metric :time long)]
-             {:consistency wrcty})))
+    (c/runq-async! session insertq
+                   [(-> metric :resolution :period int)
+                    (mkpoint metric)
+                    (mkid metric)
+                    (-> metric :time long)]
+                   {:consistency wrcty})))
 
 (defn empty-store
   []
@@ -106,3 +106,6 @@
   (let [raw-series         (fetch! store from to paths)
         [precision series] (p/normalize raw-series)]
     (p/data->series series to precision)))
+
+
+;; TODO IMPLEMENT LAG GAUGE
