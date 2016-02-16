@@ -115,17 +115,12 @@
   (transform! [this]
     (traverse!
      "derivative($0)"
-     (let [st (volatile! ::none)]
-       (fn [i]
-         (if-not (nil? i)
-           (let [prev @st]
-             (vreset! st i)
-             (if (= ::none prev)
-               i
-               (- i prev))))))
-
+     (let [safe-nil-subtract (nil-safe-op -)]
+       (fn [[a b]] (safe-nil-subtract b a)))
      nil
-     (resolve! series 1 1))))
+     (mapcat (fn [[k v]] [k (map #(partition 2 1 (cons nil %)) v)])
+             (partition 2 2
+                        (resolve! series 1 1))))))
 
 (defrecord AbsoluteOperation [series]
   SeriesTransform

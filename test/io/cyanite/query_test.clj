@@ -37,7 +37,7 @@
         [[4.0 base-time] [14.0 (+ base-time 5)]]
 
         "derivative(a.b.c)"
-        [[2.0 base-time] [5.0 (+ base-time 5)]]
+        [[5.0 (+ base-time 5)]]
 
         "sumSeries(a.b.*)"
         [[2202.0 base-time] [7707.0 (+ base-time 5)]]))))
