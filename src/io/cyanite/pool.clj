@@ -34,7 +34,11 @@
 (defrecord Pool [pool threads reporter]
   component/Lifecycle
   (start [this]
-    (assoc this :pool (ScheduledThreadPoolExecutor. (or threads 10))))
+    (let [pool (ScheduledThreadPoolExecutor. (or threads 10))]
+      (r/build! reporter
+                :gauge [:cyanite :pool :queue :size]
+                #(.size (.getQueue pool)))
+      (assoc this :pool pool)))
   (stop [this]
     (let [remains (.shutdownNow pool)]
       (info "found" (count remains) "pending tasks during shutdown."))
