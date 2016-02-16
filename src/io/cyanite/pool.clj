@@ -49,7 +49,7 @@
   (join [this]
     (while (not (.awaitTermination pool 10000 secs)) nil))
   (recurring [this f delay]
-    (.scheduleAtFixedRate pool (wrapped reporter f) 0 delay secs)))
+    (.scheduleAtFixedRate pool (wrapped reporter f) delay delay secs)))
 
 (defn cancelled?
   [task]
