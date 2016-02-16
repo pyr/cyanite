@@ -35,4 +35,7 @@
       (valAt [this k]
         (.get db k))
       (valAt [this k def]
-        (or (.get db k) def)))))
+        (or (.get db k) def))
+      java.lang.Object
+      (toString [this]
+        (.toString db)))))
