@@ -1,4 +1,6 @@
 (ns io.cyanite.index
+  (:import ifesdjeen.blomstre.BloomFilter
+           ifesdjeen.blomstre.Converters)
   (:require [com.stuartsierra.component :as component]
             [clojure.string             :refer [join split]]
             [clojure.set                :refer [union intersection]]
@@ -18,17 +20,20 @@
                         (conj paths tuple)))
                 [path length])))
 
-(defrecord AtomIndex [db]
+(defrecord AtomIndex [db bloom-filter]
   component/Lifecycle
   (start [this]
-    (assoc this :db (atom {})))
+    (assoc this
+           :db (atom {})
+           :bloom-filter (BloomFilter/makeFilter Converters/stringToByteBufferConverter 60000 0.001)))
   (stop [this]
     (assoc this :db nil))
   MetricIndex
   (push-segment! [this pos segment path length]
-    (swap! db update pos
-           push-segment*
-           segment path length))
+    (let [s (str path segment)]
+      (swap! db update pos
+             push-segment*
+             segment path length)))
   (by-pos [this pos]
     (-> @db (get pos) keys))
   (by-segment [this pos segment]
@@ -65,6 +70,10 @@
   [options]
   (EmptyIndex.))
 
+(defmethod build-index :atom
+  [options]
+  (map->AtomIndex {}))
+
 (defmethod build-index :agent
   [options]
   (AgentIndex. nil))
@@ -93,8 +102,10 @@
   [index path]
   (let [segments (segmentize path)
         length   (count segments)]
-    (doseq [[i s] segments]
-      (push-segment! index i s path length))))
+    (when-not (.isPresent (:bloom-filter index) path)
+      (.add (:bloom-filter index) path)
+      (doseq [[i s] segments]
+        (push-segment! index i s path length)))))
 
 (defn prefix-info
   [length [path matches]]
