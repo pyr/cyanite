@@ -65,6 +65,10 @@
   [options]
   (EmptyIndex.))
 
+(defmethod build-index :atom
+  [options]
+  (map->AtomIndex options))
+
 (defmethod build-index :agent
   [options]
   (AgentIndex. nil))
