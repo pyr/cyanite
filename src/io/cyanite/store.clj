@@ -88,6 +88,8 @@
                          (:time metric)]
                         (constantly (select-keys metric [:max :min :sum :mean])))))))
 
+(prefer-method print-method clojure.lang.IPersistentMap clojure.lang.IDeref)
+
 (defmulti build-store (comp (fnil keyword "cassandra-v2") :type))
 
 (defmethod build-store :cassandra-v2
