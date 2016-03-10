@@ -19,4 +19,4 @@
   (is (= (runq "derivative(a.b.c)"
                {"a.b.c" [[1 3 6]]})
          ["derivative(a.b.c)"
-          [[1 2 3]]])))
+          [[nil 2 3]]])))
