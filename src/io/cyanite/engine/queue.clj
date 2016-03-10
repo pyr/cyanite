@@ -10,8 +10,7 @@
            com.lmax.disruptor.EventHandler)
   (:require [com.stuartsierra.component :as component]
             [spootnik.reporter          :as r]
-            [clojure.tools.logging      :refer [warn error]]
-            [metrics.counters           :refer [defcounter inc! dec!]]))
+            [clojure.tools.logging      :refer [warn error]]))
 
 
 (defonce default-poolsize 4)
@@ -65,6 +64,7 @@
   (shutdown! [this]
     (.shutdown disruptor))
   (add! [this e]
+    (r/inc! reporter [:cyanite alias :events :ingested])
     (.publishEvent disruptor translator e))
   (consume! [this f]
     (.handleEventsWith
@@ -72,7 +72,7 @@
      (into-array EventHandler
                  [(event-handler (fn [e]
                                    (try
-                                     (r/inc! reporter [:cyanite alias :events])
+                                     (r/inc! reporter [:cyanite alias :events :processed])
                                      (f e)
                                      (catch Exception ex
                                        (r/inc! reporter [:cyanite alias :errors])

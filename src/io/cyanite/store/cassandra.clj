@@ -52,6 +52,11 @@
   (let [bound (alia/bind prepared-statement values)]
     (alia/execute session bound opts)))
 
+(defn runq-async!
+  [session prepared-statement values opts]
+  (let [bound (alia/bind prepared-statement values)]
+    (alia/execute-async session bound opts)))
+
 (defn get-types
   [session]
   (let [->point (alia/udt-encoder session "metric_point")

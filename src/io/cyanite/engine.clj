@@ -19,7 +19,8 @@
   (ingest! [this metric]))
 
 (defprotocol Snapshoter
-  (snapshot! [this] [this now]))
+  (snapshot! [this] [this now])
+  (snapshot-by! [this matcher]))
 
 (defn time-slot
   [^Resolution resolution ^Long now]
@@ -75,7 +76,7 @@
 
 (defn snapshot-path
   [now [path resolutions]]
-  (vec (mapcat (partial snapshot-resolution path now) resolutions)))
+  (mapcat (partial snapshot-resolution path now) resolutions))
 
 (defrecord Engine [rules state queues ingestq planner drift reporter]
   component/Lifecycle
@@ -103,7 +104,14 @@
     (snapshot! this (skewed-epoch! drift)))
   (snapshot! [this now]
     (let [entry-set (entries state)]
-      (vec (mapcat (partial snapshot-path now) entry-set))))
+      (doall (mapcat (partial snapshot-path now) entry-set))))
+  (snapshot-by! [this matcher]
+    (let [now       (skewed-epoch! drift)
+          entry-set (->> state
+                         (entries)
+                         (filter #(matcher (.getKey %))))]
+
+      (doall (mapcat (partial snapshot-path now) entry-set))))
   Resolutioner
   (resolution [this oldest newest path]
     (let [plan (->> (rule/->exec-plan planner {:path path})
