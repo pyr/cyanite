@@ -15,7 +15,7 @@
                  [spootnik/unilog               "0.7.13"]
                  [spootnik/uncaught             "0.5.3"]
                  [spootnik/globber              "0.4.1"]
-                 [spootnik/reporter             "0.1.4"]
+                 [spootnik/reporter             "0.1.5"]
                  [spootnik/signal               "0.2.0"]
                  [org.javassist/javassist       "3.20.0-GA"]
                  [instaparse                    "1.4.1"]
