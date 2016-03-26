@@ -63,6 +63,7 @@ CREATE TABLE metric.path (
     AND speculative_retry = '99.0PERCENTILE';
 
 CREATE TABLE metric.segment (
+CREATE CUSTOM INDEX IF NOT EXISTS on metric.path(path) USING 'org.apache.cassandra.index.sasi.SASIIndex';
     pos int,
     segment text,
     PRIMARY KEY (pos, segment)
