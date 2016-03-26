@@ -75,7 +75,7 @@
 
 (defmethod index/build-index :cassandra
   [options]
-  (map->CassandraIndex (dissoc options :type)))
+  (map->CassandraIndex {:options (dissoc options :type)}))
 
 
 (comment
