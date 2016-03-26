@@ -1,5 +1,6 @@
 (ns io.cyanite.index.cassandra
   (:require [com.stuartsierra.component :as component]
+            [io.cyanite.store.cassandra :as c]
             [io.cyanite.index           :as index]
             [qbits.alia                 :as alia]
             [globber.glob               :refer [glob]]
@@ -29,38 +30,6 @@
    session
    "SELECT path,length from path WHERE segment=(?,?);"))
 
-(defn session!
-  [{:keys [cluster username password] :as opts}]
-  (try
-    (let [hints   (or (:hints opts)
-                      {:replication
-                       {:class              "SimpleStrategy"
-                        :replication_factor (or (:replication_factor opts)
-                                                (:replication-factor opts)
-                                                (:repfactor opts)
-                                                1)}})
-          cluster (if (sequential? cluster) cluster [cluster])
-          session (-> {:contact-points cluster}
-                      (cond-> (and username password)
-                        (assoc :credentials {:user username
-                                             :password password}))
-                      (alia/cluster)
-                      (alia/connect (or (:keyspace opts) "metric")))
-          rdcty   (keyword
-                   (or (:read-consistency opts)
-                       (:read_consistency opts)
-                       (:rdcty opts)
-                       :one))
-          wrcty   (keyword
-                   (or (:write-consistency opts)
-                       (:write_consistency opts)
-                       (:wrcty opts)
-                       :any))]
-      [session rdcty wrcty])
-    (catch com.datastax.driver.core.exceptions.InvalidQueryException e
-      (error e "Could not connect to cassandra. Exiting")
-      (System/exit 1))))
-
 (defn runq!
   [session prepared-statement values opts]
   (let [bound (alia/bind prepared-statement values)]
@@ -72,7 +41,7 @@
                            wrcty rdcty]
   component/Lifecycle
   (start [this]
-    (let [[session rdcty wrcty] (session! options)]
+    (let [[session rdcty wrcty] (c/session! options)]
       (-> this
           (assoc :session session)
           (assoc :insert-segmentq (mk-insert-segmentq session))
