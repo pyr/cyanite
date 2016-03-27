@@ -37,18 +37,12 @@ CREATE TABLE IF NOT EXISTS metric.metric (
   AND read_repair_chance = 0.0
   AND speculative_retry = '99.0PERCENTILE';
 
-CREATE TYPE IF NOT EXISTS metric.segment_pos (
-    pos int,
-    segment text
-);
-
 CREATE TABLE IF NOT EXISTS metric.path (
-    segment frozen<segment_pos>,
+    prefix text,
     path text,
     length int,
-    PRIMARY KEY (segment, path)
-) WITH CLUSTERING ORDER BY (path ASC)
-    AND bloom_filter_fp_chance = 0.01
+    PRIMARY KEY (prefix, path)
+) WITH bloom_filter_fp_chance = 0.01
     AND caching = {'keys':'ALL', 'rows_per_partition':'NONE'}
     AND comment = ''
     AND compaction = {'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy'}
@@ -61,8 +55,6 @@ CREATE TABLE IF NOT EXISTS metric.path (
     AND min_index_interval = 128
     AND read_repair_chance = 0.0
     AND speculative_retry = '99.0PERCENTILE';
-
-CREATE CUSTOM INDEX IF NOT EXISTS on metric.path(path) USING 'org.apache.cassandra.index.sasi.SASIIndex';
 
 CREATE TABLE IF NOT EXISTS metric.segment (
     pos int,
@@ -83,3 +75,5 @@ CREATE TABLE IF NOT EXISTS metric.segment (
     AND min_index_interval = 128
     AND read_repair_chance = 0.0
     AND speculative_retry = '99.0PERCENTILE';
+CREATE CUSTOM INDEX IF NOT EXISTS on metric.path(path) USING 'org.apache.cassandra.index.sasi.SASIIndex' WITH OPTIONS = {'mode': 'CONTAINS'};
+CREATE CUSTOM INDEX IF NOT EXISTS on metric.path(length) USING 'org.apache.cassandra.index.sasi.SASIIndex';

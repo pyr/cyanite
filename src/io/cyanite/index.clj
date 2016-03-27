@@ -5,73 +5,9 @@
             [globber.glob               :refer [glob]]))
 
 (defprotocol MetricIndex
-  (push-segment! [this pos segment path length])
-  (by-pos        [this pos])
-  (by-segment    [this pos segment]))
-
-(defn push-segment*
-  [segments segment path length]
-  (into (sorted-map)
-        (update segments segment
-                (fn [paths tuple]
-                  (into (sorted-set)
-                        (conj paths tuple)))
-                [path length])))
-
-(defrecord AtomIndex [db]
-  component/Lifecycle
-  (start [this]
-    (assoc this :db (atom {})))
-  (stop [this]
-    (assoc this :db nil))
-  MetricIndex
-  (push-segment! [this pos segment path length]
-    (swap! db update pos
-           push-segment*
-           segment path length))
-  (by-pos [this pos]
-    (-> @db (get pos) keys))
-  (by-segment [this pos segment]
-    (get (get @db pos) segment)))
-
-(defrecord AgentIndex [db]
-  component/Lifecycle
-  (start [this]
-    (assoc this :db (agent {})))
-  (stop [this]
-    (assoc this :db nil))
-  MetricIndex
-  (push-segment! [this pos segment path length]
-    (send-off db update pos
-              push-segment*
-              segment path length))
-  (by-pos [this pos]
-    (-> @db (get pos) keys))
-  (by-segment [this pos segment]
-    (get (get @db pos) segment)))
-
-(defrecord EmptyIndex []
-  component/Lifecycle
-  (start [this] this)
-  (stop [this] this)
-  MetricIndex
-  (push-segment! [this pos segment path length])
-  (by-pos [this pos])
-  (by-segment [this pos segments]))
-
-(defmulti build-index (comp (fnil keyword "agent") :type))
-
-(defmethod build-index :empty
-  [options]
-  (EmptyIndex.))
-
-(defmethod build-index :atom
-  [options]
-  (map->AtomIndex options))
-
-(defmethod build-index :agent
-  [options]
-  (AgentIndex. nil))
+  (register!     [this path])
+  (prefixes      [this pattern])
+  (leaves        [this pattern]))
 
 ;; Implementation
 ;; ==============
@@ -84,21 +20,10 @@
 ;; resolve our inverted index and filter on the result list
 ;;
 
-(defn segmentize
+(defn- segmentize
   [path]
   (let [elems (split path #"\.")]
     (map-indexed vector elems)))
-
-(defn by-segments
-  [index pos segments]
-  (mapcat (partial by-segment index pos) segments))
-
-(defn register!
-  [index path]
-  (let [segments (segmentize path)
-        length   (count segments)]
-    (doseq [[i s] segments]
-      (push-segment! index i s path length))))
 
 (defn prefix-info
   [length [path matches]]
@@ -115,15 +40,38 @@
   [(join "." (take pattern-length (split path #"\.")))
    length])
 
-(defn matches
-  [index pattern leaves?]
+
+
+(defn- push-segment*
+  [segments segment path length]
+  (into (sorted-map)
+        (update segments segment
+                (fn [paths tuple]
+                  (into (sorted-set)
+                        (conj paths tuple)))
+                [path length])))
+
+(defn- by-pos
+  [db pos]
+  (-> @db (get pos) keys))
+
+(defn- by-segment
+  [db pos segment]
+  (get (get @db pos) segment))
+
+(defn- by-segments
+  [db pos segments]
+  (mapcat (partial by-segment db pos) segments))
+
+(defn- matches
+  [db pattern leaves?]
   (let [segments (segmentize pattern)
         length   (count segments)
         pred     (partial (if leaves? = <=) length)
         matches  (for [[pos pattern] segments]
-                   (->> (by-pos index pos)
+                   (->> (by-pos db pos)
                         (glob pattern)
-                        (by-segments index pos)
+                        (by-segments db pos)
                         (filter (comp pred second))
                         (set)))
         paths    (reduce union #{} matches)]
@@ -133,13 +81,72 @@
          (map (partial prefix-info length))
          (sort-by :path))))
 
-(defn prefixes
-  [index pattern]
-  (matches index pattern false))
+;;
+;; Indexes
+;;
 
-(defn leaves
-  [index pattern]
-  (matches index pattern true))
+(defrecord AtomIndex [db]
+  component/Lifecycle
+  (start [this]
+    (assoc this :db (atom {})))
+  (stop [this]
+    (assoc this :db nil))
+  MetricIndex
+  (register! [this path]
+    (let [segments (segmentize path)
+          length   (count segments)]
+      (doseq [[pos segment] segments]
+        (swap! db update pos
+               push-segment*
+               segment path length))))
+  (prefixes [index pattern]
+    (matches db pattern false))
+  (leaves [index pattern]
+    (matches db pattern true)))
+
+(defrecord AgentIndex [db]
+  component/Lifecycle
+  (start [this]
+    (assoc this :db (agent {})))
+  (stop [this]
+    (assoc this :db nil))
+  MetricIndex
+  (register! [this path]
+    (let [segments (segmentize path)
+          length   (count segments)]
+      (doseq [[pos segment] segments]
+        (send-off db update pos
+                  push-segment*
+                  segmentize path length))))
+  (prefixes [index pattern]
+    (matches db pattern false))
+  (leaves [index pattern]
+    (matches db pattern false)))
+
+(defrecord EmptyIndex []
+  component/Lifecycle
+  (start [this] this)
+  (stop [this] this)
+  MetricIndex
+  (register! [this path])
+  (prefixes [index pattern])
+  (leaves [index pattern]))
+
+(defmulti build-index (comp (fnil keyword "agent") :type))
+
+(defmethod build-index :empty
+  [options]
+  (EmptyIndex.))
+
+(defmethod build-index :atom
+  [options]
+  (map->AtomIndex options))
+
+(defmethod build-index :agent
+  [options]
+  (AgentIndex. nil))
+
+
 
 ;; Workbench
 ;; =========
