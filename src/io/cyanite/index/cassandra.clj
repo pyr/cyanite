@@ -4,6 +4,7 @@
             [io.cyanite.index           :as index]
             [qbits.alia                 :as alia]
             [globber.glob               :refer [glob]]
+            [clojure.string             :refer [index-of join split]]
             [clojure.tools.logging      :refer [error]]))
 
 (defn mk-insert-pathq
@@ -12,23 +13,11 @@
    session
    "INSERT INTO path (prefix, path, length) VALUES (?, ?, ?);"))
 
-(defn mk-fetch-pathq
+(defn mk-insert-segmentq
   [session]
   (alia/prepare
    session
-   "SELECT path,length from path WHERE path=?;"))
-
-(defn mk-fetch-prefixes
-  [session]
-  (alia/prepare
-   session
-   "SELECT * from path WHERE path LIKE ? AND length <= ? ALLOW FILTERING;"))
-
-(defn mk-fetch-leaves
-  [session]
-  (alia/prepare
-   session
-   "SELECT * from path WHERE path LIKE ? AND length = ? ALLOW FILTERING;"))
+   "INSERT INTO segment (pos, segment, length, leaf) VALUES (?, ?, ?, ?);"))
 
 (defn runq!
   [session prepared-statement values opts]
@@ -39,23 +28,43 @@
   [chars s]
   (reduce
    (fn [idx char]
-     (let [c (or (clojure.string/index-of s char) -1)]
+     (let [c (or (index-of s char) -1)]
        (if (and (>= c 0)
                 (> c idx))
          c
          idx)))
    -1
-   chars)
-  )
+   chars))
+
 (defn glob-to-like
   [pattern]
   (if-let [pos (index-of-first [\* \. \? \[] pattern)]
     (str (subs pattern 0 pos) "%")
     pattern))
 
-(defrecord CassandraIndex [options session
-                           fetch-leaves
-                           insert-pathq fetch-pathq
+(defn compose-parts
+  [path]
+  (let [parts (split path #"\." )]
+    (map
+     #(vector % (clojure.string/join "." (take % parts)))
+     (range 1 (inc (count parts))))))
+
+(defn prefix-info
+  [pattern-length [path length leaf]]
+  {:text          (last (split path #"\."))
+   :id            path
+   :allowChildren (not leaf)
+   :expandable    (not leaf)
+   :leaf          leaf})
+
+(defn mk-bloom-filter
+  []
+  (BloomFilter/makeFilter Converters/stringToByteBufferConverter
+                          50000 ;; max amount of metrix
+                          0.0001))
+
+(defrecord CassandraIndex [options session bloom-filter
+                           insert-segmentq insert-pathq
                            wrcty rdcty]
   component/Lifecycle
   (start [this]
@@ -63,50 +72,56 @@
       (-> this
           (assoc :session session)
           (assoc :insert-pathq (mk-insert-pathq session))
-          (assoc :fetch-pathq (mk-fetch-pathq session))
-          (assoc :fetch-prefixes nil)
-          (assoc :fetch-leaves nil))))
+          (assoc :insert-segmentq (mk-insert-segmentq session)))))
   (stop [this]
     (-> this
         (assoc :session nil)
         (assoc :insert-pathq nil)
-        (assoc :fetch-pathq nil)
-        (assoc :fetch-prefixes nil)
-        (assoc :fetch-leaves nil)))
+        (assoc :insert-segmentq nil)))
   index/MetricIndex
-  (push-segment! [this pos segment path length]
-    (println path)
-    (runq! session insert-pathq
-           ;; TODO possibly butlast?
-           [(first (clojure.string/split path #"\.")) path (int length)]
-           {:consistency wrcty}))
+  (register! [this path] ;; pos segment path length
+    (let [parts  (compose-parts path)
+          length (count parts)]
+      (doseq [[i part] parts]
+        (runq! session insert-segmentq
+               [(int i)
+                part
+                length
+                (= length i)]
+               {:consistency wrcty}))
+      (runq! session insert-pathq
+             [(->> (split path #"\.")
+                   (butlast)
+                   (join "."))
+              path
+              (int (count parts))]
+             {:consistency wrcty})))
   (prefixes [this pattern]
-    (println (str "SELECT * from path WHERE path LIKE '"
-                  (glob-to-like pattern)
-                  "' AND length = "
-                  (count (clojure.string/split pattern #"\."))
-                  " ALLOW FILTERING;"))
-    (let [res (alia/execute session
-                            (str "SELECT * from path WHERE path LIKE '"
-                                 (glob-to-like pattern)
-                                 "' AND length = "
-                                 (count (clojure.string/split pattern #"\."))
-                                 " ALLOW FILTERING;")
-                            {:consistency wrcty})]
-      res
-      )
-    )
+    (let [pos      (count (split pattern #"\."))
+          res      (alia/execute session
+                                 (str "SELECT * from segment where "
+                                      (if (> pos 1)
+                                        (str "segment LIKE '"
+                                             (glob-to-like pattern)
+                                             "' AND ")
+                                        "")
+                                      "pos = " pos)
+                                 {:consistency wrcty})
+          filtered (set (glob pattern (map :segment res)))]
+      (->> res
+           (filter (fn [{:keys [segment]}]
+                     (not (nil? (get filtered segment)))))
+           (map (juxt :segment :length :leaf))
+           (map (partial prefix-info pos)))))
   (leaves [this pattern]
-    (let [res (alia/execute session
-                            (str "SELECT * from path WHERE path LIKE '"
-                                 (glob-to-like pattern)
-                                 "' AND length <= "
-                                 (count (clojure.string/split pattern #"\."))
-                                 " ALLOW FILTERING;")
-                            {:consistency wrcty})]
-      res
-      )
-    ))
+    (let [res      (alia/execute session
+                                 (str "SELECT * from path WHERE path LIKE '"
+                                      (glob-to-like pattern)
+                                      "'")
+                                 {:consistency wrcty})
+          filtered (set (glob pattern (map :segment res)))]
+      (filter (fn [{:keys [segment]}]
+                (not (nil? (get filtered segment)))) res))))
 
 (defmethod index/build-index :cassandra
   [options]
@@ -124,11 +139,11 @@
     (index/register! i"foo.baz.qux")
     (index/prefixes i"foo.bar.*"))
 
-  (let [i  (component/start (index/map->AtomIndex  {} ))]
-    (index/register! i"foo.bar.baz.bim")
-    (index/register! i"foo.bar.baz.bim.bam.boum.barf")
-    (index/register! i"foo.bar.baz.bim.bam.boum")
-    (index/register! i"foo.bar.qux")
-    (index/register! i"bar.bar.qux")
-    (index/register! i"foo.baz.qux")
-    (index/matches i"foo.bar.*" false)))
+  (let [j  (component/start (index/map->AtomIndex  {} ))]
+    (index/register! j "foo.bar.baz.bim")
+    (index/register! j "foo.bar.baz.bim.bam.boum.barf")
+    (index/register! j "foo.bar.baz.bim.bam.boum")
+    (index/register! j "foo.bar.qux")
+    (index/register! j "bar.bar.qux")
+    (index/register! j "foo.baz.qux")
+    (index/prefixes j "foo.bar.*")))
