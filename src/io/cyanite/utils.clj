@@ -7,6 +7,7 @@
   (entries [this] "Return a set of entries")
   (keyset [this] "Return the keyset")
   (remove! [this k] "Atomically remove and return an element")
+  (contains-key [this key] "Checks if map contains the key")
   (assoc-if-absent! [this k v] "CAS type put"))
 
 (defn nbhm
@@ -23,6 +24,8 @@
         (.entrySet db))
       (keyset [this]
         (.keySet db))
+      (contains-key [this key]
+        (.contains db key))
       (remove! [this k]
         (.remove db k))
       (assoc-if-absent! [this k v]

@@ -2,6 +2,7 @@
   (:require [com.stuartsierra.component :as component]
             [io.cyanite.store.cassandra :as c]
             [io.cyanite.index           :as index]
+            [io.cyanite.utils           :refer [contains-key]]
             [qbits.alia                 :as alia]
             [globber.glob               :refer [glob]]
             [clojure.string             :refer [index-of join split]]
@@ -57,15 +58,9 @@
    :expandable    (not leaf)
    :leaf          leaf})
 
-(defn mk-bloom-filter
-  []
-  (BloomFilter/makeFilter Converters/stringToByteBufferConverter
-                          50000 ;; max amount of metrix
-                          0.0001))
-
-(defrecord CassandraIndex [options session bloom-filter
+(defrecord CassandraIndex [options session
                            insert-segmentq insert-pathq
-                           wrcty rdcty]
+                           engine wrcty rdcty]
   component/Lifecycle
   (start [this]
     (let [[session rdcty wrcty] (c/session! options)]
@@ -80,22 +75,23 @@
         (assoc :insert-segmentq nil)))
   index/MetricIndex
   (register! [this path] ;; pos segment path length
-    (let [parts  (compose-parts path)
-          length (count parts)]
-      (doseq [[i part] parts]
-        (runq! session insert-segmentq
-               [(int i)
-                part
-                length
-                (= length i)]
-               {:consistency wrcty}))
-      (runq! session insert-pathq
-             [(->> (split path #"\.")
-                   (butlast)
-                   (join "."))
-              path
-              (int (count parts))]
-             {:consistency wrcty})))
+    (when (not (contains-key (:state engine) path))
+      (let [parts  (compose-parts path)
+            length (count parts)]
+        (doseq [[i part] parts]
+          (runq! session insert-segmentq
+                 [(int i)
+                  part
+                  length
+                  (= length i)]
+                 {:consistency wrcty}))
+        (runq! session insert-pathq
+               [(->> (split path #"\.")
+                     (butlast)
+                     (join "."))
+                path
+                (int (count parts))]
+               {:consistency wrcty}))))
   (prefixes [this pattern]
     (let [pos      (count (split pattern #"\."))
           res      (alia/execute session

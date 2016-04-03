@@ -73,6 +73,7 @@
                                    :queues [:reporter]
                                    :pool   [:reporter]
                                    :engine [:drift :queues :reporter]
+                                   :index  [:engine]
                                    :writer [:pool :index :store :engine :reporter]
                                    :api    [:index :store :queues :engine :drift]})))))
 
