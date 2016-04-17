@@ -1,25 +1,25 @@
-CREATE KEYSPACE metric WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}  AND durable_writes = true;
+CREATE KEYSPACE IF NOT EXISTS metric WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}  AND durable_writes = true;
 
 USE metric;
 
-CREATE TYPE metric_point (
+CREATE TYPE IF NOT EXISTS metric_point (
   max double,
   mean double,
   min double,
   sum double
 );
 
-CREATE TYPE metric_resolution (
+CREATE TYPE IF NOT EXISTS metric_resolution (
   precision int,
   period int
 );
 
-CREATE TYPE metric_id (
+CREATE TYPE IF NOT EXISTS metric_id (
   path text,
   resolution frozen<metric_resolution>
 );
 
-CREATE TABLE metric.metric (
+CREATE TABLE IF NOT EXISTS metric.metric (
   id frozen<metric_id>,
   time bigint,
   point frozen<metric_point>,
@@ -36,20 +36,14 @@ CREATE TABLE metric.metric (
   AND min_index_interval = 128
   AND read_repair_chance = 0.0
   AND speculative_retry = '99.0PERCENTILE';
-                                                                        
-CREATE TYPE metric.segment_pos (
-    pos int,
-    segment text
-);
 
-CREATE TABLE metric.path (
-    segment frozen<segment_pos>,
+CREATE TABLE IF NOT EXISTS metric.path (
+    prefix text,
     path text,
     length int,
-    PRIMARY KEY (segment, path)
-) WITH CLUSTERING ORDER BY (path ASC)
-    AND bloom_filter_fp_chance = 0.01
-    AND caching = '{"keys":"ALL", "rows_per_partition":"NONE"}'
+    PRIMARY KEY (prefix, path)
+) WITH bloom_filter_fp_chance = 0.01
+    AND caching = {'keys':'ALL', 'rows_per_partition':'NONE'}
     AND comment = ''
     AND compaction = {'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy'}
     AND compression = {'sstable_compression': 'org.apache.cassandra.io.compress.LZ4Compressor'}
@@ -62,14 +56,18 @@ CREATE TABLE metric.path (
     AND read_repair_chance = 0.0
     AND speculative_retry = '99.0PERCENTILE';
 
-CREATE TABLE metric.segment (
+CREATE CUSTOM INDEX IF NOT EXISTS on metric.path(path) USING 'org.apache.cassandra.index.sasi.SASIIndex' WITH OPTIONS = {'mode': 'PREFIX'};
+CREATE CUSTOM INDEX IF NOT EXISTS on metric.path(length) USING 'org.apache.cassandra.index.sasi.SASIIndex';
+
+CREATE TABLE IF NOT EXISTS metric.segment (
     pos int,
     segment text,
+    length int,
+    leaf boolean,
     PRIMARY KEY (pos, segment)
-) WITH COMPACT STORAGE
-    AND CLUSTERING ORDER BY (segment ASC)
+) WITH CLUSTERING ORDER BY (segment ASC)
     AND bloom_filter_fp_chance = 0.01
-    AND caching = '{"keys":"ALL", "rows_per_partition":"NONE"}'
+    AND caching = {'keys':'ALL', 'rows_per_partition':'NONE'}
     AND comment = ''
     AND compaction = {'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy'}
     AND compression = {'sstable_compression': 'org.apache.cassandra.io.compress.LZ4Compressor'}
@@ -81,3 +79,5 @@ CREATE TABLE metric.segment (
     AND min_index_interval = 128
     AND read_repair_chance = 0.0
     AND speculative_retry = '99.0PERCENTILE';
+
+CREATE CUSTOM INDEX IF NOT EXISTS on metric.segment(segment) USING 'org.apache.cassandra.index.sasi.SASIIndex' WITH OPTIONS = {'mode': 'PREFIX'};

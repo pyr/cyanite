@@ -1,121 +1,145 @@
 (ns io.cyanite.index.cassandra
   (:require [com.stuartsierra.component :as component]
+            [io.cyanite.store.cassandra :as c]
             [io.cyanite.index           :as index]
+            [io.cyanite.utils           :refer [contains-key]]
             [qbits.alia                 :as alia]
             [globber.glob               :refer [glob]]
+            [clojure.string             :refer [index-of join split]]
             [clojure.tools.logging      :refer [error]]))
-
-(defn mk-insert-segmentq
-  [session]
-  (alia/prepare
-   session
-   "INSERT INTO segment (pos,segment) VALUES (?,?);"))
 
 (defn mk-insert-pathq
   [session]
   (alia/prepare
    session
-   "INSERT INTO path (segment, path, length) VALUES ((?,?), ?, ?);"))
+   "INSERT INTO path (prefix, path, length) VALUES (?, ?, ?);"))
 
-(defn mk-fetch-segmentq
+(defn mk-insert-segmentq
   [session]
   (alia/prepare
    session
-   "SELECT segment from segment WHERE pos=?;"))
-
-(defn mk-fetch-pathq
-  [session]
-  (alia/prepare
-   session
-   "SELECT path,length from path WHERE segment=(?,?);"))
-
-(defn session!
-  [{:keys [cluster username password] :as opts}]
-  (try
-    (let [hints   (or (:hints opts)
-                      {:replication
-                       {:class              "SimpleStrategy"
-                        :replication_factor (or (:replication_factor opts)
-                                                (:replication-factor opts)
-                                                (:repfactor opts)
-                                                1)}})
-          cluster (if (sequential? cluster) cluster [cluster])
-          session (-> {:contact-points cluster}
-                      (cond-> (and username password)
-                        (assoc :credentials {:user username
-                                             :password password}))
-                      (alia/cluster)
-                      (alia/connect (or (:keyspace opts) "metric")))
-          rdcty   (keyword
-                   (or (:read-consistency opts)
-                       (:read_consistency opts)
-                       (:rdcty opts)
-                       :one))
-          wrcty   (keyword
-                   (or (:write-consistency opts)
-                       (:write_consistency opts)
-                       (:wrcty opts)
-                       :any))]
-      [session rdcty wrcty])
-    (catch com.datastax.driver.core.exceptions.InvalidQueryException e
-      (error e "Could not connect to cassandra. Exiting")
-      (System/exit 1))))
+   "INSERT INTO segment (pos, segment, length, leaf) VALUES (?, ?, ?, ?);"))
 
 (defn runq!
   [session prepared-statement values opts]
   (let [bound (alia/bind prepared-statement values)]
     (alia/execute session bound opts)))
 
+(defn index-of-first
+  [chars s]
+  (reduce
+   (fn [idx char]
+     (let [c (or (index-of s char) -1)]
+       (if (and (>= c 0)
+                (> c idx))
+         c
+         idx)))
+   -1
+   chars))
+
+(defn glob-to-like
+  [pattern]
+  (if-let [pos (index-of-first [\* \. \? \[] pattern)]
+    (str (subs pattern 0 pos) "%")
+    pattern))
+
+(defn compose-parts
+  [path]
+  (let [parts (split path #"\." )]
+    (map
+     #(vector % (clojure.string/join "." (take % parts)))
+     (range 1 (inc (count parts))))))
+
+(defn prefix-info
+  [pattern-length [path length leaf]]
+  {:text          (last (split path #"\."))
+   :id            path
+   :allowChildren (not leaf)
+   :expandable    (not leaf)
+   :leaf          leaf})
+
 (defrecord CassandraIndex [options session
-                           insert-segmentq fetch-segmentq
-                           insert-pathq fetch-pathq
-                           wrcty rdcty]
+                           insert-segmentq insert-pathq
+                           engine wrcty rdcty]
   component/Lifecycle
   (start [this]
-    (let [[session rdcty wrcty] (session! options)]
+    (let [[session rdcty wrcty] (c/session! options)]
       (-> this
           (assoc :session session)
-          (assoc :insert-segmentq (mk-insert-segmentq session))
           (assoc :insert-pathq (mk-insert-pathq session))
-          (assoc :fetch-segmentq (mk-fetch-segmentq session))
-          (assoc :fetch-pathq (mk-fetch-pathq session)))))
+          (assoc :insert-segmentq (mk-insert-segmentq session)))))
   (stop [this]
     (-> this
         (assoc :session nil)
-        (assoc :insert-segmentq nil)
         (assoc :insert-pathq nil)
-        (assoc :fetch-segmentq nil)
-        (assoc :fetch-pathq nil)))
+        (assoc :insert-segmentq nil)))
   index/MetricIndex
-  (push-segment! [this pos segment path length]
-    (runq! session insert-segmentq
-           [(int pos) segment]
-           {:consistency wrcty})
-    (runq! session insert-pathq
-           [(int pos) segment path (int length)]
-           {:consistency wrcty}))
-  (by-pos [this pos]
-    (map :segment (runq! session fetch-segmentq
-                         [(int pos)]
-                         {:consistency rdcty})))
-  (by-segment [this pos segment]
-    (map (juxt :path :length)
-         (runq! session fetch-pathq
-                [(int pos) segment]
-                {:consistency rdcty}))))
+  (register! [this path] ;; pos segment path length
+    (when (not (contains-key (:state engine) path))
+      (let [parts  (compose-parts path)
+            length (count parts)]
+        (doseq [[i part] parts]
+          (runq! session insert-segmentq
+                 [(int i)
+                  part
+                  length
+                  (= length i)]
+                 {:consistency wrcty}))
+        (runq! session insert-pathq
+               [(->> (split path #"\.")
+                     (butlast)
+                     (join "."))
+                path
+                (int (count parts))]
+               {:consistency wrcty}))))
+  (prefixes [this pattern]
+    (let [pos      (count (split pattern #"\."))
+          res      (alia/execute session
+                                 (str "SELECT * from segment where "
+                                      (if (> pos 1)
+                                        (str "segment LIKE '"
+                                             (glob-to-like pattern)
+                                             "' AND ")
+                                        "")
+                                      "pos = " pos)
+                                 {:consistency wrcty})
+          filtered (set (glob pattern (map :segment res)))]
+      (->> res
+           (filter (fn [{:keys [segment]}]
+                     (not (nil? (get filtered segment)))))
+           (map (juxt :segment :length :leaf))
+           (map (partial prefix-info pos)))))
+  (leaves [this pattern]
+    (let [res      (alia/execute session
+                                 (str "SELECT * from path WHERE path LIKE '"
+                                      (glob-to-like pattern)
+                                      "'")
+                                 {:consistency wrcty})
+          filtered (set (glob pattern (map :segment res)))]
+      (filter (fn [{:keys [segment]}]
+                (not (nil? (get filtered segment)))) res))))
 
 (defmethod index/build-index :cassandra
   [options]
-  (map->CassandraIndex (dissoc options :type)))
+  (map->CassandraIndex {:options (dissoc options :type)}))
 
 
 (comment
 
-  (let [i  (component/start (map->CassandraIndex {:options {:cluster "127.0.0.1"}} ))]
-    (index/register! i "foo.bar.baz.bim")
-    (index/register! i "foo.bar.baz.bim.bam.boum.barf")
-    (index/register! i "foo.bar.baz.bim.bam.boum")
-    (index/register! i "foo.bar.qux")
-    (index/register! i "bar.bar.qux")
-    (index/register! i "foo.baz.qux")
-    (index/matches i "foo.bar.*" false)))
+  (let [i (component/start (map->CassandraIndex {:options {:cluster "127.0.0.1"}} ))]
+    (index/register! i"foo.bar.baz.bim")
+    (index/register! i"foo.bar.baz.bim.bam.boum.barf")
+    (index/register! i"foo.bar.baz.bim.bam.boum")
+    (index/register! i"foo.bar.qux")
+    (index/register! i"bar.bar.qux")
+    (index/register! i"foo.baz.qux")
+    (index/prefixes i"foo.bar.*"))
+
+  (let [j  (component/start (index/map->AtomIndex  {} ))]
+    (index/register! j "foo.bar.baz.bim")
+    (index/register! j "foo.bar.baz.bim.bam.boum.barf")
+    (index/register! j "foo.bar.baz.bim.bam.boum")
+    (index/register! j "foo.bar.qux")
+    (index/register! j "bar.bar.qux")
+    (index/register! j "foo.baz.qux")
+    (index/prefixes j "foo.bar.*")))

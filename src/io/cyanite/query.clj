@@ -12,7 +12,8 @@
 
 (defn path-leaves
   [index paths]
-  (reduce merge {} (for [p paths] [p (index/leaves index p)])))
+  (zipmap paths
+          (map #(index/leaves index %) paths)))
 
 (defn merge-paths
   [by-path series]
