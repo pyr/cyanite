@@ -27,7 +27,7 @@
   (let [p (:precision resolution)]
     (* p (quot now p))))
 
-(defrecord MetricSnapshot [path time mean min max sum])
+(defrecord MetricSnapshot [time mean min max sum])
 
 (defrecord MetricMonoid [count minv maxv sum]
   Ingester
@@ -38,24 +38,26 @@
                    (+ sum val)))
   Snapshoter
   (snapshot! [this now]
-    (MetricSnapshot. nil now (double (/ sum count)) minv maxv sum)))
+    (MetricSnapshot. now (double (/ sum count)) minv maxv sum)))
+
+(defn new-monoid
+  []
+  (MetricMonoid. 0 nil nil 0))
 
 (defrecord MetricResolution [resolution slots]
   Ingester
   (ingest! [this metric]
     (let [val        (:metric metric)
           slot       (time-slot resolution (:time metric))
-          new-monoid #(atom (MetricMonoid. 0 nil nil 0))
           monoid     (or (get slots slot) (new-monoid))]
-      (assoc-if-absent! slots slot monoid)
-      (swap! monoid ingest! val)))
+      (.assoc slots slot (ingest! monoid val))))
   Snapshoter
   (snapshot! [this now]
     (let [floor    (time-slot resolution now)
           to-purge (filter #(< (key %) floor) (entries slots))]
       (doseq [slot (map key to-purge)]
         (remove! slots slot))
-      (mapv #(snapshot! @(val %) (key %)) to-purge))))
+      (mapv #(snapshot! (val %) (key %)) to-purge))))
 
 (defn make-resolutions
   [rules metric]
