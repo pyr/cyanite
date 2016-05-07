@@ -1,6 +1,7 @@
 sudo: false
 language: clojure
 lein: lein2
+script: ./bin/ci.sh
 jdk:
   - oraclejdk8
 branches:
