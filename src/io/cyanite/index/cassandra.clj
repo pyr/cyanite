@@ -122,24 +122,3 @@
 (defmethod index/build-index :cassandra
   [options]
   (map->CassandraIndex {:options (dissoc options :type)}))
-
-
-(comment
-
-  (let [i (component/start (map->CassandraIndex {:options {:cluster "127.0.0.1"}} ))]
-    (index/register! i"foo.bar.baz.bim")
-    (index/register! i"foo.bar.baz.bim.bam.boum.barf")
-    (index/register! i"foo.bar.baz.bim.bam.boum")
-    (index/register! i"foo.bar.qux")
-    (index/register! i"bar.bar.qux")
-    (index/register! i"foo.baz.qux")
-    (index/prefixes i"foo.bar.*"))
-
-  (let [j  (component/start (index/map->AtomIndex  {} ))]
-    (index/register! j "foo.bar.baz.bim")
-    (index/register! j "foo.bar.baz.bim.bam.boum.barf")
-    (index/register! j "foo.bar.baz.bim.bam.boum")
-    (index/register! j "foo.bar.qux")
-    (index/register! j "bar.bar.qux")
-    (index/register! j "foo.baz.qux")
-    (index/prefixes j "foo.bar.*")))
