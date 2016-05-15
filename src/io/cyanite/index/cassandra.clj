@@ -115,9 +115,9 @@
                                       (glob-to-like pattern)
                                       "'")
                                  {:consistency wrcty})
-          filtered (set (glob pattern (map :segment res)))]
-      (filter (fn [{:keys [segment]}]
-                (not (nil? (get filtered segment)))) res))))
+          filtered (set (glob pattern (map :path res)))]
+      (filter (fn [{:keys [path]}]
+                (not (nil? (get filtered path)))) res))))
 
 (defmethod index/build-index :cassandra
   [options]

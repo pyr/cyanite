@@ -7,7 +7,8 @@
             [io.cyanite.engine.queue    :as queue]
             [io.cyanite.pool            :as pool]
             [io.cyanite.store           :as store]
-            [io.cyanite.index           :as index]))
+            [io.cyanite.index           :as index]
+            [io.cyanite.index.cassandra]))
 
 (defprotocol TimeTraveller
   (set-time! [clock t]))
@@ -60,9 +61,9 @@
        ;; No-op compoments
        :pool     (map->NoOpPool {})
        :drift    (drift/map->NoOpDrift {})
-       :index    (index/map->AtomIndex {})
+       :index    (index/build-index (or (:index config) {:type :atom}))
        :queues   (map->SynchronousQueue {})
-       :store    (store/map->MemoryStore {})
+       :store    (store/build-store (or (:store config) {:type :memory}))
        ;; Default versions
        :engine   (engine/map->Engine (:engine config))
        :writer   (writer/map->Writer (:writer config))
@@ -72,6 +73,7 @@
       (component/system-using {:drift  [:clock]
                                :queues [:reporter]
                                :pool   [:reporter]
+                               :index  [:engine]
                                :engine [:drift :queues :reporter]
                                :writer [:pool :index :store :engine :reporter]
                                })))
