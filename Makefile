@@ -1,3 +1,4 @@
+GRAFANA_DIR       := ./grafana/
 CLUSTER_NAME      := cyanite_cluster
 CASSANDRA_VERSION := binary:3.5
 
@@ -21,3 +22,18 @@ stop_cluster:
 .PHONY: clean
 clean:
 	pip uninstall ccm
+
+$(GRAFANA_DIR):
+	go get github.com/grafana/grafana							;\
+	git clone git@github.com:grafana/grafana.git	;\
+	git checkout v3.0.2														;\
+	cd grafana																		;\
+	go run build.go setup													;\
+	go run build.go build													;\
+	npm install																		;\
+	npm install grunt-cli													;\
+	node_modules/grunt-cli/bin/grunt build
+
+dev: $(GRAFANA_DIR)
+	cd grafana           ;\
+	./bin/grafana-server
