@@ -44,5 +44,12 @@ $(STRESSER_DIR):
 	cd graphite-stresser ;\
 	./gradlew uberjar
 
+STRESS_HOSTS    := 5
+STRESS_TIMERS   := 2
+STRESS_INTERVAL := 1
 stress: $(STRESSER_DIR)
-	java -jar $(STRESSER_DIR)/build/libs/graphite-stresser-0.1.jar localhost 2003 1 1 1 true
+	java -jar $(STRESSER_DIR)/build/libs/graphite-stresser-0.1.jar localhost 2003 $(STRESS_HOSTS) $(STRESS_TIMERS) $(STRESS_INTERVAL) true
+
+.PHONY: dev
+dev:
+	lein run --path ./dev/cyanite.yaml
