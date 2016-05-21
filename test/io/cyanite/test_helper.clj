@@ -73,9 +73,9 @@
       (component/system-using {:drift  [:clock]
                                :queues [:reporter]
                                :pool   [:reporter]
-                               :index  [:engine]
-                               :engine [:drift :queues :reporter]
-                               :writer [:pool :index :store :engine :reporter]
+                               :index  []
+                               :engine [:drift :queues :reporter :index]
+                               :writer [:pool :store :engine :reporter]
                                })))
 
 
