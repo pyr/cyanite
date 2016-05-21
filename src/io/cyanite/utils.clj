@@ -25,7 +25,7 @@
       (keyset [this]
         (.keySet db))
       (contains-key [this key]
-        (.contains db key))
+        (.containsKey db key))
       (remove! [this k]
         (.remove db k))
       (assoc-if-absent! [this k v]
