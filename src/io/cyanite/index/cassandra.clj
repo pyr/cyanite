@@ -60,7 +60,7 @@
 
 (defrecord CassandraIndex [options session
                            insert-segmentq insert-pathq
-                           engine wrcty rdcty]
+                           wrcty rdcty]
   component/Lifecycle
   (start [this]
     (let [[session rdcty wrcty] (c/session! options)]
@@ -74,24 +74,23 @@
         (assoc :insert-pathq nil)
         (assoc :insert-segmentq nil)))
   index/MetricIndex
-  (register! [this path] ;; pos segment path length
-    (when (not (contains-key (:state engine) path))
-      (let [parts  (compose-parts path)
-            length (count parts)]
-        (doseq [[i part] parts]
-          (runq! session insert-segmentq
-                 [(int i)
-                  part
-                  length
-                  (= length i)]
-                 {:consistency wrcty}))
-        (runq! session insert-pathq
-               [(->> (split path #"\.")
-                     (butlast)
-                     (join "."))
-                path
-                (int (count parts))]
-               {:consistency wrcty}))))
+  (register! [this path]
+    (let [parts  (compose-parts path)
+          length (count parts)]
+      (doseq [[i part] parts]
+        (runq! session insert-segmentq
+               [(int i)
+                part
+                length
+                (= length i)]
+               {:consistency wrcty}))
+      (runq! session insert-pathq
+             [(->> (split path #"\.")
+                   (butlast)
+                   (join "."))
+              path
+              (int (count parts))]
+             {:consistency wrcty})))
   (prefixes [this pattern]
     (let [pos      (count (split pattern #"\."))
           res      (alia/execute session
