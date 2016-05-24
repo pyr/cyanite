@@ -104,3 +104,4 @@
   (map->AgentDrift options))
 
 (prefer-method print-method clojure.lang.IRecord clojure.lang.IDeref)
+(prefer-method print-method java.util.Map clojure.lang.IDeref)

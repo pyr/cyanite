@@ -4,6 +4,7 @@
             [io.cyanite.engine.rule     :as rule]
             [io.cyanite.engine.queue    :as q]
             [spootnik.reporter          :as r]
+            [io.cyanite.index           :as index]
             [io.cyanite.utils           :refer [nbhm assoc-if-absent! entries remove!]]
             [io.cyanite.engine.drift    :refer [drift! skewed-epoch! epoch!]]
             [clojure.tools.logging      :refer [info debug error]])
@@ -65,11 +66,12 @@
     (mapv #(MetricResolution. % (nbhm)) plan)))
 
 (defn fetch-resolutions
-  [state rules metric]
+  [state rules metric absent-callback]
   (let [path        (:path metric)
         resolutions (or (get state path)
                         (make-resolutions rules metric))]
-    (assoc-if-absent! state path resolutions)
+    (when (nil? (assoc-if-absent! state path resolutions))
+      (absent-callback path))
     resolutions))
 
 (defn snapshot-resolution
@@ -80,7 +82,7 @@
   [now [path resolutions]]
   (mapcat (partial snapshot-resolution path now) resolutions))
 
-(defrecord Engine [rules state queues ingestq planner drift reporter]
+(defrecord Engine [rules state queues ingestq planner drift reporter index]
   component/Lifecycle
   (start [this]
     (let [state   (nbhm)
@@ -96,7 +98,10 @@
   Ingester
   (ingest! [this metric]
     (drift! drift (:time metric))
-    (doseq [resolution (fetch-resolutions state planner metric)]
+    (doseq [resolution (fetch-resolutions state planner metric
+                                          #(r/time! reporter
+                                                    [:cyanite :writer :indexing]
+                                                    (index/register! index %)))]
       (ingest! resolution metric)))
   Enqueuer
   (enqueue! [this metric]

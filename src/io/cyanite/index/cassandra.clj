@@ -60,7 +60,7 @@
 
 (defrecord CassandraIndex [options session
                            insert-segmentq insert-pathq
-                           engine wrcty rdcty]
+                           wrcty rdcty]
   component/Lifecycle
   (start [this]
     (let [[session rdcty wrcty] (c/session! options)]
@@ -74,24 +74,23 @@
         (assoc :insert-pathq nil)
         (assoc :insert-segmentq nil)))
   index/MetricIndex
-  (register! [this path] ;; pos segment path length
-    (when (not (contains-key (:state engine) path))
-      (let [parts  (compose-parts path)
-            length (count parts)]
-        (doseq [[i part] parts]
-          (runq! session insert-segmentq
-                 [(int i)
-                  part
-                  length
-                  (= length i)]
-                 {:consistency wrcty}))
-        (runq! session insert-pathq
-               [(->> (split path #"\.")
-                     (butlast)
-                     (join "."))
-                path
-                (int (count parts))]
-               {:consistency wrcty}))))
+  (register! [this path]
+    (let [parts  (compose-parts path)
+          length (count parts)]
+      (doseq [[i part] parts]
+        (runq! session insert-segmentq
+               [(int i)
+                part
+                length
+                (= length i)]
+               {:consistency wrcty}))
+      (runq! session insert-pathq
+             [(->> (split path #"\.")
+                   (butlast)
+                   (join "."))
+              path
+              (int (count parts))]
+             {:consistency wrcty})))
   (prefixes [this pattern]
     (let [pos      (count (split pattern #"\."))
           res      (alia/execute session
@@ -115,31 +114,10 @@
                                       (glob-to-like pattern)
                                       "'")
                                  {:consistency wrcty})
-          filtered (set (glob pattern (map :segment res)))]
-      (filter (fn [{:keys [segment]}]
-                (not (nil? (get filtered segment)))) res))))
+          filtered (set (glob pattern (map :path res)))]
+      (filter (fn [{:keys [path]}]
+                (not (nil? (get filtered path)))) res))))
 
 (defmethod index/build-index :cassandra
   [options]
   (map->CassandraIndex {:options (dissoc options :type)}))
-
-
-(comment
-
-  (let [i (component/start (map->CassandraIndex {:options {:cluster "127.0.0.1"}} ))]
-    (index/register! i"foo.bar.baz.bim")
-    (index/register! i"foo.bar.baz.bim.bam.boum.barf")
-    (index/register! i"foo.bar.baz.bim.bam.boum")
-    (index/register! i"foo.bar.qux")
-    (index/register! i"bar.bar.qux")
-    (index/register! i"foo.baz.qux")
-    (index/prefixes i"foo.bar.*"))
-
-  (let [j  (component/start (index/map->AtomIndex  {} ))]
-    (index/register! j "foo.bar.baz.bim")
-    (index/register! j "foo.bar.baz.bim.bam.boum.barf")
-    (index/register! j "foo.bar.baz.bim.bam.boum")
-    (index/register! j "foo.bar.qux")
-    (index/register! j "bar.bar.qux")
-    (index/register! j "foo.baz.qux")
-    (index/prefixes j "foo.bar.*")))
