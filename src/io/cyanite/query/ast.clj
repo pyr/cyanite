@@ -1,8 +1,6 @@
 (ns io.cyanite.query.ast
   (:require [clojure.string :as s]))
 
-(def ^:dynamic *series*)
-
 (defn nil-safe-op
   [f]
   (fn [& vals]
@@ -16,28 +14,28 @@
 
 (defn resolve!
   [series floor ceiling]
-  (let [payload (transform! series)
-        width   (count (second payload))]
+  (let [series (first (transform! series))
+        width   (count (second series))]
     (when-not (<= (or floor 0) width (or ceiling Long/MAX_VALUE))
       (throw (ex-info "invalid width for series"
                       {:ceiling ceiling
                        :floor   floor
                        :width   width
                        :series  series})))
-    payload))
+    series))
 
 (defn merge-resolve!
   [series floor ceiling]
-  (let [transformed (map transform! series)
-        width       (reduce + 0 (map (comp count second) transformed))]
+  (let [series      (mapcat transform! series)
+        width       (reduce + 0 (map (comp count second) series))]
     (when-not (<= (or floor 0) width (or ceiling Long/MAX_VALUE))
       (throw (ex-info "invalid width for series"
                       {:ceiling ceiling
                        :floor   floor
                        :width   width
-                       :series  transformed})))
-    [(s/join "," (map first transformed))
-     (reduce concat [] (map second transformed))]))
+                       :series series})))
+    [(s/join "," (map first series))
+     (reduce concat [] (map second series))]))
 
 (defn flatten-series
   [f series]
@@ -75,15 +73,16 @@
 (defn traverse!
   [repr outer inner & series]
   (let [renamed (series-rename series repr)]
-    [renamed [(apply mapv (nil-safe-op outer) (flatten-series (nil-safe-op inner) series))]]))
+    [[renamed [(apply mapv (nil-safe-op outer) (flatten-series (nil-safe-op inner) series))]]]))
 
-(extend-protocol SeriesTransform
-  String
-  (transform! [this]
-    [this (or (get *series* this) [])])
-  clojure.lang.PersistentVector
-  (transform! [this]
-    this))
+(defn add-date
+  [from step data]
+  (loop [res        []
+         [d & ds]   (first data)
+         point      from]
+    (if ds
+      (recur (if d (conj res [d point]) res) ds (+ point step))
+      res)))
 
 (defrecord SumOperation [series]
   SeriesTransform
@@ -131,37 +130,57 @@
      nil
      (resolve! series 1 1))))
 
-(defmulti  tokens->ast first)
+(defrecord IdentityOperation [path series]
+  SeriesTransform
+  (transform! [this]
+    (if (nil? path)
+      (mapv
+       (fn [[k v]]
+         [k [v]]) series)
+      [[path [(get series path)]]])))
+
+(defmulti  tokens->ast
+  (fn [series tokens]
+    (first tokens)))
+
+(defn wildcard-path?
+  [path]
+  (.contains path "*"))
 
 (defmethod tokens->ast :path
-  [[_ path]]
-  path)
+  [series [_ path]]
+  (if (wildcard-path? path)
+    (IdentityOperation. nil series)
+    (IdentityOperation. path series)))
 
 (defmethod tokens->ast :sumseries
-  [[_ & series]]
-  (SumOperation. (mapv tokens->ast series)))
+  [series [_ & tokens]]
+  (SumOperation. (mapv #(tokens->ast series %) tokens)))
 
 (defmethod tokens->ast :divideseries
-  [[_ top bottom]]
-  (DivOperation. (tokens->ast top) (tokens->ast bottom)))
+  [series [_ top bottom]]
+  (DivOperation. (tokens->ast series top) (tokens->ast series bottom)))
 
 (defmethod tokens->ast :scale
-  [[_ series factor]]
-  (ScaleOperation. (Double. factor) (tokens->ast series)))
+  [series [_ path factor]]
+  (ScaleOperation. (Double. factor) (tokens->ast series path)))
 
 (defmethod tokens->ast :absolute
-  [[_ series]]
-  (AbsoluteOperation. (tokens->ast series)))
+  [series [_ path]]
+  (AbsoluteOperation. (tokens->ast series path)))
 
 (defmethod tokens->ast :derivative
-  [[_ series]]
-  (DerivativeOperation. (tokens->ast series)))
+  [series [_ path]]
+  (DerivativeOperation. (tokens->ast series path)))
 
 (defmethod tokens->ast :default
-  [x]
+  [series x]
   (throw (ex-info "unsupported function in cyanite" {:arg x})))
 
 (defn run-query!
-  [tokens series]
-  (binding [*series* series]
-    (transform! (tokens->ast tokens))))
+  ;; for testing purposes
+  ([tokens series]
+   (transform! (tokens->ast series tokens)))
+  ([tokens series from step]
+   (for [[n datapoints] (transform! (tokens->ast series tokens))]
+     {:target n :datapoints (add-date from step datapoints)})))
