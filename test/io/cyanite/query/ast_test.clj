@@ -20,3 +20,22 @@
                {"a.b.c" [[1 3 6]]})
          ["derivative(a.b.c)"
           [[nil 2 3]]])))
+
+(deftest test-absolute
+  (is (= (runq "absolute(a.b.c)"
+               {"a.b.c" [[-1 -3 -6]]})
+         ["absolute(a.b.c)"
+          [[1 3 6]]])))
+
+(deftest test-absolute
+  (is (= (runq "scale(a.b.c,10.0)"
+               {"a.b.c" [[1 2 3]]})
+         ["scale(a.b.c,10.0)"
+          [[10.0 20.0 30.0]]])))
+
+(deftest test-div
+  (is (= (runq "divideSeries(a.b.c,a.b.d)"
+               {"a.b.c" [[10 20 30]]
+                "a.b.d" [[2 4 6]]})
+         ["divideSeries(a.b.c,a.b.d)"
+          [[5 5 5]]])))
