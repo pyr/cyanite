@@ -54,6 +54,7 @@
   [pattern-length [path length leaf]]
   {:text          (last (split path #"\."))
    :id            path
+   :path          path
    :allowChildren (not leaf)
    :expandable    (not leaf)
    :leaf          leaf})
