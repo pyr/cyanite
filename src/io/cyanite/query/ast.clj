@@ -14,14 +14,15 @@
 
 (defn resolve!
   [series floor ceiling]
-  (let [series (first (transform! series))
+  (let [series  (first (transform! series))
         width   (count (second series))]
-    (when-not (<= (or floor 0) width (or ceiling Long/MAX_VALUE))
-      (throw (ex-info "invalid width for series"
-                      {:ceiling ceiling
-                       :floor   floor
-                       :width   width
-                       :series  series})))
+    (comment
+      (when-not (<= (or floor 0) width (or ceiling Long/MAX_VALUE))
+        (throw (ex-info "invalid width for series"
+                        {:ceiling ceiling
+                         :floor   floor
+                         :width   width
+                         :series  series}))))
     series))
 
 (defn merge-resolve!
@@ -35,7 +36,7 @@
                        :width   width
                        :series series})))
     [(s/join "," (map first series))
-     (reduce concat [] (map second series))]))
+     (reduce conj [] (map second series))]))
 
 (defn flatten-series
   [f series]
@@ -71,14 +72,31 @@
                (fn [x] (get indexed (second x) "")))))
 
 (defn traverse!
+  "Traverse receives the input in form of series:
+
+   For example, the derivative operation would pass the series in form of:
+
+       [a.b.c [[nil [1 3] [3 6]]]]
+
+   First, the innermost elements will get subtracted. The outermost elements will
+   get concatenated.
+
+   The sumSeries would pass it in form of
+
+       [a.b.* [[1 1 1] [2 2 2]]]
+
+   The innermost elements will be concatenated with a summation operation (outer).
+
+
+  "
   [repr outer inner & series]
   (let [renamed (series-rename series repr)]
-    [[renamed [(apply mapv (nil-safe-op outer) (flatten-series (nil-safe-op inner) series))]]]))
+    [[renamed (apply mapv (nil-safe-op outer) (flatten-series (nil-safe-op inner) series))]]))
 
 (defn add-date
   [from step data]
   (loop [res        []
-         [d & ds]   (first data)
+         [d & ds]   data ;;(first data)
          point      from]
     (if ds
       (recur (if d (conj res [d point]) res) ds (+ point step))
@@ -88,26 +106,11 @@
   SeriesTransform
   (transform! [this]
     (let [merged (merge-resolve! series 1 nil)]
-      (traverse! "sumSeries($0)" + + merged))))
-
-(defrecord DivOperation [top bottom]
-  SeriesTransform
-  (transform! [this]
-    (traverse!
-     "divideSeries($0,$1)"
-     /
-     nil
-     (resolve! top 1 1)
-     (resolve! bottom 1 1))))
-
-(defrecord ScaleOperation [factor series]
-  SeriesTransform
-  (transform! [this]
-    (traverse!
-     (format "scale($0,%s)" factor)
-     (partial * factor)
-     nil
-     (resolve! series 1 1))))
+      (traverse!
+       "sumSeries($0)"
+       +
+       +
+       merged))))
 
 (defrecord DerivativeOperation [series]
   SeriesTransform
@@ -117,9 +120,17 @@
      (let [safe-nil-subtract (nil-safe-op -)]
        (fn [[a b]] (safe-nil-subtract b a)))
      nil
-     (mapcat (fn [[k v]] [k (map #(partition 2 1 (cons nil %)) v)])
+     ;; traverse input has to look like: (a.b.c [(nil (1 3) (3 6))])
+     (mapcat (fn [[k v]] [k [(cons nil (partition 2 1 v))]])
              (partition 2 2
                         (resolve! series 1 1))))))
+
+(defn lift-single-series
+  "Lifts the series to "
+  [series]
+  (mapcat (fn [[k v]] [k [v]])
+          (partition 2 2
+                     series)))
 
 (defrecord AbsoluteOperation [series]
   SeriesTransform
@@ -128,7 +139,26 @@
      "absolute($0)"
      #(Math/abs %)
      nil
-     (resolve! series 1 1))))
+     (lift-single-series (resolve! series 1 1)))))
+
+(defrecord DivOperation [top bottom]
+  SeriesTransform
+  (transform! [this]
+    (traverse!
+     "divideSeries($0,$1)"
+     /
+     nil
+     (lift-single-series (resolve! top 1 1))
+     (lift-single-series (resolve! bottom 1 1)))))
+
+(defrecord ScaleOperation [factor series]
+  SeriesTransform
+  (transform! [this]
+    (traverse!
+     (format "scale($0,%s)" factor)
+     (partial * factor)
+     nil
+     (lift-single-series (resolve! series 1 1)))))
 
 (defrecord IdentityOperation [path series]
   SeriesTransform
@@ -136,8 +166,8 @@
     (if (nil? path)
       (mapv
        (fn [[k v]]
-         [k [v]]) series)
-      [[path [(get series path)]]])))
+         [k v]) series)
+      [[path (get series path)]])))
 
 (defmulti  tokens->ast
   (fn [series tokens]
