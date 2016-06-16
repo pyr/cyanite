@@ -120,7 +120,6 @@
      (let [safe-nil-subtract (nil-safe-op -)]
        (fn [[a b]] (safe-nil-subtract b a)))
      nil
-     ;; traverse input has to look like: (a.b.c [(nil (1 3) (3 6))])
      (mapcat (fn [[k v]] [k [(cons nil (partition 2 1 v))]])
              (partition 2 2
                         (resolve! series 1 1))))))

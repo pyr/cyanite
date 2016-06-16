@@ -35,7 +35,7 @@
 
 (defn cleanup-tables
   [session]
-  (for [table ["metric" "path" "segment"]]
+  (doseq [table ["metric" "path" "segment"]]
     (alia/execute session (str "TRUNCATE TABLE " table))))
 
 (deftest index-prefixes-test
@@ -61,7 +61,7 @@
                (get result "a.b.c")))
         (is (= (map double (range 21 40))
                (get result "a.b.d"))))
-      (cleanup-tables store))))
+      (cleanup-tables session))))
 
 (deftest index-no-wildcard-test
   (with-config
@@ -77,6 +77,15 @@
           engine   (:engine *system*)
           session  (:session store)]
       (insert-data index store)
+
+      (let [result (->> (run-query! store index engine 0 100 ["sumSeries(a.b.c,a.b.d)"])
+                        (group-by :target)
+                        (mmap-vals :datapoints)
+                        (map-vals #(mapcat identity %))
+                        (map-vals #(map first %)))]
+        (is (= (map double (mapv + (range 11 30) (range 21 40)))
+               (get result "sumSeries(a.b.c,a.b.d)"))))
+
       (let [result (->> (run-query! store index engine 0 100 ["a.b.c"])
                         (group-by :target)
                         (mmap-vals :datapoints)
@@ -91,4 +100,4 @@
                         (map-vals #(map first %)))]
         (is (= (map double (range 21 40))
                (get result "a.b.d"))))
-      (cleanup-tables store))))
+      (cleanup-tables session))))
