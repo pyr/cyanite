@@ -25,19 +25,28 @@
         (when (= 0 (mod i 5))
           (e/snapshot! writer)))
 
-      (are [query result]
+      (is (= (run-query! store index engine base-time (+ base-time 60)
+                         ["a.b.*"])
+             [{:target "a.b.c" :datapoints [[2.0 base-time] [7.0 (+ base-time 5)]]}
+              {:target "a.b.d" :datapoints [[200.0 base-time] [700.0 (+ base-time 5)]]}
+              {:target "a.b.f" :datapoints [[2000.0 base-time] [7000.0 (+ base-time 5)]]}]))
+
+      (are [query expansion result]
           (= (run-query! store index engine base-time (+ base-time 60)
                          [query])
-             [{:target query :datapoints result}])
+             [{:target expansion :datapoints result}])
 
-        "a.b.c"
+        "a.b.c" "a.b.c"
         [[2.0 base-time] [7.0 (+ base-time 5)]]
 
-        "scale(a.b.c,2.0)"
+        "scale(a.b.c,2.0)" "scale(a.b.c,2.0)"
         [[4.0 base-time] [14.0 (+ base-time 5)]]
 
-        "derivative(a.b.c)"
+        "derivative(a.b.c)" "derivative(a.b.c)"
         [[5.0 (+ base-time 5)]]
 
-        "sumSeries(a.b.*)"
+        "sumSeries(a.b.c,a.b.d,a.b.f)" "sumSeries(a.b.c,a.b.d,a.b.f)"
+        [[2202.0 base-time] [7707.0 (+ base-time 5)]]
+
+        "sumSeries(a.b.*)" "sumSeries(a.b.c,a.b.d,a.b.f)"
         [[2202.0 base-time] [7707.0 (+ base-time 5)]]))))

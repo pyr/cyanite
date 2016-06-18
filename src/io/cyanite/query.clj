@@ -17,35 +17,30 @@
 
 (defn merge-paths
   [by-path series]
-  (let [fetch-series (fn [leaf] (get-in series [:series (:path leaf)]))]
-    (->> (for [[p leaves] by-path]
-           [p (remove nil? (map fetch-series leaves))])
-         (reduce merge {}))))
+  (let [fetch-series (fn [leaf]
+                       [(:path leaf) (get-in series [:series (:path leaf)])])]
 
-(defn add-date
-  [from step data]
-  (loop [res        []
-         [d & ds]   data
-         point      from]
-    (if ds
-      (recur (if d (conj res [d point]) res) ds (+ point step))
-      res)))
+    (->> by-path
+         (map (fn [[p leaves]]
+                (remove #(nil? (second %)) (map fetch-series leaves))))
+         (mapcat identity)
+         (reduce merge {}))))
 
 (defn run-query!
   [store index engine from to queries]
   (debug "running query: " (pr-str queries))
-  (for [query queries]
-    (let [tokens  (parser/query->tokens query)
-          paths   (path/tokens->paths tokens)
-          by-path (path-leaves index paths)
-          leaves  (->> (mapcat val by-path)
-                       (map :path)
-                       (map (partial engine/resolution engine from to))
-                       (remove nil?)
-                       (distinct))
-          series  (store/query! store from to leaves)
-          merged  (merge-paths by-path series)
-          from    (:from series)
-          step    (:step series)]
-      (let [[n [data]] (ast/run-query! tokens merged)]
-        {:target n :datapoints (add-date from step data)}))))
+  (flatten
+   (for [query queries]
+     (let [tokens     (parser/query->tokens query)
+           paths      (path/tokens->paths tokens)
+           by-path    (path-leaves index paths)
+           leaves     (->> (mapcat val by-path)
+                           (map :path)
+                           (map (partial engine/resolution engine from to))
+                           (remove nil?)
+                           (distinct))
+           series     (store/query! store from to leaves)
+           merged     (merge-paths by-path series)
+           from       (:from series)
+           step       (:step series)]
+       (ast/run-query! tokens merged from step)))))
