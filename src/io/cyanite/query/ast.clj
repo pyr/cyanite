@@ -3,27 +3,16 @@
 
 (defn nil-safe-op
   [f]
-  (fn [& vals]
-    (if (some nil? vals)
-      nil
-      (apply f vals))))
+  (if (nil? f)
+    nil
+    (fn [& vals]
+      (if (some nil? vals)
+        nil
+        (apply f vals)))))
 
 (defprotocol SeriesTransform
   "A protocol to realize operations on series."
   (transform! [this]))
-
-(defn resolve!
-  [series floor ceiling]
-  (let [series  (first (transform! series))
-        width   (count (second series))]
-    (comment
-      (when-not (<= (or floor 0) width (or ceiling Long/MAX_VALUE))
-        (throw (ex-info "invalid width for series"
-                        {:ceiling ceiling
-                         :floor   floor
-                         :width   width
-                         :series  series}))))
-    series))
 
 (defn merge-resolve!
   [series floor ceiling]
@@ -35,25 +24,22 @@
                        :floor   floor
                        :width   width
                        :series series})))
-    [(s/join "," (map first series))
-     (reduce conj [] (map second series))]))
+    [[(s/join "," (map first series))
+      (reduce conj [] (map second series))]]))
 
 (defn flatten-series
-  [f series]
-  (for [[name payload] series]
-    (cond
-      (and (nil? f) (> 1 (count payload)))
-      (throw (ex-info (str "Cannot flatten series with nil inner function. "
-                           "A likely reason is that you used a single-arity "
-                           "function on a path that resolves to multiple "
-                           "series.")
-                      {}))
-
-      (= 1 (count payload))
-      (-> payload first)
-
-      :else
-      (apply mapv f payload))))
+  [reducer mapper series]
+  (mapcat
+   (fn [[name payload]]
+     (let [payload (if (nil? mapper)
+                     payload
+                     ;; we need a second mapper here for cases when
+                     ;; we sum absolute values or similar
+                     (map #(map mapper %) payload))]
+       (if (nil? reducer)
+         payload
+         (reducer payload))))
+   series))
 
 
 (defn index-series
@@ -72,26 +58,27 @@
                (fn [x] (get indexed (second x) "")))))
 
 (defn traverse!
-  "Traverse receives the input in form of series:
+  [rename-fn combiner reducer mapper series]
+  (let [renamed   (series-rename series rename-fn)
+        flattened (flatten-series (nil-safe-op reducer) (nil-safe-op mapper) series)
+        combined  (if (nil? combiner)
+                    flattened
+                    (apply mapv (nil-safe-op combiner) flattened))]
+    [[renamed combined]]))
 
-   For example, the derivative operation would pass the series in form of:
+(defn traverse-each!
+  [rename-fn reducer mapper series]
+  (for [s series]
+    (let [renamed   (series-rename [s] rename-fn)
+          mapped    (if (nil? mapper)
+                      (second s)
+                      (map (nil-safe-op mapper) (second s)))
+          reduced   (if (nil? reducer)
+                      mapped
+                      (reducer mapped))]
+      [renamed reduced])))
 
-       [a.b.c [[nil [1 3] [3 6]]]]
 
-   First, the innermost elements will get subtracted. The outermost elements will
-   get concatenated.
-
-   The sumSeries would pass it in form of
-
-       [a.b.* [[1 1 1] [2 2 2]]]
-
-   The innermost elements will be concatenated with a summation operation (outer).
-
-
-  "
-  [repr outer inner & series]
-  (let [renamed (series-rename series repr)]
-    [[renamed (apply mapv (nil-safe-op outer) (flatten-series (nil-safe-op inner) series))]]))
 
 (defn add-date
   [from step data]
@@ -109,20 +96,19 @@
       (traverse!
        "sumSeries($0)"
        +
-       +
+       nil
+       nil
        merged))))
 
 (defrecord DerivativeOperation [series]
   SeriesTransform
   (transform! [this]
-    (traverse!
+    (traverse-each!
      "derivative($0)"
-     (let [safe-nil-subtract (nil-safe-op -)]
-       (fn [[a b]] (safe-nil-subtract b a)))
+     (fn [s]
+       (cons nil (map #(apply (nil-safe-op -) (reverse %)) (partition 2 1 s))))
      nil
-     (mapcat (fn [[k v]] [k [(cons nil (partition 2 1 v))]])
-             (partition 2 2
-                        (resolve! series 1 1))))))
+     (transform! series))))
 
 (defn lift-single-series
   "Lifts the series to "
@@ -134,30 +120,31 @@
 (defrecord AbsoluteOperation [series]
   SeriesTransform
   (transform! [this]
-    (traverse!
+    (traverse-each!
      "absolute($0)"
-     #(Math/abs %)
      nil
-     (lift-single-series (resolve! series 1 1)))))
+     #(Math/abs %)
+     (transform! series))))
 
 (defrecord DivOperation [top bottom]
   SeriesTransform
   (transform! [this]
     (traverse!
-     "divideSeries($0,$1)"
+     "divideSeries($0)"
      /
      nil
-     (lift-single-series (resolve! top 1 1))
-     (lift-single-series (resolve! bottom 1 1)))))
+     nil
+     (merge-resolve! [top bottom]
+                     1 nil))))
 
 (defrecord ScaleOperation [factor series]
   SeriesTransform
   (transform! [this]
-    (traverse!
+    (traverse-each!
      (format "scale($0,%s)" factor)
-     (partial * factor)
      nil
-     (lift-single-series (resolve! series 1 1)))))
+     (partial * factor)
+     (transform! series))))
 
 (defrecord IdentityOperation [path series]
   SeriesTransform

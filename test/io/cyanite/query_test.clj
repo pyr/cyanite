@@ -49,4 +49,5 @@
         [[2202.0 base-time] [7707.0 (+ base-time 5)]]
 
         "sumSeries(a.b.*)" "sumSeries(a.b.c,a.b.d,a.b.f)"
-        [[2202.0 base-time] [7707.0 (+ base-time 5)]]))))
+        [[2202.0 base-time] [7707.0 (+ base-time 5)]]
+        ))))
