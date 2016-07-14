@@ -33,7 +33,7 @@ Runtime requirements
 Runtime requirements for Cyanite are kept to a minimum
 
 - Java 8 Runtime (Sun JDK recommended)
-- Apache Cassandra 2.1 or later
+- Apache Cassandra 3.0 or later
 
 Build requirements
 ~~~~~~~~~~~~~~~~~~
@@ -62,7 +62,9 @@ See :ref:`Configuration Syntax` for more details
     store:
       cluster: "127.0.0.1"
     index:
-      type: "agent"
+      type: "cassandra"
+      keyspace: "metric"
+      cluster: "127.0.0.1"
     api:
       port: 8080
     engine:

@@ -92,11 +92,7 @@ Index
 ~~~~~
 
 The index determines where metric names will be stored.
-Two types of indices are available now: "agent" and
-"cassandra". If no index section is present,
-An in-memory (agent) index will be assumed.
-
-The agent index takes no options.
+The only type of index available now is: "cassandra". 
 The cassandra index takes the following options:
 
 *cluster*:
@@ -107,7 +103,9 @@ The cassandra index takes the following options:
 .. sourcecode:: yaml
 
     index:
-      type: agent
+      type: cassandra
+      keyspace: metric
+      cluster: localhost
 
 Store
 ~~~~~
@@ -149,51 +147,7 @@ defined at https://github.com/pyr/unilog
 Integration with Graphite and Grafana
 -------------------------------------
 
-Cyanite exposes an API which is not fully
-compatible with Graphite, to bridge cyanite
-to Graphite or Grafana_, two options are available:
-
-- Using alternative *storage finders* in graphite-web
-- Using graphite-api
-
-If you intend to use Grafana_, the recommended option
-is to use graphite-api.
-
-graphite-api configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-You will need to install both `graphite-api` and
-`graphite-cyanite` through pip. `graphite-api`
-can then be configured by providing a valid YAML file
-in `/etc/graphite-api.yaml`
-
-.. sourcecode:: yaml
-
-    search_index: /srv/graphite/index
-    finders:
-      - cyanite.CyaniteFinder
-    cyanite:
-      urls:
-        - http://cyanite-host:port
-
-
-`graphite-api` is fully documented at http://graphite-api.readthedocs.org/,
-`graphite-cyanite` specific documentation can be found at
-https://github.com/brutasse/graphite-cyanite.
-
-graphite-web configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The only part which needs modifying once you have a working `graphite-web`
-installation is to install `graphite-cyanite` and modify your
-`local-settings.py` configuration file in Graphite:
-
-.. sourcecode:: yaml
-
-    STORAGE_FINDERS = ( 'cyanite.CyaniteFinder', )
-    CYANITE_URLS = ( 'http://host:port', )
-
-.. _Grafana: http://grafana.org
+Cyanite exposes an API which Graphana can communicate with directly as if it were talking to graphite.
 
 Administering Cassandra for Cyanite
 -----------------------------------
@@ -205,8 +159,8 @@ operating a large metric cluster.
 Choosing a Cassandra version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Cyanite will work with Cassandra 2.1 and above, it has been tested
-with the 2.1 releases extensively and thus is recommended.
+Cyanite will work with Cassandra 3.0 and above, it has been tested
+with the 3.0 releases extensively and thus is recommended.
 
 Choosing a compaction strategy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
