@@ -33,7 +33,7 @@ Runtime requirements
 Runtime requirements for Cyanite are kept to a minimum
 
 - Java 8 Runtime (Sun JDK recommended)
-- Apache Cassandra 3.0 or later
+- Apache Cassandra 3.4 or later
 
 Build requirements
 ~~~~~~~~~~~~~~~~~~
