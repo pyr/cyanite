@@ -1,7 +1,7 @@
 (ns io.cyanite.integration.index-test
   (:require [io.cyanite.store           :refer :all]
             [clojure.test               :refer :all]
-            [io.cyanite.test-helper     :refer :all]
+           [io.cyanite.test-helper     :refer :all]
             [io.cyanite.index           :as index]
             [qbits.alia                 :as alia]))
 
@@ -28,11 +28,23 @@
       (index/register! index "a.f.c")
       (index/register! index "a.g.c")
       (index/register! index "a.h.c")
+      (index/register! index "c.b.c")
+      (index/register! index "c.b.d")
+      (index/register! index "c.e.c")
+      (index/register! index "c.f.c")
+      (index/register! index "c.g.c")
+      (index/register! index "c.h.c")
 
       (is (= ["a.b" "a.e" "a.f" "a.g" "a.h"]
              (map :id (index/prefixes index "a.*"))))
       (is (= []
              (map :id (index/prefixes index "b.*"))))
+      (is (= ["a.b" "c.b"]
+             (map :id (index/prefixes index "*.b"))))
+      (is (= ["a" "c"]
+             (map :id (index/prefixes index "*"))))
+      (is (= ["a.e.c" "a.h.c" "a.b.c" "a.f.c" "a.g.c"])
+          (map :id (index/prefixes index "a.*.c")))
       (cleanup-tables session))))
 
 (deftest leaves-test
@@ -60,4 +72,6 @@
              (map :path (index/leaves index "a.e.*"))))
       (is (= []
              (map :path (index/leaves index "a.z.*"))))
+
+      (println (map :path (index/leaves index "*.z")))
       (cleanup-tables session))))

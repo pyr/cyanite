@@ -18,7 +18,7 @@
   [session]
   (alia/prepare
    session
-   "INSERT INTO segment (pos, segment, length, leaf) VALUES (?, ?, ?, ?);"))
+   "INSERT INTO segment (parent, segment, pos, length, leaf) VALUES (?, ?, ?, ?, ?);"))
 
 (defn runq!
   [session prepared-statement values opts]
@@ -39,9 +39,11 @@
 
 (defn glob-to-like
   [pattern]
-  (if-let [pos (index-of-first [\* \. \? \[] pattern)]
-    (str (subs pattern 0 pos) "%")
-    pattern))
+  (let [pos (index-of-first [\* \. \? \[] pattern)]
+    (cond
+      (= 1 pos)  nil
+      (nil? pos) pattern
+      :default   (str (subs pattern 0 pos) "%"))))
 
 (defn compose-parts
   [path]
@@ -77,11 +79,14 @@
   index/MetricIndex
   (register! [this path]
     (let [parts  (compose-parts path)
+          fpart  (first parts)
+          parts  (cons [[0 "root"] fpart] (partition 2 1 parts))
           length (count parts)]
-      (doseq [[i part] parts]
+      (doseq [[[_ parent] [i part]] parts]
         (runq! session insert-segmentq
-               [(int i)
+               [parent
                 part
+                (int i)
                 length
                 (= length i)]
                {:consistency wrcty}))
@@ -93,26 +98,39 @@
               (int (count parts))]
              {:consistency wrcty})))
   (prefixes [this pattern]
-    (let [pos      (count (split pattern #"\."))
+    (let [parts    (split pattern #"\.")
+          pos      (count parts)
           res      (alia/execute session
-                                 (str "SELECT * from segment where "
-                                      (if (> pos 1)
-                                        (str "segment LIKE '"
-                                             (glob-to-like pattern)
-                                             "' AND ")
-                                        "")
-                                      "pos = " pos)
+                                 (p
+                                  (str "SELECT * from segment where "
+                                       (if (= pos 1)
+                                         (str "parent = 'root' AND pos = " pos)
+                                         (if-let [globbed (glob-to-like pattern)]
+                                           (let [globbed-parts   (split globbed #"\.")]
+                                             (if (= (count parts) (count globbed-parts))
+                                                 (str "pos = " (count parts)
+                                                      " AND segment LIKE '" globbed "'"
+                                                      " AND parent = '" (join "." (butlast globbed-parts)) "'")
+                                                 (do
+                                                   (str "pos = " (count parts)
+                                                        " AND segment LIKE '" globbed "' ALLOW FILTERING" ))
+
+                                                 ))
+                                           (str "pos = " pos  )))))
                                  {:consistency wrcty})
           filtered (set (glob pattern (map :segment res)))]
+      (println 'filtered filtered pattern)
       (->> res
            (filter (fn [{:keys [segment]}]
                      (not (nil? (get filtered segment)))))
            (map (juxt :segment :length :leaf))
            (map (partial prefix-info pos)))))
   (leaves [this pattern]
-    (let [res      (alia/execute session
+    (let [globbed  (glob-to-like pattern)
+          _ (println globbed)
+          res      (alia/execute session
                                  (str "SELECT * from path WHERE path LIKE '"
-                                      (glob-to-like pattern)
+                                      globbed
                                       "'")
                                  {:consistency wrcty})
           filtered (set (glob pattern (map :path res)))]

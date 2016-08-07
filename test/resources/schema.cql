@@ -60,11 +60,12 @@ CREATE CUSTOM INDEX IF NOT EXISTS on path(path) USING 'org.apache.cassandra.inde
 CREATE CUSTOM INDEX IF NOT EXISTS on path(length) USING 'org.apache.cassandra.index.sasi.SASIIndex';
 
 CREATE TABLE IF NOT EXISTS segment (
-    pos int,
+    parent text,
     segment text,
+    pos int,
     length int,
     leaf boolean,
-    PRIMARY KEY (pos, segment)
+    PRIMARY KEY (parent, segment)
 ) WITH CLUSTERING ORDER BY (segment ASC)
     AND bloom_filter_fp_chance = 0.01
     AND caching = {'keys':'ALL', 'rows_per_partition':'NONE'}
@@ -81,3 +82,4 @@ CREATE TABLE IF NOT EXISTS segment (
     AND speculative_retry = '99.0PERCENTILE';
 
 CREATE CUSTOM INDEX IF NOT EXISTS on segment(segment) USING 'org.apache.cassandra.index.sasi.SASIIndex' WITH OPTIONS = {'mode': 'PREFIX'};
+CREATE CUSTOM INDEX IF NOT EXISTS on segment(pos) USING 'org.apache.cassandra.index.sasi.SASIIndex';
