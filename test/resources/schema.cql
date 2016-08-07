@@ -1,3 +1,4 @@
+DROP KEYSPACE IF EXISTS cyanite_test;
 CREATE KEYSPACE IF NOT EXISTS cyanite_test WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}  AND durable_writes = true;
 
 USE cyanite_test;
@@ -24,8 +25,7 @@ CREATE TABLE IF NOT EXISTS metric (
   time bigint,
   point frozen<metric_point>,
   PRIMARY KEY (id, time)
-) WITH COMPACT STORAGE
-  AND CLUSTERING ORDER BY (time ASC)
+) WITH CLUSTERING ORDER BY (time ASC)
   AND compaction = {'class': 'DateTieredCompactionStrategy',  'min_threshold': '12', 'max_threshold': '32', 'max_sstable_age_days': '0.083', 'base_time_seconds': '50' }
   AND compression = {'sstable_compression': 'org.apache.cassandra.io.compress.LZ4Compressor'}
   AND dclocal_read_repair_chance = 0.1
