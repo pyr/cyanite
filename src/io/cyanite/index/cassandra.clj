@@ -39,10 +39,10 @@
 
 (defn glob-to-like
   [pattern]
-  (let [pos (index-of-first [\* \. \? \[] pattern)]
+  (let [pos (index-of-first [\* \? \[] pattern)]
     (cond
-      (= 1 pos)  nil
-      (nil? pos) pattern
+      (= 0 pos)  nil
+      (= -1 pos) pattern
       :default   (str (subs pattern 0 pos) "%"))))
 
 (defn compose-parts
@@ -98,28 +98,27 @@
               (int (count parts))]
              {:consistency wrcty})))
   (prefixes [this pattern]
-    (let [parts    (split pattern #"\.")
-          pos      (count parts)
-          res      (alia/execute session
-                                 (p
-                                  (str "SELECT * from segment where "
-                                       (if (= pos 1)
-                                         (str "parent = 'root' AND pos = " pos)
-                                         (if-let [globbed (glob-to-like pattern)]
-                                           (let [globbed-parts   (split globbed #"\.")]
-                                             (if (= (count parts) (count globbed-parts))
-                                                 (str "pos = " (count parts)
-                                                      " AND segment LIKE '" globbed "'"
-                                                      " AND parent = '" (join "." (butlast globbed-parts)) "'")
-                                                 (do
-                                                   (str "pos = " (count parts)
-                                                        " AND segment LIKE '" globbed "' ALLOW FILTERING" ))
-
-                                                 ))
-                                           (str "pos = " pos  )))))
-                                 {:consistency wrcty})
-          filtered (set (glob pattern (map :segment res)))]
-      (println 'filtered filtered pattern)
+    (let [parts         (split pattern #"\.")
+          pos           (count parts)
+          globbed       (glob-to-like pattern)
+          globbed-parts (if (nil? globbed) [] (split globbed #"\."))
+          res           (alia/execute
+                         session
+                         (str "SELECT * from segment WHERE "
+                              (cond
+                                ;; Top-level query, return root only
+                                (= pattern "*")                         "parent = 'root' AND pos = 1"
+                                ;; Postfix wildcard query (`*.abc` and alike), optimise by position
+                                (= globbed nil)                         (str "pos = " pos)
+                                ;; Prefix wildcard query (`abc.*` and alike), add parent
+                                (= (count parts) (count globbed-parts)) (str "pos = " (count parts)
+                                                                             " AND segment LIKE '" globbed "'"
+                                                                             " AND parent = '" (join "." (butlast globbed-parts)) "'")
+                                ;; Prefix wildcard query, (`abc.*.def`), can't use position
+                                :else                                   (str "pos = " (count parts)
+                                                                             " AND segment LIKE '" globbed "' ALLOW FILTERING" )))
+                         {:consistency wrcty})
+          filtered      (set (glob pattern (map :segment res)))]
       (->> res
            (filter (fn [{:keys [segment]}]
                      (not (nil? (get filtered segment)))))
@@ -127,7 +126,6 @@
            (map (partial prefix-info pos)))))
   (leaves [this pattern]
     (let [globbed  (glob-to-like pattern)
-          _ (println globbed)
           res      (alia/execute session
                                  (str "SELECT * from path WHERE path LIKE '"
                                       globbed

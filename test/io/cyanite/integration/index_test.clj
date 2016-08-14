@@ -1,9 +1,10 @@
 (ns io.cyanite.integration.index-test
   (:require [io.cyanite.store           :refer :all]
             [clojure.test               :refer :all]
-           [io.cyanite.test-helper     :refer :all]
+            [io.cyanite.test-helper     :refer :all]
             [io.cyanite.index           :as index]
-            [qbits.alia                 :as alia]))
+            [qbits.alia                 :as alia]
+            [clj-time.core :as t]))
 
 (defn cleanup-tables
   [session]
@@ -22,29 +23,31 @@
           store    (:store *system*)
           session  (:session store)]
       (cleanup-tables session)
-      (index/register! index "a.b.c")
-      (index/register! index "a.b.d")
-      (index/register! index "a.e.c")
-      (index/register! index "a.f.c")
-      (index/register! index "a.g.c")
-      (index/register! index "a.h.c")
-      (index/register! index "c.b.c")
-      (index/register! index "c.b.d")
-      (index/register! index "c.e.c")
-      (index/register! index "c.f.c")
-      (index/register! index "c.g.c")
-      (index/register! index "c.h.c")
+      (index/register! index "aa.bb.cc")
+      (index/register! index "aa.bb.dd")
+      (index/register! index "aa.ee.cc")
+      (index/register! index "aa.ff.cc")
+      (index/register! index "aa.gg.cc")
+      (index/register! index "aa.hh.cc")
+      (index/register! index "cc.bb.cc")
+      (index/register! index "cc.bb.dd")
+      (index/register! index "cc.ee.cc")
+      (index/register! index "cc.ff.cc")
+      (index/register! index "cc.gg.cc")
+      (index/register! index "cc.hh.cc")
 
-      (is (= ["a.b" "a.e" "a.f" "a.g" "a.h"]
-             (map :id (index/prefixes index "a.*"))))
-      (is (= []
-             (map :id (index/prefixes index "b.*"))))
-      (is (= ["a.b" "c.b"]
-             (map :id (index/prefixes index "*.b"))))
-      (is (= ["a" "c"]
-             (map :id (index/prefixes index "*"))))
-      (is (= ["a.e.c" "a.h.c" "a.b.c" "a.f.c" "a.g.c"])
-          (map :id (index/prefixes index "a.*.c")))
+      (is (= #{"aa.bb" "aa.ee" "aa.ff" "aa.gg" "aa.hh"}
+             (set (map :id (index/prefixes index "aa.*")))))
+      (is (= #{}
+             (set (map :id (index/prefixes index "bb.*")))))
+      (is (= #{"aa.bb" "cc.bb"}
+             (set (map :id (index/prefixes index "*.bb")))))
+      (is (= #{"aa" "cc"}
+             (set (map :id (index/prefixes index "*")))))
+      (is (= #{"aa.ee.cc" "aa.hh.cc" "aa.bb.cc" "aa.ff.cc" "aa.gg.cc"}
+             (set (map :id (index/prefixes index "aa.*.cc")))))
+      (is (= #{"aa.ee.cc"}
+             (set (map :id (index/prefixes index "aa.ee.cc")))))
       (cleanup-tables session))))
 
 (deftest leaves-test
@@ -73,5 +76,4 @@
       (is (= []
              (map :path (index/leaves index "a.z.*"))))
 
-      (println (map :path (index/leaves index "*.z")))
       (cleanup-tables session))))
