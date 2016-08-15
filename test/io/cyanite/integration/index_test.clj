@@ -6,12 +6,9 @@
             [qbits.alia                 :as alia]))
 
 (defn cleanup-tables
-  [f]
-  (f)
-  (for [table ["metric" "path" "segment"]]
-    (alia/execute (str "TRUNCATE TABLE " table))))
-
-(use-fixtures :each cleanup-tables)
+  [session]
+  (doseq [table ["metric" "path" "segment"]]
+    (alia/execute session (str "TRUNCATE TABLE " table))))
 
 (deftest index-prefixes-test
   (with-config
@@ -21,7 +18,10 @@
              :cluster  "localhost"
              :keyspace "cyanite_test"}}
     {}
-    (let [index    (:index *system*)]
+    (let [index    (:index *system*)
+          store    (:store *system*)
+          session  (:session store)]
+      (cleanup-tables session)
       (index/register! index "a.b.c")
       (index/register! index "a.b.d")
       (index/register! index "a.e.c")
@@ -32,7 +32,8 @@
       (is (= ["a.b" "a.e" "a.f" "a.g" "a.h"]
              (map :id (index/prefixes index "a.*"))))
       (is (= []
-             (map :id (index/prefixes index "b.*")))))))
+             (map :id (index/prefixes index "b.*"))))
+      (cleanup-tables session))))
 
 (deftest leaves-test
   (with-config
@@ -42,7 +43,10 @@
              :cluster  "localhost"
              :keyspace "cyanite_test"}}
     {}
-    (let [index    (:index *system*)]
+    (let [index    (:index *system*)
+          store    (:store *system*)
+          session  (:session store)]
+      (cleanup-tables session)
       (index/register! index "a.b.c")
       (index/register! index "a.b.d")
       (index/register! index "a.e.c")
@@ -55,4 +59,5 @@
       (is (= ["a.e.c"]
              (map :path (index/leaves index "a.e.*"))))
       (is (= []
-             (map :path (index/leaves index "a.z.*")))))))
+             (map :path (index/leaves index "a.z.*"))))
+      (cleanup-tables session))))

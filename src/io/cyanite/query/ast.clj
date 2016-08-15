@@ -1,60 +1,45 @@
 (ns io.cyanite.query.ast
   (:require [clojure.string :as s]))
 
-(def ^:dynamic *series*)
-
 (defn nil-safe-op
   [f]
-  (fn [& vals]
-    (if (some nil? vals)
-      nil
-      (apply f vals))))
+  (if (nil? f)
+    nil
+    (fn [& vals]
+      (if (some nil? vals)
+        nil
+        (apply f vals)))))
 
 (defprotocol SeriesTransform
   "A protocol to realize operations on series."
   (transform! [this]))
 
-(defn resolve!
-  [series floor ceiling]
-  (let [payload (transform! series)
-        width   (count (second payload))]
-    (when-not (<= (or floor 0) width (or ceiling Long/MAX_VALUE))
-      (throw (ex-info "invalid width for series"
-                      {:ceiling ceiling
-                       :floor   floor
-                       :width   width
-                       :series  series})))
-    payload))
-
 (defn merge-resolve!
   [series floor ceiling]
-  (let [transformed (map transform! series)
-        width       (reduce + 0 (map (comp count second) transformed))]
+  (let [series      (mapcat transform! series)
+        width       (reduce + 0 (map (comp count second) series))]
     (when-not (<= (or floor 0) width (or ceiling Long/MAX_VALUE))
       (throw (ex-info "invalid width for series"
                       {:ceiling ceiling
                        :floor   floor
                        :width   width
-                       :series  transformed})))
-    [(s/join "," (map first transformed))
-     (reduce concat [] (map second transformed))]))
+                       :series series})))
+    [[(s/join "," (map first series))
+      (reduce conj [] (map second series))]]))
 
 (defn flatten-series
-  [f series]
-  (for [[name payload] series]
-    (cond
-      (and (nil? f) (> 1 (count payload)))
-      (throw (ex-info (str "Cannot flatten series with nil inner function. "
-                           "A likely reason is that you used a single-arity "
-                           "function on a path that resolves to multiple "
-                           "series.")
-                      {}))
-
-      (= 1 (count payload))
-      (-> payload first)
-
-      :else
-      (apply mapv f payload))))
+  [reducer mapper series]
+  (mapcat
+   (fn [[name payload]]
+     (let [payload (if (nil? mapper)
+                     payload
+                     ;; we need a second mapper here for cases when
+                     ;; we sum absolute values or similar
+                     (map #(map mapper %) payload))]
+       (if (nil? reducer)
+         payload
+         (reducer payload))))
+   series))
 
 
 (defn index-series
@@ -73,95 +58,145 @@
                (fn [x] (get indexed (second x) "")))))
 
 (defn traverse!
-  [repr outer inner & series]
-  (let [renamed (series-rename series repr)]
-    [renamed [(apply mapv (nil-safe-op outer) (flatten-series (nil-safe-op inner) series))]]))
+  [rename-fn combiner reducer mapper series]
+  (let [renamed   (series-rename series rename-fn)
+        flattened (flatten-series (nil-safe-op reducer) (nil-safe-op mapper) series)
+        combined  (if (nil? combiner)
+                    flattened
+                    (apply mapv (nil-safe-op combiner) flattened))]
+    [[renamed combined]]))
 
-(extend-protocol SeriesTransform
-  String
-  (transform! [this]
-    [this (or (get *series* this) [])])
-  clojure.lang.PersistentVector
-  (transform! [this]
-    this))
+(defn traverse-each!
+  [rename-fn reducer mapper series]
+  (for [s series]
+    (let [renamed   (series-rename [s] rename-fn)
+          mapped    (if (nil? mapper)
+                      (second s)
+                      (map (nil-safe-op mapper) (second s)))
+          reduced   (if (nil? reducer)
+                      mapped
+                      (reducer mapped))]
+      [renamed reduced])))
+
+
+
+(defn add-date
+  [from step data]
+  (loop [res        []
+         [d & ds]   data ;;(first data)
+         point      from]
+    (if ds
+      (recur (if d (conj res [d point]) res) ds (+ point step))
+      res)))
 
 (defrecord SumOperation [series]
   SeriesTransform
   (transform! [this]
     (let [merged (merge-resolve! series 1 nil)]
-      (traverse! "sumSeries($0)" + + merged))))
+      (traverse!
+       "sumSeries($0)"
+       +
+       nil
+       nil
+       merged))))
+
+(defrecord DerivativeOperation [series]
+  SeriesTransform
+  (transform! [this]
+    (traverse-each!
+     "derivative($0)"
+     (fn [s]
+       (cons nil (map #(apply (nil-safe-op -) (reverse %)) (partition 2 1 s))))
+     nil
+     (transform! series))))
+
+(defn lift-single-series
+  "Lifts the series to "
+  [series]
+  (mapcat (fn [[k v]] [k [v]])
+          (partition 2 2
+                     series)))
+
+(defrecord AbsoluteOperation [series]
+  SeriesTransform
+  (transform! [this]
+    (traverse-each!
+     "absolute($0)"
+     nil
+     #(Math/abs %)
+     (transform! series))))
 
 (defrecord DivOperation [top bottom]
   SeriesTransform
   (transform! [this]
     (traverse!
-     "divideSeries($0,$1)"
+     "divideSeries($0)"
      /
      nil
-     (resolve! top 1 1)
-     (resolve! bottom 1 1))))
+     nil
+     (merge-resolve! [top bottom]
+                     1 nil))))
 
 (defrecord ScaleOperation [factor series]
   SeriesTransform
   (transform! [this]
-    (traverse!
+    (traverse-each!
      (format "scale($0,%s)" factor)
+     nil
      (partial * factor)
-     nil
-     (resolve! series 1 1))))
+     (transform! series))))
 
-(defrecord DerivativeOperation [series]
+(defrecord IdentityOperation [path series]
   SeriesTransform
   (transform! [this]
-    (traverse!
-     "derivative($0)"
-     (let [safe-nil-subtract (nil-safe-op -)]
-       (fn [[a b]] (safe-nil-subtract b a)))
-     nil
-     (mapcat (fn [[k v]] [k (map #(partition 2 1 (cons nil %)) v)])
-             (partition 2 2
-                        (resolve! series 1 1))))))
+    (if (nil? path)
+      (mapv
+       (fn [[k v]]
+         [k v]) series)
+      [[path (get series path)]])))
 
-(defrecord AbsoluteOperation [series]
-  SeriesTransform
-  (transform! [this]
-    (traverse!
-     "absolute($0)"
-     #(Math/abs %)
-     nil
-     (resolve! series 1 1))))
+(defmulti  tokens->ast
+  (fn [series tokens]
+    (first tokens)))
 
-(defmulti  tokens->ast first)
+(defn wildcard-path?
+  [path]
+  (.contains path "*"))
 
 (defmethod tokens->ast :path
-  [[_ path]]
-  path)
+  [series [_ path]]
+  (if (wildcard-path? path)
+    (IdentityOperation. nil series)
+    (IdentityOperation. path series)))
 
 (defmethod tokens->ast :sumseries
-  [[_ & series]]
-  (SumOperation. (mapv tokens->ast series)))
+  [series [_ & tokens]]
+  (SumOperation. (mapv #(tokens->ast series %) tokens)))
 
 (defmethod tokens->ast :divideseries
-  [[_ top bottom]]
-  (DivOperation. (tokens->ast top) (tokens->ast bottom)))
+  [series [_ top bottom]]
+  (DivOperation. (tokens->ast series top) (tokens->ast series bottom)))
 
 (defmethod tokens->ast :scale
-  [[_ series factor]]
-  (ScaleOperation. (Double. factor) (tokens->ast series)))
+  [series [_ path factor]]
+  (ScaleOperation. (Double. factor) (tokens->ast series path)))
 
 (defmethod tokens->ast :absolute
-  [[_ series]]
-  (AbsoluteOperation. (tokens->ast series)))
+  [series [_ path]]
+  (AbsoluteOperation. (tokens->ast series path)))
 
 (defmethod tokens->ast :derivative
-  [[_ series]]
-  (DerivativeOperation. (tokens->ast series)))
+  [series [_ path]]
+  (DerivativeOperation. (tokens->ast series path)))
 
 (defmethod tokens->ast :default
-  [x]
+  [series x]
   (throw (ex-info "unsupported function in cyanite" {:arg x})))
 
 (defn run-query!
-  [tokens series]
-  (binding [*series* series]
-    (transform! (tokens->ast tokens))))
+  ;; for testing purposes
+  ([tokens series]
+   (transform! (tokens->ast series tokens)))
+  ([tokens series from step]
+   (for [[n datapoints] (transform! (tokens->ast series tokens))]
+     {:target n :datapoints (add-date from step datapoints)})))

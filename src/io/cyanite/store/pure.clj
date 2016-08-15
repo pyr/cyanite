@@ -33,7 +33,7 @@
   (let [n    (count points)
         time (-> points first :time)
         mean (/ (reduce + 0.0 (map (comp :mean :point) points)) n)
-        min  (reduce min (map (comp :min :point)points))
+        min  (reduce min (map (comp :min :point) points))
         max  (reduce max (map (comp :max :point) points))
         sum  (reduce + 0.0 (map (comp :sum :point) points))]
     (update (first points)
