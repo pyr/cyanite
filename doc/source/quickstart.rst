@@ -5,7 +5,7 @@ Getting up and running with Cyanite involves two things which
 we'll cover in this quick walk-through:
 
 - Installing, configuring, and running `Apache Cassandra`_.
-- Installing, configuring, and running Cyanite itself. 
+- Installing, configuring, and running Cyanite itself.
 
 Obtaining Cyanite
 -----------------
@@ -14,6 +14,9 @@ Cyanite is released in both source and binary.
 
 Binary releases
 ~~~~~~~~~~~~~~~
+
+Cyanite currently has no binary releases, as it's under active development.
+We are getting clos to first stable version.
 
 Binary release are the simplest way to get started and are hosted on github:
 https://github.com/pyr/cyanite/releases/latest.
@@ -58,7 +61,6 @@ See :ref:`Configuration Syntax` for more details
         - "/var/log/cyanite/cyanite.log"
     input:
       - type: "carbon"
-      - type: "pickle"
     store:
       cluster: "127.0.0.1"
     index:
@@ -88,8 +90,10 @@ Cyanite accepts the following arguments::
 
 .. _leiningen: https://leiningen.org
 .. _Apache Cassandra: http://cassandra.apache.org
-    
-    
 
+Default Schema
+--------------
 
-          
+The following schema has to be loaded in Cassandra in order to store data:
+
+.. literalinclude:: ./../schema.cql
