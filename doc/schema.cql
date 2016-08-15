@@ -19,13 +19,12 @@ CREATE TYPE IF NOT EXISTS metric_id (
   resolution frozen<metric_resolution>
 );
 
-CREATE TABLE IF NOT EXISTS metric.metric (
+CREATE TABLE IF NOT EXISTS metric (
   id frozen<metric_id>,
   time bigint,
   point frozen<metric_point>,
   PRIMARY KEY (id, time)
-) WITH COMPACT STORAGE
-  AND CLUSTERING ORDER BY (time ASC)
+) WITH CLUSTERING ORDER BY (time ASC)
   AND compaction = {'class': 'DateTieredCompactionStrategy',  'min_threshold': '12', 'max_threshold': '32', 'max_sstable_age_days': '0.083', 'base_time_seconds': '50' }
   AND compression = {'sstable_compression': 'org.apache.cassandra.io.compress.LZ4Compressor'}
   AND dclocal_read_repair_chance = 0.1
@@ -37,7 +36,7 @@ CREATE TABLE IF NOT EXISTS metric.metric (
   AND read_repair_chance = 0.0
   AND speculative_retry = '99.0PERCENTILE';
 
-CREATE TABLE IF NOT EXISTS metric.path (
+CREATE TABLE IF NOT EXISTS path (
     prefix text,
     path text,
     length int,
@@ -56,15 +55,16 @@ CREATE TABLE IF NOT EXISTS metric.path (
     AND read_repair_chance = 0.0
     AND speculative_retry = '99.0PERCENTILE';
 
-CREATE CUSTOM INDEX IF NOT EXISTS on metric.path(path) USING 'org.apache.cassandra.index.sasi.SASIIndex' WITH OPTIONS = {'mode': 'PREFIX'};
-CREATE CUSTOM INDEX IF NOT EXISTS on metric.path(length) USING 'org.apache.cassandra.index.sasi.SASIIndex';
+CREATE CUSTOM INDEX IF NOT EXISTS on path(path) USING 'org.apache.cassandra.index.sasi.SASIIndex' WITH OPTIONS = {'mode': 'PREFIX'};
+CREATE CUSTOM INDEX IF NOT EXISTS on path(length) USING 'org.apache.cassandra.index.sasi.SASIIndex';
 
-CREATE TABLE IF NOT EXISTS metric.segment (
-    pos int,
+CREATE TABLE IF NOT EXISTS segment (
+    parent text,
     segment text,
+    pos int,
     length int,
     leaf boolean,
-    PRIMARY KEY (pos, segment)
+    PRIMARY KEY (parent, segment)
 ) WITH CLUSTERING ORDER BY (segment ASC)
     AND bloom_filter_fp_chance = 0.01
     AND caching = {'keys':'ALL', 'rows_per_partition':'NONE'}
@@ -80,4 +80,5 @@ CREATE TABLE IF NOT EXISTS metric.segment (
     AND read_repair_chance = 0.0
     AND speculative_retry = '99.0PERCENTILE';
 
-CREATE CUSTOM INDEX IF NOT EXISTS on metric.segment(segment) USING 'org.apache.cassandra.index.sasi.SASIIndex' WITH OPTIONS = {'mode': 'PREFIX'};
+CREATE CUSTOM INDEX IF NOT EXISTS on segment(segment) USING 'org.apache.cassandra.index.sasi.SASIIndex' WITH OPTIONS = {'mode': 'PREFIX'};
+CREATE CUSTOM INDEX IF NOT EXISTS on segment(pos) USING 'org.apache.cassandra.index.sasi.SASIIndex';

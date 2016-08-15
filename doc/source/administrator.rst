@@ -92,7 +92,7 @@ Index
 ~~~~~
 
 The index determines where metric names will be stored.
-The only type of index available now is: "cassandra". 
+The only type of index available now is: "cassandra".
 The cassandra index takes the following options:
 
 *cluster*:
@@ -120,12 +120,16 @@ The following options are accepted:
    A string or list of strings to provide cluster contact points.
 *keyspace*:
    The keyspace to use.
+*batch-size*:
+   10 by default, amount of messages to be batched together. Batches will be spliti in parts. For example, 53 messages will be
+   sent in 5 batches of 10 messages, remaining 3 messages will be sent one by one.
 
 .. sourcecode:: yaml
 
   store:
     cluster: 'localhost'
     keyspace: 'metric'
+    batch-size: 10
 
 Logging
 ~~~~~~~
@@ -165,7 +169,7 @@ with the 3.0 releases extensively and thus is recommended.
 Choosing a compaction strategy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``DateTieredCompactionStrategy``  is likely to be your best bet. 
+``DateTieredCompactionStrategy``  is likely to be your best bet.
 
 The following config causes most compaction activity to occur at 10m and 2h windows.\
 If you want to allow 24h windows, simply raise max_sstable_age days to '1.0'.
