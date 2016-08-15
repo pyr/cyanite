@@ -2,6 +2,17 @@
   (:require [qbits.alia            :as alia]
             [clojure.tools.logging :refer [error]]))
 
+(defn insert-batchq-v2
+  [session table batch-size]
+  (alia/prepare
+   session
+   (str "BEGIN BATCH "
+        (->> table
+             (#(str "UPDATE " % " USING TTL ? SET point=? WHERE id=? AND time=?"))
+             (repeat batch-size)
+             (clojure.string/join ";\n"))
+        "APPLY BATCH")))
+
 (defn insertq-v2
   [session table]
   (alia/prepare
