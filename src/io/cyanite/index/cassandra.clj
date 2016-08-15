@@ -111,9 +111,9 @@
                                 ;; Postfix wildcard query (`*.abc` and alike), optimise by position
                                 (= globbed nil)                         (str "pos = " pos)
                                 ;; Prefix wildcard query (`abc.*` and alike), add parent
-                                (= (count parts) (count globbed-parts)) (str "pos = " (count parts)
+                                (= (count parts) (count globbed-parts)) (str "parent = '" (join "." (butlast globbed-parts)) "'"
                                                                              " AND segment LIKE '" globbed "'"
-                                                                             " AND parent = '" (join "." (butlast globbed-parts)) "'")
+                                                                             " AND pos = " (count parts) " ALLOW FILTERING")
                                 ;; Prefix wildcard query, (`abc.*.def`), can't use position
                                 :else                                   (str "pos = " (count parts)
                                                                              " AND segment LIKE '" globbed "' ALLOW FILTERING" )))
