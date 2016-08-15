@@ -6,21 +6,18 @@
 
 (defprotocol MetricStore
   (insert! [this metric])
-  (insert-batch! [this metrics])
   (fetch!  [this from to paths]))
 
-(defrecord CassandraV2Store [options session insertq insert-batchq fetchq
+(defrecord CassandraV2Store [options session insertq fetchq
                              wrcty rdcty mkid mkpoint reporter]
   component/Lifecycle
   (start [this]
     (let [[session rdcty wrcty] (c/session! options)
           table                 (or (:table options) "metric")
-          batch-size            (or (:batch-size options) 10)
           [mkid mkpoint]        (c/get-types session)]
       (-> this
           (assoc :session session)
           (assoc :insertq (c/insertq-v2 session table))
-          (assoc :insert-batchq (c/insert-batchq-v2 session table batch-size))
           (assoc :fetchq  (c/fetchq-v2 session table))
           (assoc :mkid mkid)
           (assoc :mkpoint mkpoint))))
@@ -28,7 +25,6 @@
     (-> this
         (assoc :session nil)
         (assoc :insertq nil)
-        (assoc :insert-batchq nil)
         (assoc :fetchq nil)
         (assoc :mkid nil)
         (assoc :mkpoint nil)))
@@ -47,15 +43,6 @@
                     (mkpoint metric)
                     (mkid metric)
                     (-> metric :time long)]
-                   {:consistency wrcty}))
-  (insert-batch! [this metrics]
-    (c/runq-async! session insert-batchq
-                   (mapcat identity
-                    (for [metric metrics]
-                      [(-> metric :resolution :period int)
-                       (mkpoint metric)
-                       (mkid metric)
-                       (-> metric :time long)]))
                    {:consistency wrcty})))
 
 (defn empty-store
@@ -66,7 +53,6 @@
     (stop [this] this)
     MetricStore
     (fetch! [this from to paths])
-    (insert-batch! [this metric])
     (insert! [this metric])))
 
 (defrecord MemoryStore [state]
@@ -94,9 +80,6 @@
                   :time  time
                   :point point}))))
        paths)))
-  (insert-batch! [this metrics]
-    (doseq [metric metrics]
-      (insert! this metric)))
   (insert! [this metric]
     (swap! state
            (fn [old]
