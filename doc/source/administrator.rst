@@ -163,8 +163,8 @@ operating a large metric cluster.
 Choosing a Cassandra version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Cyanite will work with Cassandra 3.0 and above, it has been tested
-with the 3.0 releases extensively and thus is recommended.
+Cyanite requires Cassandra 3.4 as it depends on SASI https://docs.datastax.com/en/cql/3.3/cql/cql_using/useSASIIndexConcept.html. It has been tested
+with the 3.4 releases extensively and thus is recommended. 
 
 Choosing a compaction strategy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
