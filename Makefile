@@ -1,7 +1,7 @@
-GRAFANA_DIR       := ./grafana/
-STRESSER_DIR      := ./graphite-stresser/
-CLUSTER_NAME      := cyanite_cluster
-CASSANDRA_VERSION := binary:3.5
+GRAFANA_DIR				:= ./grafana/
+STRESSER_DIR			:= ./graphite-stresser/
+CLUSTER_NAME			:= cyanite_cluster
+CASSANDRA_VERSION	:= binary:3.5
 
 maybe_install_ccm:
 	which ccm || test -s ~/.local/bin/ccm || pip install --user ccm
@@ -27,15 +27,17 @@ stop_cluster:
 clean:
 	pip uninstall ccm
 
-
+#.PHONY: $(GRAFANA_DIR)
 $(GRAFANA_DIR):
+	mkdir $(GRAFANA_DIR)																		;\
 	cd $(GRAFANA_DIR)																				;\
 	export GOPATH=`pwd`																			;\
 	go get github.com/grafana/grafana												;\
-	cd $GOPATH/src/github.com/grafana/grafana								;\
-	go run build.go setup																		;\ # (only needed once to install godep)
-	$GOPATH/bin/godep restore																;\ # (will pull down all golang lib dependencies in your current GOPATH)
+	cd $(GOPATH)/src/github.com/grafana/grafana							;\
+	go run build.go setup																		;\
+	$(GOPATH)/bin/godep restore															;\
 	go run build.go build																		;\
+	npm install grunt --save-dev														;\
 	npm install																							;\
 	npm install -g grunt-cli																;\
 	grunt
