@@ -107,6 +107,25 @@ The cassandra index takes the following options:
       keyspace: metric
       cluster: localhost
 
+Metamonitoring
+~~~~~~~~~~~~~~
+
+To enable internal stats you must enable the internal reporter.
+
+
+.. sourcecode:: yaml
+
+    reporter:
+      metrics:
+        reporters:
+          graphite:
+            interval: 1
+            opts:
+              host: 127.0.0.1
+              port: 2003
+              prefix: internal
+
+
 Store
 ~~~~~
 
