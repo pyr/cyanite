@@ -24,7 +24,7 @@
                  [clj-yaml                      "0.4.0"]
                  [clj-time                      "0.11.0"]
                  [cc.qbits/alia                 "3.1.3"]
-                 [com.lmax/disruptor            "3.3.4"]
+                 [org.jctools/jctools-core      "1.2"]
                  [com.boundary/high-scale-lib   "1.0.6"]
                  [net.jpountz.lz4/lz4           "1.3"]
                  [org.xerial.snappy/snappy-java "1.1.2.1"]

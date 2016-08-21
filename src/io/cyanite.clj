@@ -75,7 +75,7 @@
                                    :engine [:drift :queues :reporter :index]
                                    :index  []
                                    :store  []
-                                   :writer [:pool :store :engine :reporter]
+                                   :writer [:queues :pool :store :engine :reporter]
                                    :api    [:index :store :queues :engine :drift]})))))
 
 (defn -main
