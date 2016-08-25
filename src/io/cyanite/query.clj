@@ -13,7 +13,7 @@
 (defn path-leaves
   [index paths]
   (zipmap paths
-          (map #(index/leaves index %) paths)))
+          (map #(index/prefixes index %) paths)))
 
 (defn merge-paths
   [by-path series]

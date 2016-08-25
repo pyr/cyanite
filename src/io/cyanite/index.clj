@@ -6,8 +6,7 @@
 
 (defprotocol MetricIndex
   (register!     [this path])
-  (prefixes      [this pattern])
-  (leaves        [this pattern]))
+  (prefixes      [this pattern]))
 
 ;; Implementation
 ;; ==============
@@ -100,27 +99,6 @@
                push-segment*
                segment path length))))
   (prefixes [index pattern]
-    (matches db pattern false))
-  (leaves [index pattern]
-    (matches db pattern true)))
-
-(defrecord AgentIndex [db]
-  component/Lifecycle
-  (start [this]
-    (assoc this :db (agent {})))
-  (stop [this]
-    (assoc this :db nil))
-  MetricIndex
-  (register! [this path]
-    (let [segments (segmentize path)
-          length   (count segments)]
-      (doseq [[pos segment] segments]
-        (send-off db update pos
-                  push-segment*
-                  segmentize path length))))
-  (prefixes [index pattern]
-    (matches db pattern false))
-  (leaves [index pattern]
     (matches db pattern false)))
 
 (defrecord EmptyIndex []
@@ -129,8 +107,7 @@
   (stop [this] this)
   MetricIndex
   (register! [this path])
-  (prefixes [index pattern])
-  (leaves [index pattern]))
+  (prefixes [index pattern]))
 
 (defmulti build-index (comp (fnil keyword "agent") :type))
 
@@ -141,34 +118,3 @@
 (defmethod build-index :atom
   [options]
   (map->AtomIndex options))
-
-(defmethod build-index :agent
-  [options]
-  (AgentIndex. nil))
-
-
-
-;; Workbench
-;; =========
-(comment
-
-  (let [i  (component/start (AgentIndex. nil))
-        db (:db i)]
-
-    (register! i "foo.bar.baz.bim")
-    (register! i "foo.bar.baz.bim.bam.boum.barf")
-    (register! i "foo.bar.baz.bim.bam.boum")
-    (register! i "foo.bar.qux")
-    (register! i "bar.bar.qux")
-    (register! i "foo.baz.qux")
-
-    (await db)
-    (matches i "foo.bar.*" false))
-
-
-
-
-
-
-
-  )
