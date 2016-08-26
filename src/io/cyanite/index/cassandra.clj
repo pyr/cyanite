@@ -8,12 +8,6 @@
             [clojure.string             :refer [index-of join split]]
             [clojure.tools.logging      :refer [error]]))
 
-(defn mk-insert-pathq
-  [session]
-  (alia/prepare
-   session
-   "INSERT INTO path (prefix, path, length) VALUES (?, ?, ?);"))
-
 (defn mk-insert-segmentq
   [session]
   (alia/prepare
@@ -69,12 +63,10 @@
     (let [[session rdcty wrcty] (c/session! options)]
       (-> this
           (assoc :session session)
-          (assoc :insert-pathq (mk-insert-pathq session))
           (assoc :insert-segmentq (mk-insert-segmentq session)))))
   (stop [this]
     (-> this
         (assoc :session nil)
-        (assoc :insert-pathq nil)
         (assoc :insert-segmentq nil)))
   index/MetricIndex
   (register! [this path]
@@ -89,14 +81,7 @@
                 (int i)
                 length
                 (= length i)]
-               {:consistency wrcty}))
-      (runq! session insert-pathq
-             [(->> (split path #"\.")
-                   (butlast)
-                   (join "."))
-              path
-              (int (count parts))]
-             {:consistency wrcty})))
+               {:consistency wrcty}))))
   (prefixes [this pattern]
     (let [parts         (split pattern #"\.")
           pos           (count parts)
@@ -123,17 +108,7 @@
            (filter (fn [{:keys [segment]}]
                      (not (nil? (get filtered segment)))))
            (map (juxt :segment :length :leaf))
-           (map (partial prefix-info pos)))))
-  (leaves [this pattern]
-    (let [globbed  (glob-to-like pattern)
-          res      (alia/execute session
-                                 (str "SELECT * from path WHERE path LIKE '"
-                                      globbed
-                                      "'")
-                                 {:consistency wrcty})
-          filtered (set (glob pattern (map :path res)))]
-      (filter (fn [{:keys [path]}]
-                (not (nil? (get filtered path)))) res))))
+           (map (partial prefix-info pos))))))
 
 (defmethod index/build-index :cassandra
   [options]

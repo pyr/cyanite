@@ -35,7 +35,7 @@
 
 (defn cleanup-tables
   [session]
-  (doseq [table ["metric" "path" "segment"]]
+  (doseq [table ["metric" "segment"]]
     (alia/execute session (str "TRUNCATE TABLE " table))))
 
 (deftest index-prefixes-test
