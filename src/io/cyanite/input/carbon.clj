@@ -25,7 +25,7 @@
     (let [metric (try (Double. metric)
                       (catch NumberFormatException e
                         (throw (ex-info "invalid metric" {:metric metric}))))
-          time   (try (Long. time)
+          time   (try (long (Double. time))
                       (catch NumberFormatException e
                         (throw (ex-info "invalid time" {:time time}))))]
       {:path path :metric metric :time time})))
