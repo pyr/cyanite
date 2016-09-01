@@ -4,6 +4,7 @@
            java.util.ArrayList
            org.jctools.queues.SpscArrayQueue
            org.jctools.queues.SpmcArrayQueue
+           java.util.concurrent.locks.LockSupport
            )
   (:require [com.stuartsierra.component :as component]
             [spootnik.reporter          :as r]
@@ -57,30 +58,30 @@
                      ;; TODO: exception handling
                      ;; TODO: metrics
                      (f))
-                   (when-let [el (.poll queue)]
-                     (f el))
+                   (if-let [el (.poll queue)]
+                     (f el)
+                     (LockSupport/parkNanos 10))
                    (recur))
                  ))
       )))
 
 (defn make-queue
-  [defaults alias reporter]
-  (let [capacity (or (:queue-capacity defaults) default-capacity)
-        workers  (or (:pool-size defaults) workers)
+  [options alias reporter]
+  (let [capacity (or (:queue-capacity options) default-capacity)
+        workers  (or (:pool-size options) workers)
         pool     (threadpool workers)]
     (EngineQueue. alias
                   reporter
                   pool
                   (take workers (repeatedly #(SpscArrayQueue. capacity)))
-                  (SpmcArrayQueue. capacity)
-                  )))
+                  (SpmcArrayQueue. capacity))))
 
-(defrecord BlockingMemoryQueue [ingestq defaults reporter]
+(defrecord BlockingMemoryQueue [ingestq options reporter]
   component/Lifecycle
   (start [this]
     (r/build! reporter :counter [:cyanite :ingestq :events])
     (r/build! reporter :counter [:cyanite :ingestq :errors])
-    (assoc this :ingestq (make-queue defaults :ingestq reporter)))
+    (assoc this :ingestq (make-queue options :ingestq reporter)))
   (stop [this]
     (shutdown! ingestq)
     (assoc this :ingestq nil)))
