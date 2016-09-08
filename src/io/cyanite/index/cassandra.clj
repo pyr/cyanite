@@ -97,8 +97,7 @@
                                 (= globbed nil)                         (str "pos = " pos)
                                 ;; Prefix wildcard query (`abc.*` and alike), add parent
                                 (= (count parts) (count globbed-parts)) (str "parent = '" (join "." (butlast globbed-parts)) "'"
-                                                                             " AND segment LIKE '" globbed "'"
-                                                                             " AND pos = " (count parts) " ALLOW FILTERING")
+                                                                             " AND pos = " (count parts))
                                 ;; Prefix wildcard query, (`abc.*.def`), can't use position
                                 :else                                   (str "pos = " (count parts)
                                                                              " AND segment LIKE '" globbed "' ALLOW FILTERING" )))
