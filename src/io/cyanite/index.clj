@@ -30,7 +30,7 @@
     {:path         path
      :text         (last (split path #"\."))
      :id           path
-     :allowChilren (if (some (partial < length) lengths) 1 0)
+     :allowChildren (if (some (partial < length) lengths) 1 0)
      :expandable   (if (some (partial < length) lengths) 1 0)
      :leaf         (if (boolean (lengths length)) 1 0)}))
 
