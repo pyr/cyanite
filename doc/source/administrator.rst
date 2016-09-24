@@ -139,16 +139,12 @@ The following options are accepted:
    A string or list of strings to provide cluster contact points.
 *keyspace*:
    The keyspace to use.
-*batch-size*:
-   10 by default, amount of messages to be batched together. Batches will be spliti in parts. For example, 53 messages will be
-   sent in 5 batches of 10 messages, remaining 3 messages will be sent one by one.
 
 .. sourcecode:: yaml
 
   store:
     cluster: 'localhost'
     keyspace: 'metric'
-    batch-size: 10
 
 Logging
 ~~~~~~~
