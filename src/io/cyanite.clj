@@ -59,7 +59,7 @@
       (start-logging! (merge config/default-logging (:logging config)))
       (-> (component/system-map
            :clock  (map->SystemClock {})
-           :queues (queue/map->BlockingMemoryQueue (:queue config))
+           :queues (queue/map->BlockingMemoryQueue {:options (:queue config)})
            :drift  (build-drift (:drift config))
            :engine (map->Engine (:engine config))
            :writer (map->Writer (:writer config))
@@ -75,7 +75,7 @@
                                    :engine [:drift :queues :reporter :index]
                                    :index  []
                                    :store  []
-                                   :writer [:pool :store :engine :reporter]
+                                   :writer [:queues :pool :store :engine :reporter]
                                    :api    [:index :store :queues :engine :drift]})))))
 
 (defn -main

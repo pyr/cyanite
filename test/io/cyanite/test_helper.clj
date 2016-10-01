@@ -39,7 +39,10 @@
 (defrecord SynchronousQueueEngine [consumers]
   queue/QueueEngine
   (shutdown! [this])
-  (add! [this e]
+  (engine-event! [this e]
+    (doseq [f @consumers]
+      (f e)))
+  (writer-event! [this e]
     (doseq [f @consumers]
       (f e)))
   (consume! [this f]

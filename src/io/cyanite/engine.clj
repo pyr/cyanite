@@ -105,7 +105,7 @@
       (ingest! resolution metric)))
   Enqueuer
   (enqueue! [this metric]
-    (q/add! ingestq metric))
+    (q/engine-event! ingestq metric))
   Snapshoter
   (snapshot! [this]
     (snapshot! this (skewed-epoch! drift)))
