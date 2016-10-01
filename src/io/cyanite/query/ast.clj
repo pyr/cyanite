@@ -83,7 +83,7 @@
 (defn add-date
   [from step data]
   (loop [res        []
-         [d & ds]   data ;;(first data)
+         [d & ds]   data
          point      from]
     (if ds
       (recur (if d (conj res [d point]) res) ds (+ point step))

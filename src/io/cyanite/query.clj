@@ -8,21 +8,46 @@
             [io.cyanite.index        :as index]
             [io.cyanite.store        :as store]
             [io.cyanite.engine       :as engine]
-            [clojure.tools.logging   :refer [debug]]))
+            [clojure.tools.logging   :refer [debug]]
+            [clojure.string          :refer [join]]
+            ))
+
+(def aggregates ["min" "max" "mean" "sum"])
+(def pattern (re-pattern (str "(.*)(\\_)(" (join "|" aggregates) ")")))
+
+(defn maybe-multiplex
+  [paths]
+  (mapcat
+   (fn [path]
+     (if (not (:expandable path))
+       (map #(assoc path
+                    :path (str (:path path) %)
+                    :text (str (:text path) %))
+            (cons "" (map #(str "_" %) aggregates)))
+       [path]))
+   paths))
+
+(defn extract-aggregate
+  [path]
+  (if-let [[_ extracted :as all] (re-matches pattern path)]
+    [extracted (keyword (last all))]
+    [path :default]))
 
 (defn path-leaves
   [index paths]
   (zipmap paths
-          (map #(index/prefixes index %) paths)))
+          (map #(index/prefixes index (first %)) paths)))
 
 (defn merge-paths
   [by-path series]
-  (let [fetch-series (fn [leaf]
-                       [(:path leaf) (get-in series [:series (:path leaf)])])]
-
+  (let [fetch-series (fn [leaf aggregate]
+                       (let [path (store/reconstruct-aggregate (:path leaf) aggregate)]
+                         [path (get-in series [:series path])]))]
     (->> by-path
-         (map (fn [[p leaves]]
-                (remove #(nil? (second %)) (map fetch-series leaves))))
+         (map (fn [[[_ aggregate] leaves]]
+                (->> leaves
+                     (map #(fetch-series % aggregate))
+                     (remove #(nil? (second %))))))
          (mapcat identity)
          (reduce merge {}))))
 
@@ -32,11 +57,18 @@
   (flatten
    (for [query queries]
      (let [tokens     (parser/query->tokens query)
-           paths      (path/tokens->paths tokens)
+           paths      (->> tokens
+                           (path/tokens->paths)
+                           (map extract-aggregate))
+           ;; by this point we have "real" paths (without aggregates)
            by-path    (path-leaves index paths)
-           leaves     (->> (mapcat val by-path)
-                           (map :path)
-                           (map (partial engine/resolution engine from to))
+           leaves     (->> by-path
+                           (mapcat
+                            (fn [[[_ aggregate] paths]]
+                              (map
+                               #(engine/resolution engine from to (:path %) aggregate)
+                               paths
+                               )))
                            (remove nil?)
                            (distinct))
            series     (store/query! store from to leaves)

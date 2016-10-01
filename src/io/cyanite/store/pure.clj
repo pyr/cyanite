@@ -12,7 +12,7 @@
 (defn fill-in
   [nils data]
   (->> (group-by :time data)
-       (map (fn [[k v]] [k (-> v first :point :mean)]))
+       (map (fn [[k v]] [k (-> v first :point)]))
        (reduce merge {})
        (merge nils)
        (sort-by key)
@@ -28,25 +28,13 @@
   [greatest metric]
   (update metric :time #(-> (quot % greatest) (* greatest))))
 
-(defn reduce-to-mean
-  [points]
-  (let [n    (count points)
-        time (-> points first :time)
-        mean (/ (reduce + 0.0 (map (comp :mean :point) points)) n)
-        min  (reduce min (map (comp :min :point) points))
-        max  (reduce max (map (comp :max :point) points))
-        sum  (reduce + 0.0 (map (comp :sum :point) points))]
-    (update (first points)
-            :point
-            assoc :min min :max max :sum sum :mean mean)))
-
 (defn normalize-to
   [greatest]
   (fn [[_ raw]]
     (->> (sort-by :time raw)
          (map (partial normalize-time greatest))
          (partition-by :time)
-         (map reduce-to-mean))))
+         (map first))))
 
 (defn normalize
   [data]

@@ -1,6 +1,32 @@
 (ns io.cyanite.store.cassandra
   (:require [qbits.alia            :as alia]
+            [qbits.alia.codec      :as codec]
+            [io.cyanite.engine.rule :as rule]
             [clojure.tools.logging :refer [error]]))
+
+(defn udt-value->map
+  [udt-value]
+  (let [udt-type (.getType udt-value)
+        udt-type-iter (.iterator udt-type)
+        len (.size udt-type)]
+    (loop [udt (transient {})
+           idx' 0]
+      (if (= idx' len)
+        (persistent! udt)
+        (let [^com.datastax.driver.core.UserType$Field type (.next udt-type-iter)]
+          (recur (assoc! udt
+                         (-> type .getName keyword)
+                         (codec/deserialize udt-value idx'))
+                 (unchecked-inc-int idx')))))))
+
+(extend-protocol codec/PCodec
+  com.datastax.driver.core.UDTValue
+  (encode [x] x)
+  (decode [udt-value]
+    (let [m (udt-value->map udt-value)]
+      (if (= "metric_resolution" (.getTypeName (.getType udt-value)))
+        (rule/map->Resolution m)
+        m))))
 
 (defn insertq-v2
   [session table]
@@ -13,7 +39,7 @@
   (alia/prepare
    session
    (str "SELECT id,time,point FROM " table " WHERE "
-        "id in ? AND time >= ? AND TIME <= ?;")))
+        "id IN ? AND time >= ? AND TIME <= ?;")))
 
 (defn session!
   [{:keys [cluster username password] :as opts}]
