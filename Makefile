@@ -11,11 +11,17 @@ prepare_aliases:
 	sudo ifconfig lo0 alias 127.0.0.2 up
 
 start_one_node_cluster: maybe_install_ccm
-	ccm create $(CLUSTER_NAME) -v $(CASSANDRA_VERSION)	;\
-	ccm populate -n 1              				;\
-	ccm start						;\
-	sleep 20						;\
-	ccm node1 cqlsh < test/resources/schema.cql
+	ccm create $(CLUSTER_NAME) -v $(CASSANDRA_VERSION)			;\
+	cd tokenizer								;\
+	lein uberjar								;\
+	cd ..									;\
+	cp tokenizer/target/tokenizer-0.0.1.jar ~/.ccm/repository/3.9/lib/	;\
+	ccm populate -n 1							;\
+	ccm start								;\
+	sleep 20								;\
+	ccm node1 cqlsh < test/resources/schema.cql				;\
+	ccm node1 cqlsh < test/resources/schema_with_tokeniser.cql
+
 
 reload_schema: maybe_install_ccm
 	ccm node1 cqlsh < test/resources/schema.cql

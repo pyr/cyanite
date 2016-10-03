@@ -129,6 +129,26 @@ a way of querying them back. There are two implementations of this component ava
 
 - ``cassandra`` stores path-names in cassandra.
 
+Cyanite has it's own index extension that helps to build more compact trees in Cassandra
+SASI index. It's not necessary to use them, although it's highly advised especially if you
+have a lot of metrics.
+
+In order to enable index, you should build tokenizer and put it into `lib` directory of
+your cassandra distribution. After that, create (or re-create) your SASI index for
+segment with::
+
+  CREATE CUSTOM INDEX IF NOT EXISTS on segment(segment) USING 'org.apache.cassandra.index.sasi.SASIIndex' WITH OPTIONS = {'analyzer_class': 'org.apache.cassandra.index.sasi.analyzer.SplittingTokenizer'};
+
+And turn it on in configuration using `with_tokeniser` directive:
+
+.. sourcecode:: yaml
+
+   index:
+     type: cassandra
+     cluster: '127.0.0.1'
+     keyspace: 'cyanite_dev'
+     with_tokenizer: true
+
 
 API Component
 -------------
