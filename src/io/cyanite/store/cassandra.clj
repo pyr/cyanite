@@ -4,29 +4,17 @@
             [io.cyanite.engine.rule :as rule]
             [clojure.tools.logging :refer [error]]))
 
-(defn udt-value->map
-  [udt-value]
-  (let [udt-type (.getType udt-value)
-        udt-type-iter (.iterator udt-type)
-        len (.size udt-type)]
-    (loop [udt (transient {})
-           idx' 0]
-      (if (= idx' len)
-        (persistent! udt)
-        (let [^com.datastax.driver.core.UserType$Field type (.next udt-type-iter)]
-          (recur (assoc! udt
-                         (-> type .getName keyword)
-                         (codec/deserialize udt-value idx'))
-                 (unchecked-inc-int idx')))))))
-
-(extend-protocol codec/PCodec
-  com.datastax.driver.core.UDTValue
-  (encode [x] x)
-  (decode [udt-value]
-    (let [m (udt-value->map udt-value)]
-      (if (= "metric_resolution" (.getTypeName (.getType udt-value)))
-        (rule/map->Resolution m)
-        m))))
+(def custom-row-generator
+  (reify qbits.alia.codec/RowGenerator
+    (init-row [_] (transient {}))
+    (conj-row [_ row k v]
+      (assoc! row
+              (keyword k)
+              (if (= k "id")
+                (update-in v [:resolution] rule/map->Resolution)
+                v)))
+    (finalize-row [_ row]
+      (persistent! row))))
 
 (defn insertq-v2
   [session table]
@@ -76,12 +64,16 @@
 (defn runq!
   [session prepared-statement values opts]
   (let [bound (alia/bind prepared-statement values)]
-    (alia/execute session bound opts)))
+    (alia/execute session bound
+                  (assoc opts
+                         :row-generator custom-row-generator))))
 
 (defn runq-async!
   [session prepared-statement values opts]
   (let [bound (alia/bind prepared-statement values)]
-    (alia/execute-async session bound opts)))
+    (alia/execute-async session bound
+                        (assoc opts
+                               :row-generator custom-row-generator))))
 
 (defn get-types
   [session]

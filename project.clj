@@ -23,7 +23,7 @@
                  [metrics-clojure               "2.6.1"]
                  [clj-yaml                      "0.4.0"]
                  [clj-time                      "0.11.0"]
-                 [cc.qbits/alia                 "3.1.3"]
+                 [cc.qbits/alia                 "3.2.0"]
                  [org.jctools/jctools-core      "1.2"]
                  [com.boundary/high-scale-lib   "1.0.6"]
                  [net.jpountz.lz4/lz4           "1.3"]
