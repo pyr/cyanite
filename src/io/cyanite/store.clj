@@ -8,6 +8,31 @@
   (insert! [this metric])
   (fetch!  [this from to paths]))
 
+(defn reconstruct-aggregate
+  [path aggregate]
+  (if (= :default aggregate)
+    path
+    (str path "_" (name aggregate))))
+
+(defn common-fetch!
+  [paths f]
+  (let [aggregates (reduce (fn [acc {:keys [aggregate] :as path}]
+                             (assoc acc
+                                    (dissoc path :aggregate)
+                                    (if-let [aggregates (get acc path)]
+                                      (conj aggregates aggregate)
+                                      [aggregate])))
+                           {} paths)
+        paths      (keys aggregates)
+        results    (f paths)]
+    (mapcat
+     (fn [{:keys [id point] :as metric}]
+       (map #(assoc metric
+                    :id    (assoc id :path (reconstruct-aggregate (:path id) %))
+                    :point (get point (if (= :default %) :mean %)))
+            (get aggregates id)))
+     results)))
+
 (defrecord CassandraV2Store [options session insertq fetchq
                              wrcty rdcty mkid mkpoint reporter]
   component/Lifecycle
@@ -30,12 +55,14 @@
         (assoc :mkpoint nil)))
   MetricStore
   (fetch! [this from to paths]
-    (c/runq! session fetchq
-             [(mapv mkid paths)
-              (long from)
-              (long to)]
-             {:consistency rdcty
-              :fetch-size Integer/MAX_VALUE}))
+    (common-fetch!
+     paths
+     #(c/runq! session fetchq
+               [(mapv mkid %)
+                (long from)
+                (long to)]
+               {:consistency rdcty
+                :fetch-size  Integer/MAX_VALUE})))
 
   (insert! [this metric]
     (c/runq-async! session insertq
@@ -66,20 +93,22 @@
     @state)
   MetricStore
   (fetch! [this from to paths]
-    (let [st @state]
-      (mapcat
-       (fn [path]
-         (->> (get st path)
-              (filter
-               (fn [[time _]]
-                 (and (>= time from)
-                      (<= time to))))
-              (map
-               (fn [[time point]]
-                 {:id    path
-                  :time  time
-                  :point point}))))
-       paths)))
+    (common-fetch!
+     paths
+     #(let [st @state]
+        (mapcat
+         (fn [path]
+           (->> (get st path)
+                (filter
+                 (fn [[time _]]
+                   (and (>= time from)
+                        (<= time to))))
+                (map
+                 (fn [[time point]]
+                   {:id    path
+                    :time  time
+                    :point point}))))
+         %))))
   (insert! [this metric]
     (swap! state
            (fn [old]

@@ -31,39 +31,37 @@
   (toString [_]
     "EngineQueue")
   QueueEngine
+  (start! [this]
+    ;; no-op
+    )
   (shutdown! [this]
-    ;; (.shutdown disruptor)
+    ;; no-op
     )
   (engine-event! [this e]
     (r/inc! reporter [:cyanite alias :events :ingested])
     ;; TODO: implement Round-robin for more fair scheduling?
-    (.add (nth engine-queues (mod (hash e) workers)) e)
-    ;; (.publishEvent disruptor translator e)
-    )
-
+    (let [queue ^SpscArrayQueue (nth engine-queues (mod (hash e) workers))]
+      (.add queue e)))
   (writer-event! [this e]
-    ;; (r/inc! reporter [:cyanite alias :events :ingested])
-    (.add writer-queue e)
-    ;; (.publishEvent disruptor translator e)
-    )
-  (start! [this]
-    )
+    (r/inc! reporter [:cyanite alias :events :written])
+    (.add ^SpmcArrayQueue writer-queue e))
   (consume! [this f]
     (doseq [queue engine-queues]
       (.submit pool
                (fn []
                  (loop []
-                   (when-let [f (.poll writer-queue)]
-                     ;; TODO: poll-all-available?
-                     ;; TODO: exception handling
-                     ;; TODO: metrics
-                     (f))
-                   (if-let [el (.poll queue)]
-                     (f el)
-                     (LockSupport/parkNanos 10))
-                   (recur))
-                 ))
-      )))
+                   (try
+                     (when-let [f (.poll ^SpmcArrayQueue writer-queue)]
+                       (f))
+                     (if-let [el (.poll ^SpscArrayQueue queue)]
+                       (f el)
+                       (LockSupport/parkNanos 10))
+                     (catch Throwable exception
+                       (r/inc! reporter [:cyanite alias :events :error])
+                       (error exception "exception while processing the event from the queue")))
+                   (recur)
+                   ))
+               ))))
 
 (defn make-queue
   [options alias reporter]

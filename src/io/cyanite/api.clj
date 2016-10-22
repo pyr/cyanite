@@ -112,7 +112,12 @@
   (when (sequential? query)
     (throw (ex-info "only one query argument supported for path queries"
                     {:status 400 :suppress? true})))
-  (index/prefixes index (if (blank? query) "*" query)))
+  (let [[path _] (if (blank? query)
+                    "*"
+                    (query/extract-aggregate query))]
+    (->> path
+         (index/prefixes index)
+         (query/maybe-multiplex))))
 
 (defmethod dispatch :render
   [{{:keys [from until target format]} :params :keys [index drift store engine]}]
@@ -129,16 +134,20 @@
                         [target]))))
 
 (defmethod dispatch :metrics
-  [{{:keys [from to path agg]} :params :keys [index store engine drift]}]
+  [{{:keys [from to path]} :params :keys [index store engine drift]}]
   (debug "metric fetch request for:" (pr-str path))
   (let [from  (or (parse-time from drift)
                   (throw (ex-info "missing from parameter"
                                   {:suppress? true :status 400})))
         to    (or (parse-time to drift) (epoch! drift))
-        paths (->> (mapcat (partial index/prefixes index)
-                           (if (sequential? path) path [path]))
-                   (map :path)
-                   (map (partial engine/resolution engine from to))
+        paths (->> (if (sequential? path) path [path])
+                   (map query/extract-aggregate)
+                   (mapcat (fn [[path aggregate]]
+                             (->> path
+                                  (index/prefixes index)
+                                  (map #(vector % aggregate)))))
+                   (map (fn [[path aggregate]]
+                          (engine/resolution engine from to (:path path) aggregate)))
                    (remove nil?))]
     (store/query! store from to paths)))
 

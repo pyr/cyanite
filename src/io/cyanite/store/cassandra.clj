@@ -1,6 +1,20 @@
 (ns io.cyanite.store.cassandra
   (:require [qbits.alia            :as alia]
+            [qbits.alia.codec      :as codec]
+            [io.cyanite.engine.rule :as rule]
             [clojure.tools.logging :refer [error]]))
+
+(def custom-row-generator
+  (reify qbits.alia.codec/RowGenerator
+    (init-row [_] (transient {}))
+    (conj-row [_ row k v]
+      (assoc! row
+              (keyword k)
+              (if (= k "id")
+                (update-in v [:resolution] rule/map->Resolution)
+                v)))
+    (finalize-row [_ row]
+      (persistent! row))))
 
 (defn insertq-v2
   [session table]
@@ -13,7 +27,7 @@
   (alia/prepare
    session
    (str "SELECT id,time,point FROM " table " WHERE "
-        "id in ? AND time >= ? AND TIME <= ?;")))
+        "id IN ? AND time >= ? AND TIME <= ?;")))
 
 (defn session!
   [{:keys [cluster username password] :as opts}]
@@ -50,12 +64,16 @@
 (defn runq!
   [session prepared-statement values opts]
   (let [bound (alia/bind prepared-statement values)]
-    (alia/execute session bound opts)))
+    (alia/execute session bound
+                  (assoc opts
+                         :row-generator custom-row-generator))))
 
 (defn runq-async!
   [session prepared-statement values opts]
   (let [bound (alia/bind prepared-statement values)]
-    (alia/execute-async session bound opts)))
+    (alia/execute-async session bound
+                        (assoc opts
+                               :row-generator custom-row-generator))))
 
 (defn get-types
   [session]
