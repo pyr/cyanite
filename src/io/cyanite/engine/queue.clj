@@ -12,7 +12,7 @@
 
 
 (defonce workers 4)
-(defonce default-capacity (int 1024))
+(defonce default-capacity (int 1048576))
 
 (defprotocol QueueEngine
   (shutdown! [this])
