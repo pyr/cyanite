@@ -1,7 +1,8 @@
 (ns io.cyanite.input.tcp
   (:require [com.stuartsierra.component :as component]
-            [clojure.tools.logging      :refer [warn debug]])
-  (:import io.netty.bootstrap.ServerBootstrap
+            [clojure.tools.logging      :refer [warn debug error]])
+  (:import clojure.lang.ExceptionInfo
+           io.netty.bootstrap.ServerBootstrap
            io.netty.channel.ChannelInitializer
            io.netty.channel.ChannelOption
            io.netty.channel.ChannelInboundHandlerAdapter
@@ -20,9 +21,10 @@
        (let [~input input#]
          ~@body))
      (exceptionCaught [^ChannelHandlerContext ctx# ^Throwable e#]
-       (if (instance? ReadTimeoutException e#)
-         (.close ctx#)
-         (proxy-super exceptionCaught ctx# e#)))
+       (cond
+         (instance? ReadTimeoutException e#)  (.close ctx#)
+         (instance? ExceptionInfo e#)         (error e# (ex-data e#))
+         :else                                (proxy-super exceptionCaught ctx# e#)))
      (isSharable []
        true)))
 
