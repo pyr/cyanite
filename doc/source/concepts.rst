@@ -129,6 +129,8 @@ a way of querying them back. There are two implementations of this component ava
 
 - ``cassandra`` stores path-names in cassandra.
 
+Cyanite caches index lookups for 1 minute by default. You can configure cache ttl
+by using `cache_ttl_in_ms`.
 
 API Component
 -------------

@@ -1,4 +1,6 @@
 (ns io.cyanite.index.cassandra
+  (:import  [com.github.benmanes.caffeine.cache Caffeine CacheLoader LoadingCache]
+            [java.util.concurrent TimeUnit])
   (:require [com.stuartsierra.component :as component]
             [io.cyanite.store.cassandra :as c]
             [io.cyanite.index           :as index]
@@ -7,6 +9,8 @@
             [globber.glob               :refer [glob]]
             [clojure.string             :refer [index-of join split]]
             [clojure.tools.logging      :refer [error]]))
+
+(def default-cache-ttl-in-ms 60000)
 
 (defn mk-insert-segmentq
   [session]
@@ -55,34 +59,9 @@
    :expandable    (not leaf)
    :leaf          leaf})
 
-(defrecord CassandraIndex [options session
-                           insert-segmentq insert-pathq
-                           wrcty rdcty]
-  component/Lifecycle
-  (start [this]
-    (let [[session rdcty wrcty] (c/session! options)]
-      (-> this
-          (assoc :session session)
-          (assoc :insert-segmentq (mk-insert-segmentq session)))))
-  (stop [this]
-    (-> this
-        (assoc :session nil)
-        (assoc :insert-segmentq nil)))
-  index/MetricIndex
-  (register! [this path]
-    (let [parts  (compose-parts path)
-          fpart  (first parts)
-          parts  (cons [[0 "root"] fpart] (partition 2 1 parts))
-          length (count parts)]
-      (doseq [[[_ parent] [i part]] parts]
-        (runq! session insert-segmentq
-               [parent
-                part
-                (int i)
-                length
-                (= length i)]
-               {:consistency wrcty}))))
-  (prefixes [this pattern]
+(defn load-prefixes-fn
+  [session rdcty]
+  (fn [pattern]
     (let [parts         (split pattern #"\.")
           pos           (count parts)
           globbed       (glob-to-like pattern)
@@ -101,13 +80,50 @@
                                 ;; Prefix wildcard query, (`abc.*.def`), can't use position
                                 :else                                   (str "pos = " (count parts)
                                                                              " AND segment LIKE '" globbed "' ALLOW FILTERING" )))
-                         {:consistency wrcty})
+                         {:consistency rdcty})
           filtered      (set (glob pattern (map :segment res)))]
       (->> res
            (filter (fn [{:keys [segment]}]
                      (not (nil? (get filtered segment)))))
            (map (juxt :segment :length :leaf))
            (map (partial prefix-info pos))))))
+
+(defrecord CassandraIndex [options session ^LoadingCache cache
+                           insert-segmentq insert-pathq
+                           wrcty rdcty]
+  component/Lifecycle
+  (start [this]
+    (let [[session rdcty wrcty] (c/session! options)
+          load-prefixes-fn      (load-prefixes-fn session rdcty)]
+      (-> this
+          (assoc :session session
+                 :insert-segmentq (mk-insert-segmentq session)
+                 :cache (-> (Caffeine/newBuilder)
+                            (.expireAfterWrite (or (:cache_ttl_in_ms options) (or default-cache-ttl-in-ms)) TimeUnit/MILLISECONDS)
+                            (.build (reify CacheLoader
+                                      (load [this pattern]
+                                        (load-prefixes-fn pattern)))))))))
+  (stop [this]
+    (-> this
+        (assoc :session nil
+               :insert-segmentq nil
+               :cache nil)))
+  index/MetricIndex
+  (register! [this path]
+    (let [parts  (compose-parts path)
+          fpart  (first parts)
+          parts  (cons [[0 "root"] fpart] (partition 2 1 parts))
+          length (count parts)]
+      (doseq [[[_ parent] [i part]] parts]
+        (runq! session insert-segmentq
+               [parent
+                part
+                (int i)
+                length
+                (= length i)]
+               {:consistency wrcty}))))
+  (prefixes [this pattern]
+    (.get cache pattern)))
 
 (defmethod index/build-index :cassandra
   [options]
