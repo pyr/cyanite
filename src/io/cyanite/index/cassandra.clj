@@ -55,14 +55,52 @@
    :expandable    (not leaf)
    :leaf          leaf})
 
+(defn native-sasi-index
+  [session pattern parts]
+  (let [globbed       (glob-to-like pattern)
+        pos           (count parts)
+        globbed-parts (if (nil? globbed) [] (split globbed #"\."))]
+    (alia/execute
+     session
+     (str "SELECT * from segment WHERE "
+          (cond
+            ;; Top-level query, return root only
+            (= pattern "*")                         "parent = 'root' AND pos = 1"
+            ;; Postfix wildcard query (`*.abc` and alike), optimise by position
+            (= globbed nil)                         (str "pos = " pos)
+            ;; Prefix wildcard query (`abc.*` and alike), add parent
+            (= (count parts) (count globbed-parts)) (str "parent = '" (join "." (butlast globbed-parts)) "'"
+                                                         " AND pos = " (count parts))
+            ;; Prefix wildcard query, (`abc.*.def`), can't use position
+            :else                                   (str "pos = " (count parts)
+                                                         " AND segment LIKE '" globbed "' ALLOW FILTERING" )))
+     )))
+
+(defn with-cyanite-tokenizer
+  [session pattern parts]
+  (let [globbed       (glob-to-like pattern)
+        pos           (count parts)
+        globbed-parts (if (nil? globbed) [] (split globbed #"\."))]
+    (alia/execute session
+                  (cond
+                    ;; Top-level query, return root only
+                    (= pattern "*")                         (str "SELECT * FROM segment WHERE parent = 'root' AND pos = 1")
+                    ;; Postfix wildcard query (`*.abc` and alike), optimise by position
+                    (= globbed nil)                         (str "SELECT * FROM segment WHERE pos = " pos)
+                    ;; Prefix wildcard query (`abc.*` and alike), add parent
+                    :else                                   (str "SELECT * FROM segment WHERE segment LIKE '" pattern "' AND pos = " pos " ALLOW FILTERING")))))
+
 (defrecord CassandraIndex [options session
-                           insert-segmentq insert-pathq
+                           insert-segmentq insert-pathq index-query-fn
                            wrcty rdcty]
   component/Lifecycle
   (start [this]
     (let [[session rdcty wrcty] (c/session! options)]
       (-> this
           (assoc :session session)
+          (assoc :index-query-fn (if (:with_tokenizer options)
+                                   with-cyanite-tokenizer
+                                   native-sasi-index))
           (assoc :insert-segmentq (mk-insert-segmentq session)))))
   (stop [this]
     (-> this
@@ -85,23 +123,7 @@
   (prefixes [this pattern]
     (let [parts         (split pattern #"\.")
           pos           (count parts)
-          globbed       (glob-to-like pattern)
-          globbed-parts (if (nil? globbed) [] (split globbed #"\."))
-          res           (alia/execute
-                         session
-                         (str "SELECT * from segment WHERE "
-                              (cond
-                                ;; Top-level query, return root only
-                                (= pattern "*")                         "parent = 'root' AND pos = 1"
-                                ;; Postfix wildcard query (`*.abc` and alike), optimise by position
-                                (= globbed nil)                         (str "pos = " pos)
-                                ;; Prefix wildcard query (`abc.*` and alike), add parent
-                                (= (count parts) (count globbed-parts)) (str "parent = '" (join "." (butlast globbed-parts)) "'"
-                                                                             " AND pos = " (count parts))
-                                ;; Prefix wildcard query, (`abc.*.def`), can't use position
-                                :else                                   (str "pos = " (count parts)
-                                                                             " AND segment LIKE '" globbed "' ALLOW FILTERING" )))
-                         {:consistency wrcty})
+          res           (index-query-fn session pattern parts)
           filtered      (set (glob pattern (map :segment res)))]
       (->> res
            (filter (fn [{:keys [segment]}]
