@@ -26,8 +26,8 @@
   [session table]
   (alia/prepare
    session
-   (str "SELECT id,time,point FROM " table " WHERE "
-        "id IN ? AND time >= ? AND TIME <= ?;")))
+   (str "SELECT time,point FROM " table " WHERE "
+        "id = ? AND time >= ? AND TIME <= ?;")))
 
 (defn session!
   [{:keys [cluster username password] :as opts}]
