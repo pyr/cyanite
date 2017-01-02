@@ -1,4 +1,6 @@
 (ns io.cyanite.index.cassandra
+  (:import  [com.github.benmanes.caffeine.cache Caffeine CacheLoader LoadingCache]
+            [java.util.concurrent TimeUnit])
   (:require [com.stuartsierra.component :as component]
             [io.cyanite.store.cassandra :as c]
             [io.cyanite.index           :as index]
@@ -7,6 +9,8 @@
             [globber.glob               :refer [glob]]
             [clojure.string             :refer [index-of join split]]
             [clojure.tools.logging      :refer [error]]))
+
+(def default-cache-ttl-in-ms 60000)
 
 (defn mk-insert-segmentq
   [session]
@@ -73,8 +77,7 @@
                                                          " AND pos = " (count parts))
             ;; Prefix wildcard query, (`abc.*.def`), can't use position
             :else                                   (str "pos = " (count parts)
-                                                         " AND segment LIKE '" globbed "' ALLOW FILTERING" )))
-     )))
+                                                         " AND segment LIKE '" globbed "' ALLOW FILTERING" ))))))
 
 (defn with-cyanite-tokenizer
   [session pattern parts]
@@ -90,18 +93,39 @@
                     ;; Prefix wildcard query (`abc.*` and alike), add parent
                     :else                                   (str "SELECT * FROM segment WHERE segment LIKE '" pattern "' AND pos = " pos " ALLOW FILTERING")))))
 
-(defrecord CassandraIndex [options session
+(defn load-prefixes-fn
+  [session index-query-fn pattern]
+  (let [parts    (split pattern #"\.")
+        pos      (count parts)
+        res      (index-query-fn session pattern parts)
+        filtered (set (glob pattern (map :segment res)))]
+    (->> res
+         (filter (fn [{:keys [segment]}]
+                   (not (nil? (get filtered segment)))))
+         (map (juxt :segment :length :leaf))
+         (map (partial prefix-info pos)))))
+
+(defrecord CassandraIndex [options session ^LoadingCache cache
                            insert-segmentq insert-pathq index-query-fn
                            wrcty rdcty]
   component/Lifecycle
   (start [this]
-    (let [[session rdcty wrcty] (c/session! options)]
-      (-> this
-          (assoc :session session)
-          (assoc :index-query-fn (if (:with_tokenizer options)
-                                   with-cyanite-tokenizer
-                                   native-sasi-index))
-          (assoc :insert-segmentq (mk-insert-segmentq session)))))
+    (let [[session rdcty wrcty] (c/session! options)
+          index-query-fn        (if (:with_tokenizer options)
+                                  with-cyanite-tokenizer
+                                  native-sasi-index)]
+      (assoc this
+             :session         session
+             :insert-segmentq (mk-insert-segmentq session)
+             :cache           (-> (Caffeine/newBuilder)
+                                  (.expireAfterWrite
+                                   (or (:cache_ttl_in_ms options)
+                                       default-cache-ttl-in-ms)
+                                   TimeUnit/MILLISECONDS)
+                                  (.build (reify CacheLoader
+                                            (load [this pattern]
+                                              (load-prefixes-fn session index-query-fn pattern)))))
+             )))
   (stop [this]
     (-> this
         (assoc :session nil)
@@ -121,15 +145,7 @@
                 (= length i)]
                {:consistency wrcty}))))
   (prefixes [this pattern]
-    (let [parts         (split pattern #"\.")
-          pos           (count parts)
-          res           (index-query-fn session pattern parts)
-          filtered      (set (glob pattern (map :segment res)))]
-      (->> res
-           (filter (fn [{:keys [segment]}]
-                     (not (nil? (get filtered segment)))))
-           (map (juxt :segment :length :leaf))
-           (map (partial prefix-info pos))))))
+    (.get cache pattern)))
 
 (defmethod index/build-index :cassandra
   [options]

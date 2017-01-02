@@ -129,6 +129,9 @@ a way of querying them back. There are two implementations of this component ava
 
 - ``cassandra`` stores path-names in cassandra.
 
+Cyanite caches index lookups for 1 minute by default. You can configure cache ttl
+by using `cache_ttl_in_ms`.
+
 Cyanite has it's own index extension that helps to build more compact trees in Cassandra
 SASI index. It's not necessary to use them, although it's highly advised especially if you
 have a lot of metrics.
