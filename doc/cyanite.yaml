@@ -75,19 +75,32 @@ input:
 ## =====
 ##
 ## The index determines where metric names will be stored.
-## Two types of indices are available now: "agent" and
+## Two types of indices are available now: "atom" and
 ## "cassandra". If no index section is present,
-## An in-memory (agent) index will be assumed.
+## An in-memory (atom) index will be assumed. Atom index
+## is not suitable for production usage.
 ##
-## The agent index takes no options.
+## The atom index takes no options.
 ## The cassandra index takes the following options:
 ##
 ## *cluster*:
 ##   A string or list of strings to provide cluster contact points.
 ## *keyspace*:
 ##   The keyspace to use.
+## *with_tokenizer*:
+##   Whether or not Cyanite custom tokeniser is enabled on Cassandra nodes.
+##
+## Indexes support artifical paths. For each metric, Cyanite
+## calculates `min`, `max`, `mean` and `sum` metrics. By default,
+## `mean` is returned. If you need access to the other aggregates,
+## enable them in `aggregates`.
 index:
-  type: agent
+  type: atom
+  aggregates:
+    - min
+    - max
+    - mean
+    - sum
 ##
 ## Drift
 ## =====
