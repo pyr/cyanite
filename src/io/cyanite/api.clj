@@ -9,7 +9,7 @@
             [io.cyanite.index           :as index]
             [io.cyanite.store           :as store]
             [io.cyanite.query           :as query]
-            [io.cyanite.http            :as http]
+            [net.http.server            :as http]
             [io.cyanite.engine.drift    :refer [epoch!]]
             [io.cyanite.utils           :refer [nbhm assoc-if-absent!]]
             [clj-time.coerce            :refer [to-epoch]]
