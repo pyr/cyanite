@@ -5,8 +5,36 @@
             [globber.glob               :refer [glob]]))
 
 (defprotocol MetricIndex
-  (register!     [this path])
-  (prefixes      [this pattern]))
+  (register!      [this path])
+  (prefixes       [this pattern])
+
+  (multiplex-aggregates [this prefixes])
+  (extract-aggregate    [this prefix]))
+
+;; Path explansion / artificial aggreate paths
+;;
+
+(defn make-pattern
+  [aggregates]
+  (re-pattern (str "(.*)(\\_)(" (join "|" aggregates) ")")))
+
+(defn multiplex-aggregates-paths
+  [aggregates paths]
+  (mapcat
+   (fn [path]
+     (if (not (:expandable path))
+       (map #(assoc path
+                    :path (str (:path path) %)
+                    :text (str (:text path) %))
+            (cons "" (map #(str "_" %) aggregates)))
+       [path]))
+   paths))
+
+(defn extract-aggregate-path
+  [pattern path]
+  (if-let [[_ extracted :as all] (re-matches pattern path)]
+    [extracted (keyword (last all))]
+    [path :default]))
 
 ;; Implementation
 ;; ==============
@@ -84,12 +112,19 @@
 ;; Indexes
 ;;
 
-(defrecord AtomIndex [db]
+(defrecord AtomIndex [options db aggregates pattern]
   component/Lifecycle
   (start [this]
-    (assoc this :db (atom {})))
+    (let [aggregates (or (:aggregates options) [])]
+      (assoc this
+             :db (atom {})
+             :aggregates aggregates
+             :pattern (make-pattern aggregates))))
   (stop [this]
-    (assoc this :db nil))
+    (assoc this
+           :db nil
+           :aggregates nil
+           :pattern nil))
   MetricIndex
   (register! [this path]
     (let [segments (segmentize path)
@@ -99,7 +134,12 @@
                push-segment*
                segment path length))))
   (prefixes [index pattern]
-    (matches db pattern false)))
+    (matches db pattern false))
+
+  (multiplex-aggregates [this prefixes]
+    (multiplex-aggregates-paths aggregates prefixes))
+  (extract-aggregate   [this prefix]
+    (extract-aggregate-path pattern prefix)))
 
 (defrecord EmptyIndex []
   component/Lifecycle

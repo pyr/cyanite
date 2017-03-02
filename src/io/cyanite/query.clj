@@ -12,27 +12,6 @@
             [clojure.string          :refer [join]]
             ))
 
-(def aggregates ["min" "max" "mean" "sum"])
-(def pattern (re-pattern (str "(.*)(\\_)(" (join "|" aggregates) ")")))
-
-(defn maybe-multiplex
-  [paths]
-  (mapcat
-   (fn [path]
-     (if (not (:expandable path))
-       (map #(assoc path
-                    :path (str (:path path) %)
-                    :text (str (:text path) %))
-            (cons "" (map #(str "_" %) aggregates)))
-       [path]))
-   paths))
-
-(defn extract-aggregate
-  [path]
-  (if-let [[_ extracted :as all] (re-matches pattern path)]
-    [extracted (keyword (last all))]
-    [path :default]))
-
 (defn path-leaves
   [index paths]
   (zipmap paths
@@ -59,7 +38,7 @@
      (let [tokens     (parser/query->tokens query)
            paths      (->> tokens
                            (path/tokens->paths)
-                           (map extract-aggregate))
+                           (map #(index/extract-aggregate index %)))
            ;; by this point we have "real" paths (without aggregates)
            by-path    (path-leaves index paths)
            leaves     (->> by-path

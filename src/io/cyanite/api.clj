@@ -114,10 +114,10 @@
                     {:status 400 :suppress? true})))
   (let [[path _] (if (blank? query)
                     "*"
-                    (query/extract-aggregate query))]
+                    (index/extract-aggregate index query))]
     (->> path
          (index/prefixes index)
-         (query/maybe-multiplex))))
+         (index/multiplex-aggregates index))))
 
 (defmethod dispatch :render
   [{{:keys [from until target format]} :params :keys [index drift store engine]}]
@@ -141,7 +141,7 @@
                                   {:suppress? true :status 400})))
         to    (or (parse-time to drift) (epoch! drift))
         paths (->> (if (sequential? path) path [path])
-                   (map query/extract-aggregate)
+                   (map #(index/extract-aggregate index %))
                    (mapcat (fn [[path aggregate]]
                              (->> path
                                   (index/prefixes index)
