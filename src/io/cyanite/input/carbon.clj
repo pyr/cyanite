@@ -1,12 +1,10 @@
 (ns io.cyanite.input.carbon
-  (:require [io.cyanite.engine     :as engine]
-            [io.cyanite.input.tcp  :as tcp]
-            [clojure.string        :refer [split]]
-            [clojure.tools.logging :refer [info]])
-  (:import io.netty.handler.codec.LineBasedFrameDecoder
-           io.netty.handler.codec.string.StringDecoder
-           io.netty.handler.timeout.ReadTimeoutHandler
-           io.netty.util.CharsetUtil))
+  (:require [com.stuartsierra.component :as component]
+            [io.cyanite.engine          :as engine]
+            [net.tcp                    :as tcp]
+            [net.ty.pipeline            :as pipeline]
+            [clojure.string             :refer [split]]
+            [clojure.tools.logging      :refer [info warn]]))
 
 (defn parse-line
   [^String line]
@@ -31,10 +29,27 @@
       {:path path :metric metric :time time})))
 
 (defn pipeline
-  [^Integer read-timeout engine]
-  [#(LineBasedFrameDecoder. 2048)
-   (StringDecoder. (CharsetUtil/UTF_8))
-   #(ReadTimeoutHandler. read-timeout)
-   (tcp/with-input input
-     (when (seq input)
-       (engine/enqueue! engine (parse-line input))))])
+  [engine read-timeout]
+  (pipeline/channel-initializer
+    [(pipeline/line-based-frame-decoder 2048)
+     pipeline/string-decoder
+     (pipeline/read-timeout-handler read-timeout)
+     (pipeline/with-input [ctx msg]
+       (when (seq msg)
+         (engine/enqueue! engine (parse-line msg))))]))
+
+(defrecord CarbonTCPInput [host port timeout server engine]
+  component/Lifecycle
+  (start [this]
+    (let [timeout  (or timeout 30)
+          host     (or host "127.0.0.1")
+          port     (or port 2002)
+          server   (tcp/server {:handler (pipeline engine timeout)} host port)]
+      (try
+        (assoc this :server server)
+        (catch Exception e
+          (warn e "could not start server")))))
+  (stop [this]
+    (when server
+      (server))
+    (assoc this :server nil)))
