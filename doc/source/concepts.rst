@@ -121,20 +121,29 @@ the ``DateTieredCompactionStrategy`` is likely your best bet.
 
 .. _Apache Cassandra: http://cassandra.apache.org
 
+
 Index Component
 ---------------
 
-The index component is responsible for building an index of path names and providing
-a way of querying them back. There are two implementations of this component available:
+Cyanite stores metric names in Cassandra, using SASI index. Cyanite index component is
+responsible for building an index of path names and providing a way of querying them back.
 
-- ``cassandra`` stores path-names in cassandra.
-
-Cyanite caches index lookups for 1 minute by default. You can configure cache ttl
-by using `cache_ttl_in_ms`.
-
-Cyanite has it's own index extension that helps to build more compact trees in Cassandra
+Cyanite will work out of the box, although in order to improve query performance,
+you can use Cyanite index extension that helps to build more compact trees in Cassandra
 SASI index. It's not necessary to use them, although it's highly advised especially if you
 have a lot of metrics.
+
+Index component can be enabled by the following configuration:
+
+.. sourcecode:: yaml
+
+   index:
+     type: cassandra
+     cluster: '127.0.0.1'
+     keyspace: 'cyanite_dev'
+
+Enabling advanced tokenizer
+---------------------------
 
 In order to enable index, you should build tokenizer and put it into `lib` directory of
 your cassandra distribution. After that, create (or re-create) your SASI index for
@@ -152,6 +161,21 @@ And turn it on in configuration using `with_tokeniser` directive:
      keyspace: 'cyanite_dev'
      with_tokenizer: true
 
+Index Caching
+-------------
+
+Cyanite caches index lookups for 1 minute by default. You can configure cache ttl
+by using `cache_ttl_in_ms`:
+
+.. sourcecode:: yaml
+
+   index:
+     type: cassandra
+     cluster: '127.0.0.1'
+     keyspace: 'cyanite_dev'
+     cache_ttl_in_ms: 5000
+
+All forementioned configuration options may be used in combination.
 
 API Component
 -------------
