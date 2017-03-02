@@ -106,6 +106,7 @@
          (map (partial prefix-info pos)))))
 
 (defrecord CassandraIndex [options session ^LoadingCache cache
+                           aggregates pattern
                            insert-segmentq insert-pathq index-query-fn
                            wrcty rdcty]
   component/Lifecycle
@@ -113,8 +114,11 @@
     (let [[session rdcty wrcty] (c/session! options)
           index-query-fn        (if (:with_tokenizer options)
                                   with-cyanite-tokenizer
-                                  native-sasi-index)]
+                                  native-sasi-index)
+          aggregates            (or (:aggregates options) [])]
       (assoc this
+             :aggregates      aggregates
+             :pattern         (index/make-pattern aggregates)
              :session         session
              :insert-segmentq (mk-insert-segmentq session)
              :cache           (-> (Caffeine/newBuilder)
@@ -145,7 +149,12 @@
                 (= length i)]
                {:consistency wrcty}))))
   (prefixes [this pattern]
-    (.get cache pattern)))
+    (.get cache pattern))
+
+  (multiplex-aggregates [this prefixes]
+    (index/multiplex-aggregates-paths aggregates prefixes))
+  (extract-aggregate   [this prefix]
+    (index/extract-aggregate-path pattern prefix)))
 
 (defmethod index/build-index :cassandra
   [options]
