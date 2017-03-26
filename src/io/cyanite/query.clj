@@ -9,8 +9,7 @@
             [io.cyanite.store        :as store]
             [io.cyanite.engine       :as engine]
             [clojure.tools.logging   :refer [debug]]
-            [clojure.string          :refer [join]]
-            ))
+            [clojure.string          :refer [join]]))
 
 (defn path-leaves
   [index paths]
@@ -31,27 +30,27 @@
          (reduce merge {}))))
 
 (defn run-query!
-  [store index engine from to queries]
+  [index engine from to queries]
   (debug "running query: " (pr-str queries))
   (flatten
    (for [query queries]
-     (let [tokens     (parser/query->tokens query)
-           paths      (->> tokens
-                           (path/tokens->paths)
-                           (map #(index/extract-aggregate index %)))
+     (let [tokens  (parser/query->tokens query)
+           paths   (->> tokens
+                        (path/tokens->paths)
+                        (map #(index/extract-aggregate index %)))
            ;; by this point we have "real" paths (without aggregates)
-           by-path    (path-leaves index paths)
-           leaves     (->> by-path
-                           (mapcat
-                            (fn [[[_ aggregate] paths]]
-                              (map
-                               #(engine/resolution engine from to (:path %) aggregate)
-                               paths
-                               )))
-                           (remove nil?)
-                           (distinct))
-           series     (store/query! store from to leaves)
-           merged     (merge-paths by-path series)
-           from       (:from series)
-           step       (:step series)]
+           by-path (path-leaves index paths)
+           leaves  (->> by-path
+                        (mapcat
+                         (fn [[[_ aggregate] paths]]
+                           (map
+                            #(engine/resolution engine from to (:path %) aggregate)
+                            paths
+                            )))
+                        (remove nil?)
+                        (distinct))
+           series  (engine/query engine from to leaves)
+           merged  (merge-paths by-path series)
+           from    (:from series)
+           step    (:step series)]
        (ast/run-query! tokens merged from step)))))

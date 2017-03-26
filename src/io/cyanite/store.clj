@@ -1,12 +1,12 @@
 (ns io.cyanite.store
   (:require [com.stuartsierra.component :as component]
             [io.cyanite.store.cassandra :as c]
-            [io.cyanite.store.pure      :as p]
             [clojure.tools.logging      :refer [info error]]))
 
 (defprotocol MetricStore
-  (insert! [this metric])
-  (fetch!  [this from to paths]))
+  (insert! [this path resolution snapshot])
+  (fetch!  [this from to paths])
+  (truncate! [this]))
 
 (defn reconstruct-aggregate
   [path aggregate]
@@ -27,32 +27,38 @@
         results    (f paths)]
     (mapcat
      (fn [{:keys [id point] :as metric}]
-       (map #(assoc metric
-                    :id    (assoc id :path (reconstruct-aggregate (:path id) %))
-                    :point (get point (if (= :default %) :mean %)))
+       (map #(let [aggregate (if (= :default %) :mean %)]
+               (assoc metric
+                      :id    (assoc id
+                                    :path (reconstruct-aggregate (:path id) %)
+                                    :aggregate %)
+                      :point (get point aggregate)))
             (get aggregates id)))
      results)))
 
-(defrecord CassandraV2Store [options session insertq fetchq
-                             wrcty rdcty mkid mkpoint reporter]
+(defrecord CassandraV2Store [options session insertq fetchq truncateq
+                             wrcty rdcty mkid mkpoint reporter
+                             statement-cache]
   component/Lifecycle
   (start [this]
     (let [[session rdcty wrcty] (c/session! options)
           table                 (or (:table options) "metric")
           [mkid mkpoint]        (c/get-types session)]
       (-> this
-          (assoc :session session)
-          (assoc :insertq (c/insertq-v2 session table))
-          (assoc :fetchq  (c/fetchq-v2 session table))
-          (assoc :mkid mkid)
-          (assoc :mkpoint mkpoint))))
+          (assoc :session   session
+                 :insertq   (c/insertq-v2 session table)
+                 :fetchq    (c/fetchq-v2 session table)
+                 :truncateq (c/truncateq-v2 session table)
+                 :mkid      mkid
+                 :mkpoint   mkpoint))))
   (stop [this]
     (-> this
-        (assoc :session nil)
-        (assoc :insertq nil)
-        (assoc :fetchq nil)
-        (assoc :mkid nil)
-        (assoc :mkpoint nil)))
+        (assoc :session nil
+               :insertq nil
+               :fetchq nil
+               :truncateq nil
+               :mkid nil
+               :mkpoint nil)))
   MetricStore
   (fetch! [this from to paths]
     (common-fetch!
@@ -64,13 +70,16 @@
                {:consistency rdcty
                 :fetch-size  Integer/MAX_VALUE})))
 
-  (insert! [this metric]
+  (insert! [this path resolution snapshot]
     (c/runq-async! session insertq
-                   [(-> metric :resolution :period int)
-                    (mkpoint metric)
-                    (mkid metric)
-                    (-> metric :time long)]
-                   {:consistency wrcty})))
+                   [(-> resolution :period int)
+                    (mkpoint snapshot)
+                    (mkid {:path path :resolution resolution})
+                    (-> snapshot :time long)]
+                   {:consistency wrcty}))
+
+  (truncate! [this]
+    (c/runq! session truncateq [] {})))
 
 (defn empty-store
   []
@@ -80,7 +89,7 @@
     (stop [this] this)
     MetricStore
     (fetch! [this from to paths])
-    (insert! [this metric])))
+    (insert! [this path resolution snapshot])))
 
 (defrecord MemoryStore [state]
   component/Lifecycle
@@ -98,7 +107,7 @@
      #(let [st @state]
         (mapcat
          (fn [path]
-           (->> (get st path)
+           (->> (get-in st ((juxt :path :resolution) path))
                 (filter
                  (fn [[time _]]
                    (and (>= time from)
@@ -109,13 +118,14 @@
                     :time  time
                     :point point}))))
          %))))
-  (insert! [this metric]
+  (insert! [this path resolution snapshot]
     (swap! state
            (fn [old]
              (update-in old
-                        [(select-keys metric [:path :resolution])
-                         (:time metric)]
-                        (constantly (select-keys metric [:max :min :sum :mean])))))))
+                        [path resolution (:time snapshot)]
+                        (constantly (select-keys snapshot [:max :min :sum :mean]))))))
+  (truncate! [this]
+    (reset! state {})))
 
 (prefer-method print-method clojure.lang.IPersistentMap clojure.lang.IDeref)
 
@@ -132,11 +142,3 @@
 (defmethod build-store :memory
   [options]
   (map->MemoryStore options))
-
-(defn query! [store from to paths]
-  (let [raw-series         (fetch! store from to paths)
-        [precision series] (p/normalize raw-series)]
-    (p/data->series series to precision)))
-
-
-;; TODO IMPLEMENT LAG GAUGE
