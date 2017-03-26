@@ -16,6 +16,12 @@
     (finalize-row [_ row]
       (persistent! row))))
 
+(defn truncateq-v2
+  [session table]
+  (alia/prepare
+   session
+   (str "TRUNCATE " table)))
+
 (defn insertq-v2
   [session table]
   (alia/prepare

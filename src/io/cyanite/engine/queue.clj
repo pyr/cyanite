@@ -19,14 +19,13 @@
   (start! [this])
   (consume! [this f])
   (engine-event! [this e])
-  (writer-event! [this e])
   )
 
 (defn threadpool
   [sz]
   (Executors/newFixedThreadPool (int sz)))
 
-(defrecord EngineQueue [alias reporter pool engine-queues writer-queue]
+(defrecord EngineQueue [alias reporter pool engine-queues]
   Object
   (toString [_]
     "EngineQueue")
@@ -42,17 +41,12 @@
     ;; TODO: implement Round-robin for more fair scheduling?
     (let [queue ^SpscArrayQueue (nth engine-queues (mod (hash e) workers))]
       (.add queue e)))
-  (writer-event! [this e]
-    (r/inc! reporter [:cyanite alias :events :written])
-    (.add ^SpmcArrayQueue writer-queue e))
   (consume! [this f]
     (doseq [queue engine-queues]
       (.submit pool
                (fn []
                  (loop []
                    (try
-                     (when-let [f (.poll ^SpmcArrayQueue writer-queue)]
-                       (f))
                      (if-let [el (.poll ^SpscArrayQueue queue)]
                        (f el)
                        (LockSupport/parkNanos 10))
@@ -70,7 +64,6 @@
         pool     (threadpool workers)]
     (EngineQueue. alias
                   reporter
-                  pool
                   (take workers (repeatedly #(SpscArrayQueue. capacity)))
                   (SpmcArrayQueue. capacity))))
 

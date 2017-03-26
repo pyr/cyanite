@@ -7,6 +7,7 @@
 (defprotocol MetricIndex
   (register!      [this path])
   (prefixes       [this pattern])
+  (truncate!      [this])
 
   (multiplex-aggregates [this prefixes])
   (extract-aggregate    [this prefix]))
@@ -135,7 +136,8 @@
                segment path length))))
   (prefixes [index pattern]
     (matches db pattern false))
-
+  (truncate! [this]
+    (reset! db {}))
   (multiplex-aggregates [this prefixes]
     (multiplex-aggregates-paths aggregates prefixes))
   (extract-aggregate   [this prefix]

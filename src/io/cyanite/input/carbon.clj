@@ -11,8 +11,8 @@
   (let [[path metric time & garbage] (split line #"\s+")]
     (cond
       garbage
-      (throw (ex-info "invalid carbon line: too many fields" {:line line})
-             )
+      (throw (ex-info "invalid carbon line: too many fields" {:line line}))
+
       (not (and (seq path) (seq metric) (seq time)))
       (throw (ex-info "invalid carbon line: missing fields" {:line line}))
 
@@ -20,13 +20,13 @@
       (throw (ex-info (str "invalid carbon line: NaN metric for path:" path)
                       {:line line
                        :path path})))
-    (let [metric (try (Double. metric)
+    (let [metric (try (.doubleValue (Double. metric))
                       (catch NumberFormatException e
                         (throw (ex-info "invalid metric" {:metric metric}))))
-          time   (try (long (Double. time))
+          time   (try (.longValue (Double. time))
                       (catch NumberFormatException e
                         (throw (ex-info "invalid time" {:time time}))))]
-      {:path path :metric metric :time time})))
+      [path time metric])))
 
 (defn pipeline
   [engine read-timeout]
@@ -36,7 +36,8 @@
      (pipeline/read-timeout-handler read-timeout)
      (pipeline/with-input [ctx msg]
        (when (seq msg)
-         (engine/enqueue! engine (parse-line msg))))]))
+         (let [[path time metric] (parse-line msg)]
+           (engine/ingest! engine path time metric))))]))
 
 (defrecord CarbonTCPInput [host port timeout server engine]
   component/Lifecycle
