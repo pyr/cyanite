@@ -17,7 +17,8 @@ and start it with:
 java -jar <path-to-cyanite-jar>.jar --path <path-to-cyanite-config>.yaml
 ```
 
-Default configuration and basic configuration options can be found [here|https://github.com/pyr/cyanite/blob/master/doc/cyanite.yaml].
+[See default configuration and basic configuration options.](https://github.com/pyr/cyanite/blob/master/doc/cyanite.yaml)
+
 For advanced usage and information on possible Cyanite optimisations, refer to [configuration guide](http://cyanite.io/concepts.html).
 
 # Getting help
