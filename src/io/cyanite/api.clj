@@ -48,7 +48,6 @@
     (.startsWith time-string "-")
     (sub-time (.substring time-string 1))
 
-
     :else
     (try (Long/parseLong time-string)
          (catch NumberFormatException _
@@ -128,7 +127,7 @@
                   (throw (ex-info "missing from parameter"
                                   {:suppress? true :status 400})))
         to    (or (parse-time until drift) (epoch! drift))]
-    (query/run-query! store index engine from to
+    (query/run-query! index engine from to
                       (if (seq? target)
                         target
                         [target]))))
@@ -149,7 +148,7 @@
                    (map (fn [[path aggregate]]
                           (engine/resolution engine from to (:path path) aggregate)))
                    (remove nil?))]
-    (store/query! store from to paths)))
+    (store/fetch! store from to paths)))
 
 (defmethod dispatch :default
   [_]

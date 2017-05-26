@@ -3,7 +3,6 @@
             [spootnik.reporter          :as reporter]
             [io.cyanite.engine          :as engine]
             [io.cyanite.engine.drift    :as drift]
-            [io.cyanite.engine.writer   :as writer]
             [io.cyanite.engine.queue    :as queue]
             [io.cyanite.pool            :as pool]
             [io.cyanite.store           :as store]
@@ -42,9 +41,6 @@
   (engine-event! [this e]
     (doseq [f @consumers]
       (f e)))
-  (writer-event! [this e]
-    (doseq [f @consumers]
-      (f e)))
   (consume! [this f]
     (swap! consumers conj f)))
 
@@ -68,8 +64,7 @@
        :queues   (map->SynchronousQueue {})
        :store    (store/build-store (or (:store config) {:type :memory}))
        ;; Default versions
-       :engine   (engine/map->Engine (:engine config))
-       :writer   (writer/map->Writer (:writer config))
+       :engine   (engine/make-engine (:engine config))
        }
       (merge overrides)
       (component/map->SystemMap)
@@ -77,13 +72,19 @@
                                :queues [:reporter]
                                :pool   [:reporter]
                                :index  []
-                               :engine [:drift :queues :reporter :index]
-                               :writer [:pool :store :engine :reporter]
+                               :engine [:drift :store :queues :reporter :index]
                                })))
 
 
 (defmacro with-config
   [config overrides & body]
-  `(binding [*system* (component/start-system (make-test-system ~config ~overrides))]
-     ~@body
-     (component/stop-system *system*)))
+  `(let [cfg# ~config]
+    (if (vector? cfg#)
+      (doseq [config# cfg#]
+        (binding [*system* (component/start-system (make-test-system config# ~overrides))] ;;TODO: get rid of overrides, wtf
+          ~@body
+          (component/stop-system *system*)))
+      (binding [*system* (component/start-system (make-test-system ~config ~overrides))]
+        ~@body
+        (component/stop-system *system*))))
+  )

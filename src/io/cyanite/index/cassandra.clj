@@ -107,7 +107,7 @@
 
 (defrecord CassandraIndex [options session ^LoadingCache cache
                            aggregates pattern
-                           insert-segmentq insert-pathq index-query-fn
+                           insert-segmentq index-query-fn
                            wrcty rdcty]
   component/Lifecycle
   (start [this]
@@ -150,6 +150,8 @@
                {:consistency wrcty}))))
   (prefixes [this pattern]
     (.get cache pattern))
+  (truncate! [this]
+    (alia/execute session "TRUNCATE segment"))
 
   (multiplex-aggregates [this prefixes]
     (index/multiplex-aggregates-paths aggregates prefixes))

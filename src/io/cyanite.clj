@@ -13,8 +13,7 @@
             [metrics.reporters.csv      :as csv]
             [metrics.reporters.jmx      :as jmx]
             [spootnik.reporter          :as reporter]
-            [io.cyanite.engine          :refer [map->Engine]]
-            [io.cyanite.engine.writer   :refer [map->Writer]]
+            [io.cyanite.engine          :as engine]
             [io.cyanite.engine.drift    :refer [map->SystemClock build-drift]]
             [io.cyanite.api             :refer [map->Api]]
             [signal.handler             :refer [with-handler]]
@@ -61,8 +60,7 @@
            :clock  (map->SystemClock {})
            :queues (queue/map->BlockingMemoryQueue {:options (:queue config)})
            :drift  (build-drift (:drift config))
-           :engine (map->Engine (:engine config))
-           :writer (map->Writer (:writer config))
+           :engine (engine/make-engine (:engine config))
            :api    (map->Api {:options (:api config)})
            :index  (index/build-index (:index config))
            :store  (store/build-store (:store config))
@@ -72,10 +70,9 @@
           (component/system-using {:drift  [:clock]
                                    :queues [:reporter]
                                    :pool   [:reporter]
-                                   :engine [:drift :queues :reporter :index]
+                                   :engine [:drift :queues :store :reporter :index]
                                    :index  []
                                    :store  []
-                                   :writer [:queues :pool :store :engine :reporter]
                                    :api    [:index :store :queues :engine :drift]})))))
 
 (defn -main

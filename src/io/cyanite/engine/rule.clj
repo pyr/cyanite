@@ -7,7 +7,7 @@
    converts it to seconds"
   [s]
   (let [[_ value unit] (re-matches #"^([0-9]+)([a-z])$" s)
-        quantity (Long/valueOf value)]
+        quantity (Long/valueOf ^String value)]
     (case unit
       "s" quantity
       "m" (* 60 quantity)
@@ -56,14 +56,14 @@
 
 (defrecord MetricRule [pattern resolutions]
   MetricMatcher
-  (metric-matches? [this metric]
+  (metric-matches? [this path]
     (and
-     (re-find pattern (:path metric))
+     (re-find pattern path)
      this)))
 
 (defn ->exec-plan
-  [rules metric]
-  (when-let [rule (some #(metric-matches? % metric) rules)]
+  [planner metric]
+  (when-let [rule (some #(metric-matches? % metric) planner)]
     (:resolutions rule)))
 
 (defn ->rule
