@@ -63,12 +63,18 @@
   (fetch! [this from to paths]
     (common-fetch!
      paths
-     #(c/runq! session fetchq
-               [(mapv mkid %)
-                (long from)
-                (long to)]
-               {:consistency rdcty
-                :fetch-size  Integer/MAX_VALUE})))
+     (fn [paths]
+       (->> paths
+            (pmap
+             (fn [path]
+               (->> (c/runq! session fetchq
+                             [(mkid path)
+                              (long from)
+                              (long to)]
+                             {:consistency rdcty
+                              :fetch-size  Integer/MAX_VALUE})
+                    (map (fn [i] (assoc i :id path))))))
+            (mapcat identity)))))
 
   (insert! [this path resolution snapshot]
     (c/runq-async! session insertq
