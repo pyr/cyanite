@@ -8,6 +8,7 @@
             [io.cyanite.engine.queue    :as q]
             [io.cyanite.index           :as index]
             [io.cyanite.store           :as store]
+            [io.cyanite.store.pure      :as pure]
             [io.cyanite.query           :as query]
             [net.http.server            :as http]
             [io.cyanite.engine.drift    :refer [epoch!]]
@@ -147,8 +148,11 @@
                                   (map #(vector % aggregate)))))
                    (map (fn [[path aggregate]]
                           (engine/resolution engine from to (:path path) aggregate)))
-                   (remove nil?))]
-    (store/fetch! store from to paths)))
+                   (remove nil?))
+        raw-series (store/fetch! store from to paths)
+        [precision series] (pure/normalize raw-series)]
+    (pure/data->series series to precision)
+    ))
 
 (defmethod dispatch :default
   [_]
